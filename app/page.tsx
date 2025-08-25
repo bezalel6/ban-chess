@@ -1,22 +1,69 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { v4 as uuidv4 } from 'uuid';
 
 export default function HomePage() {
-  const [gameId, setGameId] = useState('');
+  const [inQueue, setInQueue] = useState(false);
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const wsRef = useRef<WebSocket | null>(null);
 
-  const createNewGame = () => {
-    const newGameId = uuidv4();
-    router.push(`/game/${newGameId}`);
+  useEffect(() => {
+    return () => {
+      // Clean up WebSocket on unmount
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
+  const joinQueue = () => {
+    setInQueue(true);
+    setError(null);
+    
+    const ws = new WebSocket('ws://localhost:8081');
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'join-queue' }));
+    };
+
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      
+      if (msg.type === 'queued') {
+        setQueuePosition(msg.position);
+      } else if (msg.type === 'matched') {
+        // Store color in sessionStorage for the game page
+        sessionStorage.setItem(`gameColor-${msg.gameId}`, msg.color);
+        // Redirect to game
+        router.push(`/game/${msg.gameId}`);
+      } else if (msg.type === 'error') {
+        setError(msg.message);
+        setInQueue(false);
+      }
+    };
+
+    ws.onerror = () => {
+      setError('Connection failed');
+      setInQueue(false);
+    };
+
+    ws.onclose = () => {
+      setInQueue(false);
+      setQueuePosition(null);
+    };
   };
 
-  const joinGame = () => {
-    if (gameId.trim()) {
-      router.push(`/game/${gameId.trim()}`);
+  const leaveQueue = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'leave-queue' }));
+      wsRef.current.close();
     }
+    setInQueue(false);
+    setQueuePosition(null);
   };
 
   return (
@@ -28,55 +75,54 @@ export default function HomePage() {
         </p>
 
         <div className="game-info" style={{ maxWidth: '500px', margin: '0 auto' }}>
-          <h2 style={{ marginBottom: '30px' }}>Start Playing</h2>
-          
-          <div style={{ marginBottom: '30px' }}>
-            <button 
-              onClick={createNewGame}
-              style={{ 
-                fontSize: '20px', 
-                padding: '15px 30px',
-                width: '100%',
-                maxWidth: '300px'
-              }}
-            >
-              Create New Game
-            </button>
-          </div>
-
-          <div style={{ 
-            borderTop: '1px solid #ddd', 
-            margin: '30px 0', 
-            paddingTop: '30px' 
-          }}>
-            <h3 style={{ marginBottom: '20px' }}>Or Join Existing Game</h3>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-              <input
-                type="text"
-                placeholder="Enter game ID"
-                value={gameId}
-                onChange={(e) => setGameId(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') joinGame();
-                }}
-                style={{
-                  padding: '10px',
-                  fontSize: '16px',
-                  border: '2px solid #ddd',
-                  borderRadius: '5px',
-                  flex: '1',
+          {!inQueue ? (
+            <>
+              <h2 style={{ marginBottom: '30px' }}>Ready to Play?</h2>
+              <button 
+                onClick={joinQueue}
+                style={{ 
+                  fontSize: '24px', 
+                  padding: '20px 40px',
+                  width: '100%',
                   maxWidth: '300px'
                 }}
-              />
-              <button onClick={joinGame} disabled={!gameId.trim()}>
-                Join Game
+              >
+                Join Queue
               </button>
+            </>
+          ) : (
+            <>
+              <h2 style={{ marginBottom: '30px' }}>Finding Opponent...</h2>
+              <div style={{ marginBottom: '30px' }}>
+                <div className="loading-spinner" />
+                {queuePosition && (
+                  <p style={{ fontSize: '18px', marginTop: '20px' }}>
+                    Position in queue: {queuePosition}
+                  </p>
+                )}
+              </div>
+              <button 
+                onClick={leaveQueue}
+                style={{ 
+                  background: '#f44336',
+                  fontSize: '18px',
+                  padding: '10px 20px'
+                }}
+              >
+                Leave Queue
+              </button>
+            </>
+          )}
+          
+          {error && (
+            <div className="error" style={{ marginTop: '20px' }}>
+              {error}
             </div>
-          </div>
+          )}
         </div>
 
-        <div style={{ marginTop: '40px', color: '#666' }}>
-          <h3 style={{ marginBottom: '15px' }}>How to Play</h3>
+        <div style={{ marginTop: '60px', color: '#666' }}>
+          <h3 style={{ marginBottom: '15px' }}>How to Play Ban Chess</h3>
           <ol style={{ 
             textAlign: 'left', 
             maxWidth: '600px', 
@@ -92,6 +138,23 @@ export default function HomePage() {
           </ol>
         </div>
       </div>
+
+      <style jsx>{`
+        .loading-spinner {
+          border: 4px solid #f3f3f3;
+          border-top: 4px solid #4CAF50;
+          border-radius: 50%;
+          width: 60px;
+          height: 60px;
+          animation: spin 1s linear infinite;
+          margin: 0 auto;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

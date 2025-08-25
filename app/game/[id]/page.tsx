@@ -16,7 +16,8 @@ export default function GamePage() {
   const [copied, setCopied] = useState(false);
 
   const copyGameLink = () => {
-    const url = window.location.href;
+    // Remove the create parameter when sharing
+    const url = window.location.href.replace('?create=true', '');
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

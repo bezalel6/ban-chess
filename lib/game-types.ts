@@ -1,42 +1,13 @@
-export interface Move {
-  from: string;
-  to: string;
-  promotion?: 'q' | 'r' | 'b' | 'n';
-}
+// Re-export types from ban-chess.ts library
+export type { Move, Ban, Action, ActionResult, HistoryEntry } from 'ban-chess.ts';
 
-export interface Ban {
-  from: string;
-  to: string;
-}
-
-export type Action = 
-  | { move: Move }
-  | { ban: Ban };
-
-export interface ActionResult {
-  success: boolean;
-  action?: Action;
-  san?: string;
-  error?: string;
-  newFen?: string;
-  gameOver?: boolean;
-  checkmate?: boolean;
-  stalemate?: boolean;
-}
-
-export interface HistoryEntry {
-  turnNumber: number;
-  player: 'white' | 'black';
-  actionType: 'ban' | 'move';
-  action: Ban | Move;
-  san?: string;
-  fen: string;
-  bannedMove?: Ban;
-}
+// Import types needed for custom definitions
+import type { Move, Ban, HistoryEntry } from 'ban-chess.ts';
 
 export type ClientMsg =
-  | { type: "create"; gameId: string }
-  | { type: "join"; gameId: string }
+  | { type: "join-queue" }
+  | { type: "leave-queue" }
+  | { type: "join-game"; gameId: string }
   | { type: "ban"; gameId: string; ban: Ban }
   | { type: "move"; gameId: string; move: Move };
 
@@ -53,7 +24,8 @@ export type ServerMsg =
       gameId: string;
     }
   | { type: "error"; message: string; error?: string }
-  | { type: "created"; gameId: string }
+  | { type: "queued"; position: number }
+  | { type: "matched"; gameId: string; color: 'white' | 'black' }
   | { type: "joined"; gameId: string; color: 'white' | 'black' };
 
 export interface GameState {

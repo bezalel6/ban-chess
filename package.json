@@ -20,6 +20,7 @@
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
+    "@types/react-chessground": "^1.5.0",
     "@types/react-dom": "^18",
     "@types/uuid": "^9.0.8",
     "@types/ws": "^8.5.10",
