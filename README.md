@@ -62,7 +62,7 @@ npm install
 npx ts-node server/ws-server.ts
 ```
 
-This starts a WebSocket server on **ws\://localhost:8080**.
+This starts a WebSocket server on **ws://localhost:8081**.
 
 ### 3. Run Next.js App
 
