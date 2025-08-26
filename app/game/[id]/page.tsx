@@ -110,7 +110,7 @@ export default function GamePage() {
       <SoundControl />
       <div style={{ textAlign: "center", marginBottom: "20px" }}>
         <h1>♟️ Ban Chess</h1>
-        <p style={{ color: "#666" }}>Game ID: {gameId}</p>
+        <p style={{ color: "#a0a0a0" }}>Game ID: {gameId}</p>
         <button
           onClick={copyGameLink}
           style={{
@@ -129,8 +129,8 @@ export default function GamePage() {
         <div className="status">{getStatusText()}</div>
 
         {gameState.playerColor && (
-          <div style={{ marginTop: "10px", color: "#666" }}>
-            You are playing as: <strong>{gameState.playerColor}</strong>
+          <div style={{ marginTop: "10px", color: "#b0b0b0" }}>
+            You are playing as: <strong style={{ color: "#f0f0f0" }}>{gameState.playerColor}</strong>
           </div>
         )}
 
@@ -145,7 +145,7 @@ export default function GamePage() {
                 maxHeight: "200px",
                 overflowY: "auto",
                 padding: "10px",
-                background: "#f5f5f5",
+                background: "rgba(40, 40, 55, 0.8)",
                 borderRadius: "5px",
               }}
             >
@@ -182,7 +182,7 @@ export default function GamePage() {
       />
 
       <div style={{ textAlign: "center", marginTop: "20px" }}>
-        <p style={{ color: "#666", fontSize: "14px" }}>
+        <p style={{ color: "#a0a0a0", fontSize: "14px" }}>
           {gameState.nextAction === "ban"
             ? "Click on an opponent piece, then click its destination to ban that move"
             : "Click on your piece, then click its destination to move"}

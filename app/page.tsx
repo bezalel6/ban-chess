@@ -70,14 +70,14 @@ export default function HomePage() {
     <div className="container">
       <div style={{ textAlign: 'center', marginTop: '50px' }}>
         <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>♟️ Ban Chess Web</h1>
-        <p style={{ fontSize: '18px', color: '#666', marginBottom: '40px' }}>
+        <p style={{ fontSize: '18px', color: '#a0a0a0', marginBottom: '40px' }}>
           Play Ban Chess online - a variant where you can ban your opponent's moves!
         </p>
 
         <div className="game-info" style={{ maxWidth: '500px', margin: '0 auto' }}>
           {!inQueue ? (
             <>
-              <h2 style={{ marginBottom: '30px' }}>Ready to Play?</h2>
+              <h2 style={{ marginBottom: '30px', color: '#f0f0f0' }}>Ready to Play?</h2>
               <button 
                 onClick={joinQueue}
                 style={{ 
@@ -92,7 +92,7 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <h2 style={{ marginBottom: '30px' }}>Finding Opponent...</h2>
+              <h2 style={{ marginBottom: '30px', color: '#f0f0f0' }}>Finding Opponent...</h2>
               <div style={{ marginBottom: '30px' }}>
                 <div className="loading-spinner" />
                 {queuePosition && (
@@ -121,8 +121,8 @@ export default function HomePage() {
           )}
         </div>
 
-        <div style={{ marginTop: '60px', color: '#666' }}>
-          <h3 style={{ marginBottom: '15px' }}>How to Play Ban Chess</h3>
+        <div style={{ marginTop: '60px', color: '#b0b0b0' }}>
+          <h3 style={{ marginBottom: '15px', color: '#f0f0f0' }}>How to Play Ban Chess</h3>
           <ol style={{ 
             textAlign: 'left', 
             maxWidth: '600px', 
@@ -141,7 +141,7 @@ export default function HomePage() {
 
       <style jsx>{`
         .loading-spinner {
-          border: 4px solid #f3f3f3;
+          border: 4px solid #333;
           border-top: 4px solid #4CAF50;
           border-radius: 50%;
           width: 60px;

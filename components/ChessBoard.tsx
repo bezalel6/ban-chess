@@ -1,44 +1,60 @@
-'use client';
+"use client";
 
-import React, { useMemo, useEffect, useRef } from 'react';
-import Chessground from 'react-chessground';
-import 'react-chessground/dist/styles/chessground.css';
-import type { Move, Ban, GameState, HistoryEntry } from '@/lib/game-types';
-import soundManager from '@/lib/sound-manager';
+import React, { useMemo, useEffect, useRef } from "react";
+import "./ChessBoard.css";
+import Chessground, {
+  Dests,
+  DrawShape,
+  Key,
+  ReactChessGroundProps,
+} from "react-chessground";
+import "react-chessground/dist/styles/chessground.css";
+import type { Move, Ban, GameState, HistoryEntry } from "@/lib/game-types";
+import soundManager from "@/lib/sound-manager";
 
 interface ChessBoardProps {
   gameState: GameState;
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
-  playerColor?: 'white' | 'black';
+  playerColor?: "white" | "black";
 }
 
-export default function ChessBoard({ gameState, onMove, onBan, playerColor }: ChessBoardProps) {
+export default function ChessBoard({
+  gameState,
+  onMove,
+  onBan,
+  playerColor,
+}: ChessBoardProps) {
   const previousHistoryRef = useRef<HistoryEntry[]>([]);
   const hasPlayedGameStartRef = useRef(false);
-  
+  const lastBannedMoveRef = useRef<Ban | null>(null);
+
   // Play game start sound when first joining
   useEffect(() => {
     if (!hasPlayedGameStartRef.current && gameState.history.length === 0) {
-      soundManager.play('game-start');
+      soundManager.play("game-start");
       hasPlayedGameStartRef.current = true;
     }
   }, []);
-  
-  // Detect and play sounds for moves
+
+  // Detect and play sounds for moves and bans
   useEffect(() => {
     const previousHistory = previousHistoryRef.current;
     const currentHistory = gameState.history;
-    
-    // Check if a new move was made
+
+    // Check if a new action was made
     if (currentHistory.length > previousHistory.length) {
       const lastEntry = currentHistory[currentHistory.length - 1];
-      
-      // Only play sound for actual moves, not bans
-      if (lastEntry.actionType === 'move') {
+
+      // Play sound for bans
+      if (lastEntry.actionType === "ban") {
+        soundManager.play("ban");
+        // Store the banned move for visual indication
+        lastBannedMoveRef.current = lastEntry.action as Ban;
+      } else if (lastEntry.actionType === "move") {
         const move = lastEntry.action as Move;
         const isOpponent = lastEntry.player !== playerColor;
-        
+
         // Determine move characteristics
         const moveDetails = {
           isOpponent,
@@ -47,44 +63,66 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
           check: false,
           promotion: false,
         };
-        
+
         // Check for capture (if 'x' is in the SAN notation)
-        if (lastEntry.san && lastEntry.san.includes('x')) {
+        if (lastEntry.san && lastEntry.san.includes("x")) {
           moveDetails.capture = true;
         }
-        
+
         // Check for castling
-        if (lastEntry.san && (lastEntry.san === 'O-O' || lastEntry.san === 'O-O-O')) {
+        if (
+          lastEntry.san &&
+          (lastEntry.san === "O-O" || lastEntry.san === "O-O-O")
+        ) {
           moveDetails.castle = true;
         }
-        
+
         // Check for check
-        if (lastEntry.san && lastEntry.san.includes('+')) {
+        if (lastEntry.san && lastEntry.san.includes("+")) {
           moveDetails.check = true;
         }
-        
+
         // Check for checkmate (game end)
-        if (lastEntry.san && lastEntry.san.includes('#')) {
-          soundManager.play('game-end');
+        if (lastEntry.san && lastEntry.san.includes("#")) {
+          soundManager.play("game-end");
         } else if (move.promotion) {
           moveDetails.promotion = true;
         }
-        
+
         // Play the appropriate sound
-        if (!lastEntry.san?.includes('#')) {
+        if (!lastEntry.san?.includes("#")) {
           soundManager.playMoveSound(moveDetails);
         }
       }
     }
-    
+
     // Update the reference
     previousHistoryRef.current = [...currentHistory];
   }, [gameState.history, playerColor]);
-  
+
   const config = useMemo(() => {
-    const baseConfig: any = {
-      fen: gameState.fen.split(' ')[0],
-      orientation: playerColor || 'white',
+    // Create ban indicator shapes
+    const banShapes: DrawShape[] = [];
+    if (lastBannedMoveRef.current && gameState.history.length > 0) {
+      const lastEntry = gameState.history[gameState.history.length - 1];
+      if (lastEntry.actionType === "ban" && lastEntry.bannedMove) {
+        // Add red X or circle on the banned move's destination
+        banShapes.push({
+          orig: lastEntry.bannedMove.from as any,
+          dest: lastEntry.bannedMove.to as any,
+          brush: "red",
+        });
+        // Add a red circle on the destination square
+        banShapes.push({
+          orig: lastEntry.bannedMove.to as any,
+          brush: "red",
+        });
+      }
+    }
+
+    const baseConfig: ReactChessGroundProps = {
+      fen: gameState.fen.split(" ")[0],
+      orientation: playerColor || "white",
       coordinates: true,
       autoCastle: true,
       highlight: {
@@ -104,11 +142,57 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
       premovable: {
         enabled: false,
       },
+      drawable: {
+        enabled: true,
+        visible: true,
+        defaultSnapToValidMove: false,
+        eraseOnClick: false,
+        shapes: banShapes,
+        brushes: {
+          green: { key: "g", color: "#15781B", opacity: 1, lineWidth: 10 },
+          red: { key: "r", color: "#882020", opacity: 1, lineWidth: 10 },
+          blue: { key: "b", color: "#003088", opacity: 1, lineWidth: 10 },
+          yellow: { key: "y", color: "#e68f00", opacity: 1, lineWidth: 10 },
+          paleBlue: {
+            key: "pb",
+            color: "#003088",
+            opacity: 0.4,
+            lineWidth: 15,
+          },
+          paleGreen: {
+            key: "pg",
+            color: "#15781B",
+            opacity: 0.4,
+            lineWidth: 15,
+          },
+          paleRed: { key: "pr", color: "#882020", opacity: 0.4, lineWidth: 15 },
+          paleGrey: {
+            key: "pgr",
+            color: "#4a4a4a",
+            opacity: 0.35,
+            lineWidth: 15,
+          },
+          purple: {
+            key: "purple",
+            color: "#68217a",
+            opacity: 0.65,
+            lineWidth: 10,
+          },
+          pink: { key: "pink", color: "#ee2080", opacity: 0.5, lineWidth: 10 },
+          white: { key: "white", color: "white", opacity: 1, lineWidth: 10 },
+          paleWhite: {
+            key: "pwhite",
+            color: "white",
+            opacity: 0.6,
+            lineWidth: 10,
+          },
+        },
+      },
     };
 
-    if (gameState.nextAction === 'move' && gameState.turn === playerColor) {
+    if (gameState.nextAction === "move" && gameState.turn === playerColor) {
       // Player's turn to move
-      const dests = new Map<string, string[]>();
+      const dests: Dests = new Map<Key, Key[]>();
       gameState.legalMoves.forEach((move) => {
         if (!dests.has(move.from)) {
           dests.set(move.from, []);
@@ -124,7 +208,7 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
         events: {
           after: (orig: string, dest: string) => {
             const move = gameState.legalMoves.find(
-              m => m.from === orig && m.to === dest
+              (m) => m.from === orig && m.to === dest
             );
             if (move) {
               onMove(move);
@@ -132,9 +216,12 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
           },
         },
       };
-    } else if (gameState.nextAction === 'ban' && gameState.turn === playerColor) {
+    } else if (
+      gameState.nextAction === "ban" &&
+      gameState.turn === playerColor
+    ) {
       // Player's turn to ban opponent's move
-      const dests = new Map<string, string[]>();
+      const dests = new Map<Key, Key[]>();
       gameState.legalBans.forEach((ban) => {
         if (!dests.has(ban.from)) {
           dests.set(ban.from, []);
@@ -143,8 +230,8 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
       });
 
       // During ban phase, show opponent's pieces as movable (these are the moves you can ban)
-      const opponentColor = gameState.turn === 'white' ? 'black' : 'white';
-      
+      const opponentColor = gameState.turn === "white" ? "black" : "white";
+
       baseConfig.movable = {
         free: false,
         color: opponentColor,
@@ -153,7 +240,7 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
         events: {
           after: (orig: string, dest: string) => {
             const ban = gameState.legalBans.find(
-              b => b.from === orig && b.to === dest
+              (b) => b.from === orig && b.to === dest
             );
             if (ban) {
               onBan(ban);
@@ -161,11 +248,23 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
           },
         },
       };
-      
-      // Add visual indicator that this is ban mode
+
+      // Update drawable config for ban mode with yellow highlights
       baseConfig.drawable = {
+        ...baseConfig.drawable,
         enabled: true,
         defaultSnapToValidMove: false,
+        shapes: [
+          ...banShapes,
+          // Add yellow highlights for available bans
+          ...Array.from(dests.entries()).flatMap(([from, tos]) =>
+            tos.map((to) => ({
+              orig: from as any,
+              dest: to as any,
+              brush: "yellow",
+            }))
+          ),
+        ],
       };
     } else {
       // Not player's turn - disable moves
@@ -182,27 +281,7 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
 
   return (
     <div className="chess-board-container">
-      <Chessground
-        {...config}
-        style={{ width: '600px', height: '600px' }}
-      />
-      <style jsx>{`
-        .chess-board-container {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          padding: 20px;
-        }
-
-        @media (max-width: 768px) {
-          .chess-board-container :global(.cg-container) {
-            width: 90vw !important;
-            height: 90vw !important;
-            max-width: 500px;
-            max-height: 500px;
-          }
-        }
-      `}</style>
+      <Chessground {...config} />
     </div>
   );
 }

@@ -44,6 +44,9 @@ export default function SoundControl() {
           value={volume}
           onChange={handleVolumeChange}
           className="volume-slider"
+          style={{
+            background: `linear-gradient(to right, #4caf50 0%, #4caf50 ${volume * 100}%, rgba(255, 255, 255, 0.2) ${volume * 100}%, rgba(255, 255, 255, 0.2) 100%)`
+          }}
           title={`Volume: ${Math.round(volume * 100)}%`}
         />
       )}
@@ -56,10 +59,11 @@ export default function SoundControl() {
           display: flex;
           align-items: center;
           gap: 10px;
-          background: rgba(255, 255, 255, 0.9);
+          background: rgba(30, 30, 45, 0.95);
           padding: 8px 12px;
           border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           z-index: 1000;
         }
 
@@ -84,7 +88,7 @@ export default function SoundControl() {
           height: 4px;
           -webkit-appearance: none;
           appearance: none;
-          background: #ddd;
+          background: rgba(255, 255, 255, 0.2);
           border-radius: 2px;
           outline: none;
         }

@@ -8,7 +8,8 @@ export type SoundType =
   | "promote"
   | "opponent-move"
   | "game-start"
-  | "game-end";
+  | "game-end"
+  | "ban";
 
 class SoundManager {
   private sounds: Map<SoundType, Howl>;
@@ -31,6 +32,7 @@ class SoundManager {
       "opponent-move": "/sounds/opponent-move.wav",
       "game-start": "/sounds/game-start.wav",
       "game-end": "/sounds/game-end.wav",
+      ban: "/sounds/ban.wav",
     };
 
     Object.entries(soundFiles).forEach(([type, src]) => {
