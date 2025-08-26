@@ -1,6 +1,9 @@
 # ♟️ Ban Chess Web (MVP)
 
-An experimental **online platform for playing Ban Chess**, a chess variant where before each move, your opponent can *ban* one of your legal moves.  
+An experimental **online platform for playing Ban Chess**, a chess variant where players alternate between banning opponent moves and making their own moves. 
+
+> 📖 **For complete game rules, see [RULES.md](./RULES.md)** - the canonical ruleset for Ban-Chess.
+
 Built with:
 
 - [Next.js 14 (App Router)](https://nextjs.org/) — UI & routing
@@ -77,13 +80,17 @@ App will be available at [http://localhost:3000](http://localhost:3000).
 ## 🎮 Usage
 
 1. Open [http://localhost:3000](http://localhost:3000).
-2. Click **“New Game”** → generates unique game ID and room.
+2. Click **"New Game"** → generates unique game ID and room.
 3. Copy the URL and share with opponent.
 4. On the game page:
 
-   * If it’s your turn to **ban**, select an opponent’s move to disable it.
-   * If it’s your turn to **move**, make a legal move on the board.
+   * **Black bans first** - the game starts with Black banning a White move
+   * If it's your turn to **ban**, select an opponent's move to disable it (ban lasts one move only)
+   * If it's your turn to **move**, make a legal move on the board (cannot be the banned move)
+   * Turn order: Black bans → White moves → White bans → Black moves → repeat
 5. Game state updates in real time across all clients.
+
+> See [RULES.md](./RULES.md) for detailed game rules, special move handling, and edge cases.
 
 ---
 
