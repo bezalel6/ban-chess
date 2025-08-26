@@ -35,11 +35,13 @@ export default function HomePage() {
 
     ws.onopen = () => {
       // Send user ID with join-queue message
-      ws.send(JSON.stringify({ 
-        type: "join-queue",
-        userId: user.userId,
-        username: user.username
-      }));
+      ws.send(
+        JSON.stringify({
+          type: "join-queue",
+          userId: user.userId,
+          username: user.username,
+        })
+      );
     };
 
     ws.onmessage = (event) => {
@@ -86,12 +88,10 @@ export default function HomePage() {
   return (
     <div className="container-custom">
       <div className="text-center mt-12">
-        <h1 className="text-5xl mb-5">
-          ♟️ Ban Chess Web
-        </h1>
+        <h1 className="text-5xl mb-5">♟️ Ban Chess Web</h1>
         <p className="text-lg text-dark-200 mb-10">
-          Play Ban Chess online - a variant where you can ban your opponent&apos;s
-          moves!
+          Play Ban Chess online - a variant where you can ban your
+          opponent&apos;s moves!
         </p>
 
         {user && (
@@ -103,9 +103,7 @@ export default function HomePage() {
         <div className="game-info max-w-lg mx-auto">
           {!inQueue ? (
             <>
-              <h2 className="mb-8 text-gray-100">
-                Ready to Play?
-              </h2>
+              <h2 className="mb-8 text-gray-100">Ready to Play?</h2>
               <button
                 onClick={joinQueue}
                 className="text-2xl px-10 py-5 w-full max-w-xs"
@@ -115,9 +113,7 @@ export default function HomePage() {
             </>
           ) : (
             <>
-              <h2 className="mb-8 text-gray-100">
-                Finding Opponent...
-              </h2>
+              <h2 className="mb-8 text-gray-100">Finding Opponent...</h2>
               <div className="mb-8">
                 <div className="loading-spinner" />
                 {queuePosition && (
@@ -135,17 +131,11 @@ export default function HomePage() {
             </>
           )}
 
-          {error && (
-            <div className="error mt-5">
-              {error}
-            </div>
-          )}
+          {error && <div className="error mt-5">{error}</div>}
         </div>
 
         <div className="mt-15 text-dark-300">
-          <h3 className="mb-4 text-gray-100">
-            How to Play Ban Chess
-          </h3>
+          <h3 className="mb-4 text-gray-100">How to Play Ban Chess</h3>
           <ol className="text-left max-w-2xl mx-auto leading-relaxed">
             <li>Black bans one of White&apos;s opening moves</li>
             <li>White makes their first move (with the ban in effect)</li>

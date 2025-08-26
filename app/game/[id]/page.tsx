@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import { useWebSocket } from '@/lib/ws-client';
-import SoundControl from '@/components/SoundControl';
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useWebSocket } from "@/lib/ws-client";
+import SoundControl from "@/components/SoundControl";
 
-const ChessBoard = dynamic(() => import('@/components/ChessBoard'), {
+const ChessBoard = dynamic(() => import("@/components/ChessBoard"), {
   ssr: false,
 });
 
@@ -19,7 +19,7 @@ export default function GamePage() {
 
   const copyGameLink = () => {
     // Remove the create parameter when sharing
-    const url = window.location.href.replace('?create=true', '');
+    const url = window.location.href.replace("?create=true", "");
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -62,18 +62,20 @@ export default function GamePage() {
     const actionType = gameState.nextAction;
 
     if (!gameState.playerColor) {
-      return 'Spectating';
+      return "Spectating";
     }
 
-    if (actionType === 'ban') {
+    if (actionType === "ban") {
       if (isMyTurn) {
-        return `Your turn: Ban one of ${gameState.turn === 'white' ? 'Black' : 'White'}'s moves`;
+        return `Your turn: Ban one of ${
+          gameState.turn === "white" ? "Black" : "White"
+        }'s moves`;
       } else {
         return `Waiting for ${gameState.turn} to ban a move`;
       }
     } else {
       if (isMyTurn) {
-        return 'Your turn: Make a move';
+        return "Your turn: Make a move";
       } else {
         return `Waiting for ${gameState.turn} to move`;
       }
@@ -88,11 +90,11 @@ export default function GamePage() {
       <div className="mb-4">
         <span
           className={`inline-block w-5 h-5 rounded-full border-2 border-gray-500 mr-2.5 align-middle ${
-            currentPlayer === 'white' ? 'bg-white' : 'bg-gray-800'
+            currentPlayer === "white" ? "bg-white" : "bg-gray-800"
           }`}
         />
         <span className="text-lg font-bold">
-          {currentPlayer === 'white' ? 'White' : 'Black'} to {nextAction}
+          {currentPlayer === "white" ? "White" : "Black"} to {nextAction}
         </span>
       </div>
     );
@@ -107,10 +109,10 @@ export default function GamePage() {
         <button
           onClick={copyGameLink}
           className={`text-sm px-4 py-1 mt-2.5 transition-colors ${
-            copied ? 'bg-success-400' : 'bg-blue-600 hover:bg-blue-700'
+            copied ? "bg-success-400" : "bg-blue-600 hover:bg-blue-700"
           }`}
         >
-          {copied ? 'Link Copied!' : 'Copy Game Link'}
+          {copied ? "Link Copied!" : "Copy Game Link"}
         </button>
       </div>
 
@@ -120,10 +122,8 @@ export default function GamePage() {
 
         {gameState.playerColor && (
           <div className="mt-2.5 text-dark-300">
-            You are playing as:{' '}
-            <strong className="text-gray-100">
-              {gameState.playerColor}
-            </strong>
+            You are playing as:{" "}
+            <strong className="text-gray-100">{gameState.playerColor}</strong>
           </div>
         )}
 
@@ -139,14 +139,14 @@ export default function GamePage() {
                 gameState.history.map((entry, idx) => (
                   <div key={idx} className="mb-1">
                     {entry.turnNumber}. {entry.player}:
-                    {entry.actionType === 'ban' ? (
+                    {entry.actionType === "ban" ? (
                       <span>
-                        {' '}
+                        {" "}
                         banned {entry.action.from}-{entry.action.to}
                       </span>
                     ) : (
                       <span>
-                        {' '}
+                        {" "}
                         {entry.san || `${entry.action.from}-${entry.action.to}`}
                       </span>
                     )}
@@ -167,9 +167,9 @@ export default function GamePage() {
 
       <div className="text-center mt-5">
         <p className="text-dark-200 text-sm">
-          {gameState.nextAction === 'ban'
-            ? 'Click on an opponent piece, then click its destination to ban that move'
-            : 'Click on your piece, then click its destination to move'}
+          {gameState.nextAction === "ban"
+            ? "Click on an opponent piece, then click its destination to ban that move"
+            : "Click on your piece, then click its destination to move"}
         </p>
       </div>
     </div>

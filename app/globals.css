@@ -17,19 +17,19 @@
   --color-dark-700: #16213e;
   --color-dark-800: #1a1a2e;
   --color-dark-900: #0f0f23;
-  
+
   /* Success colors (green) */
   --color-success-400: #4caf50;
   --color-success-500: #45a049;
-  
+
   /* Error colors */
   --color-error-400: #f44336;
   --color-error-500: #ff6b6b;
-  
+
   /* Custom spacing values */
   --spacing-15: 3.75rem;
   --spacing-50: 12.5rem;
-  
+
   /* Custom max heights */
   --max-height-50: 12.5rem;
 }
