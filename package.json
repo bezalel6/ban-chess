@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
+    "dev": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run ws-server\"",
     "dev:next": "portio --mine 3000 && next dev",
     "dev:ws": "portio --mine 8081 && nodemon server/ws-server.ts",
     "build": "next build",
