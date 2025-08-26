@@ -16,7 +16,8 @@ export type ClientMsg =
   | { type: 'leave-queue' }
   | { type: 'join-game'; gameId: string }
   | { type: 'ban'; gameId: string; ban: Ban }
-  | { type: 'move'; gameId: string; move: Move };
+  | { type: 'move'; gameId: string; move: Move }
+  | { type: 'ping' };
 
 export type ServerMsg =
   | {
@@ -35,7 +36,8 @@ export type ServerMsg =
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
   | { type: 'matched'; gameId: string; color: 'white' | 'black'; opponent?: string }
-  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players?: { white?: string; black?: string } };
+  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players?: { white?: string; black?: string } }
+  | { type: 'pong' };
 
 export interface GameState {
   fen: string;

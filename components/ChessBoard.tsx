@@ -13,8 +13,10 @@ import soundManager from "@/lib/sound-manager";
 
 interface ChessBoardProps {
   gameState: GameState;
-  onMove: (move: Move) => void;
-  onBan: (ban: Ban) => void;
+  // eslint-disable-next-line no-unused-vars
+  onMove: (_move: Move) => void;
+  // eslint-disable-next-line no-unused-vars
+  onBan: (_ban: Ban) => void;
   playerColor?: "white" | "black";
 }
 
@@ -97,6 +99,7 @@ export default function ChessBoard({
 
     // Update the reference
     previousHistoryRef.current = [...currentHistory];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState.history, playerColor]);
 
   const config = useMemo(() => {
@@ -110,16 +113,14 @@ export default function ChessBoard({
       if (entry.actionType === "ban") {
         // The ban action itself contains the banned move
         recentBan = entry.action as Ban;
-        console.log(`[Ban Visual] Found ban at history[${i}]:`, recentBan);
+        // Found ban at history[i]
         break;
       }
     }
 
     // If we found a recent ban, show it
     if (recentBan) {
-      console.log(
-        `[Ban Visual] Creating shapes for ban: ${recentBan.from}->${recentBan.to}`
-      );
+      // Creating shapes for ban
       // Add red arrow from origin to destination of the banned move
       banShapes.push({
         orig: recentBan.from,
@@ -131,9 +132,9 @@ export default function ChessBoard({
         orig: recentBan.to as Key,
         brush: "red",
       });
-      console.log(`[Ban Visual] Created ${banShapes.length} shapes`);
+      // Created shapes
     } else {
-      console.log("[Ban Visual] No ban found in history");
+      // No ban found in history
     }
 
     const baseConfig: ReactChessGroundProps = {

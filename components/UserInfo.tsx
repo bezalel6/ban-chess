@@ -1,34 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
+import { useAuth } from '@/components/AuthProvider';
+import { logoutAction } from '@/app/actions/auth';
 
-export function UserInfo() {
-  const { user, isAuthenticated, logout } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const router = useRouter();
+export default function UserInfo() {
+  const { user } = useAuth();
+  const [isPending, startTransition] = useTransition();
 
-  const handleSignOut = async () => {
-    if (isLoggingOut) return;
-    
+  const handleSignOut = () => {
     // Add confirmation dialog
     const confirmLogout = window.confirm('Are you sure you want to sign out? You will lose any ongoing games.');
     if (!confirmLogout) return;
     
-    setIsLoggingOut(true);
-    try {
-      await logout();
-      // Redirect to home page after logout
-      router.push('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    } finally {
-      setIsLoggingOut(false);
-    }
+    startTransition(async () => {
+      await logoutAction();
+    });
   };
 
-  if (!isAuthenticated || !user) {
+  if (!user) {
     return null;
   }
 
@@ -53,11 +43,11 @@ export function UserInfo() {
         {/* Sign Out Button */}
         <button
           onClick={handleSignOut}
-          disabled={isLoggingOut}
+          disabled={isPending}
           className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-gray-300 hover:text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed group flex items-center gap-2"
           title="Sign out and return to login"
         >
-          <span>{isLoggingOut ? 'Signing out...' : 'Sign Out'}</span>
+          <span>{isPending ? 'Signing out...' : 'Sign Out'}</span>
           <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
