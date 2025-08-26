@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useWebSocket } from "@/lib/ws-client";
+import { useAuth } from "@/contexts/AuthContext";
 import SoundControl from "@/components/SoundControl";
 
 const ChessBoard = dynamic(() => import("@/components/ChessBoard"), {
@@ -13,8 +14,9 @@ const ChessBoard = dynamic(() => import("@/components/ChessBoard"), {
 export default function GamePage() {
   const params = useParams();
   const gameId = params.id as string;
-  const { gameState, error, connected, sendMove, sendBan } =
-    useWebSocket(gameId);
+  const { user } = useAuth();
+  const { gameState, error, connected, authenticated, sendMove, sendBan } =
+    useWebSocket(gameId, user ? { userId: user.userId, username: user.username } : undefined);
   const [copied, setCopied] = useState(false);
 
   const copyGameLink = () => {
@@ -25,11 +27,11 @@ export default function GamePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!connected) {
+  if (!connected || !authenticated) {
     return (
       <div className="container-custom">
         <div className="game-info text-center">
-          <h2>Connecting to game server...</h2>
+          <h2>{!connected ? "Connecting to game server..." : "Authenticating..."}</h2>
           <p>Please wait while we establish a connection.</p>
         </div>
       </div>
@@ -124,6 +126,13 @@ export default function GamePage() {
           <div className="mt-2.5 text-dark-300">
             You are playing as:{" "}
             <strong className="text-gray-100">{gameState.playerColor}</strong>
+          </div>
+        )}
+
+        {gameState.players && (
+          <div className="mt-2.5 text-dark-300">
+            <div>⚪ White: {gameState.players.white || "Waiting..."}</div>
+            <div>⚫ Black: {gameState.players.black || "Waiting..."}</div>
           </div>
         )}
 

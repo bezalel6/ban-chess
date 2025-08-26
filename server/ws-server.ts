@@ -1,19 +1,26 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { BanChess } from 'ban-chess.ts';
 import { v4 as uuidv4 } from 'uuid';
-import type { ClientMsg, ServerMsg, Move, Ban } from '../lib/game-types';
+import type { ClientMsg, ServerMsg } from '../lib/game-types';
+
+interface Player {
+  userId: string;
+  username: string;
+  ws: WebSocket;
+}
 
 interface GameRoom {
   game: BanChess;
-  players: Map<WebSocket, 'white' | 'black'>;
-  whitePlayer: WebSocket;
-  blackPlayer: WebSocket;
+  players: Map<string, { color: 'white' | 'black'; username: string }>; // userId -> player info
+  whitePlayerId?: string;
+  blackPlayerId?: string;
 }
 
 const wss = new WebSocketServer({ port: 8081 });
 const games = new Map<string, GameRoom>();
-const queue: WebSocket[] = [];
-const playerToGame = new Map<WebSocket, string>();
+const queue: Player[] = [];
+const authenticatedPlayers = new Map<WebSocket, Player>(); // ws -> Player
+const playerToGame = new Map<string, string>(); // userId -> gameId
 
 console.log('WebSocket server started on ws://localhost:8081');
 
@@ -22,11 +29,31 @@ function broadcastToRoom(gameId: string, msg: ServerMsg) {
   if (!room) return;
 
   const msgStr = JSON.stringify(msg);
-  room.players.forEach((_, ws) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(msgStr);
+  
+  // Send to all authenticated players in the room
+  room.players.forEach((playerInfo, userId) => {
+    // Find the player's current WebSocket connection
+    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
+    if (player && player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(msgStr);
     }
   });
+}
+
+function getPlayerUsernames(room: GameRoom): { white?: string; black?: string } {
+  const usernames: { white?: string; black?: string } = {};
+  
+  if (room.whitePlayerId) {
+    const whitePlayer = room.players.get(room.whitePlayerId);
+    if (whitePlayer) usernames.white = whitePlayer.username;
+  }
+  
+  if (room.blackPlayerId) {
+    const blackPlayer = room.players.get(room.blackPlayerId);
+    if (blackPlayer) usernames.black = blackPlayer.username;
+  }
+  
+  return usernames;
 }
 
 function sendGameState(gameId: string) {
@@ -45,6 +72,7 @@ function sendGameState(gameId: string) {
     history: game.history(),
     turn: game.turn,
     gameId,
+    players: getPlayerUsernames(room),
   };
 
   broadcastToRoom(gameId, stateMsg);
@@ -60,38 +88,43 @@ function matchPlayers() {
     const gameId = uuidv4();
     const room: GameRoom = {
       game: new BanChess(),
-      players: new Map(), // Don't add queue connections - they'll disconnect
-      whitePlayer: player1, // Keep for reference but they'll reconnect
-      blackPlayer: player2,
+      players: new Map(),
+      whitePlayerId: player1.userId,
+      blackPlayerId: player2.userId,
     };
 
+    // Add players to the room
+    room.players.set(player1.userId, { color: 'white', username: player1.username });
+    room.players.set(player2.userId, { color: 'black', username: player2.username });
+
     games.set(gameId, room);
-    // Don't map queue connections to game - they're about to disconnect
+    playerToGame.set(player1.userId, gameId);
+    playerToGame.set(player2.userId, gameId);
 
     // Send matched message to both players
-    if (player1.readyState === WebSocket.OPEN) {
-      player1.send(
+    if (player1.ws.readyState === WebSocket.OPEN) {
+      player1.ws.send(
         JSON.stringify({
           type: 'matched',
           gameId,
           color: 'white',
+          opponent: player2.username,
         } as ServerMsg)
       );
     }
 
-    if (player2.readyState === WebSocket.OPEN) {
-      player2.send(
+    if (player2.ws.readyState === WebSocket.OPEN) {
+      player2.ws.send(
         JSON.stringify({
           type: 'matched',
           gameId,
           color: 'black',
+          opponent: player1.username,
         } as ServerMsg)
       );
     }
 
-    console.log(`Matched players - Game ${gameId} created`);
-
-    // Don't send game state yet - players will reconnect with new WebSockets
+    console.log(`Matched players ${player1.username} (white) vs ${player2.username} (black) - Game ${gameId} created`);
 
     // Update queue positions for remaining players
     updateQueuePositions();
@@ -99,9 +132,9 @@ function matchPlayers() {
 }
 
 function updateQueuePositions() {
-  queue.forEach((ws, index) => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(
+  queue.forEach((player, index) => {
+    if (player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(
         JSON.stringify({
           type: 'queued',
           position: index + 1,
@@ -111,8 +144,8 @@ function updateQueuePositions() {
   });
 }
 
-function removeFromQueue(ws: WebSocket) {
-  const index = queue.indexOf(ws);
+function removeFromQueue(player: Player) {
+  const index = queue.findIndex(p => p.userId === player.userId);
   if (index > -1) {
     queue.splice(index, 1);
     updateQueuePositions();
@@ -121,6 +154,7 @@ function removeFromQueue(ws: WebSocket) {
 
 wss.on('connection', (ws: WebSocket) => {
   console.log('New client connected');
+  let currentPlayer: Player | null = null;
 
   ws.on('message', (data: Buffer) => {
     try {
@@ -128,11 +162,77 @@ wss.on('connection', (ws: WebSocket) => {
       console.log('Received message:', msg.type);
 
       switch (msg.type) {
+        case 'authenticate': {
+          // Handle authentication
+          const { userId, username } = msg;
+          
+          // Check if this user is already connected
+          const existingPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
+          if (existingPlayer) {
+            // Close the old connection
+            existingPlayer.ws.close();
+          }
+          
+          // Create or update player
+          currentPlayer = { userId, username, ws };
+          authenticatedPlayers.set(ws, currentPlayer);
+          
+          console.log(`Player authenticated: ${username} (${userId})`);
+          
+          // Send authentication confirmation
+          ws.send(
+            JSON.stringify({
+              type: 'authenticated',
+              userId,
+              username,
+            } as ServerMsg)
+          );
+          
+          // Check if player was in a game (reconnection)
+          const gameId = playerToGame.get(userId);
+          if (gameId) {
+            const room = games.get(gameId);
+            if (room) {
+              const playerInfo = room.players.get(userId);
+              if (playerInfo) {
+                // Rejoin the game
+                ws.send(
+                  JSON.stringify({
+                    type: 'joined',
+                    gameId,
+                    color: playerInfo.color,
+                    players: getPlayerUsernames(room),
+                  } as ServerMsg)
+                );
+                
+                // Send current game state
+                setTimeout(() => sendGameState(gameId), 50);
+                
+                console.log(`Player ${username} reconnected to game ${gameId}`);
+              }
+            }
+          }
+          
+          break;
+        }
+
         case 'join-queue': {
-          // Add to queue if not already in it
-          if (!queue.includes(ws) && !playerToGame.has(ws)) {
-            queue.push(ws);
-            console.log(`Player joined queue. Queue size: ${queue.length}`);
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Not authenticated',
+              } as ServerMsg)
+            );
+            return;
+          }
+          
+          // Check if already in queue
+          const inQueue = queue.some(p => p.userId === currentPlayer!.userId);
+          
+          if (!inQueue && !playerToGame.has(currentPlayer.userId)) {
+            queue.push(currentPlayer);
+            console.log(`Player ${currentPlayer.username} joined queue. Queue size: ${queue.length}`);
 
             // Send queue position
             ws.send(
@@ -149,12 +249,32 @@ wss.on('connection', (ws: WebSocket) => {
         }
 
         case 'leave-queue': {
-          removeFromQueue(ws);
-          console.log(`Player left queue. Queue size: ${queue.length}`);
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Not authenticated',
+              } as ServerMsg)
+            );
+            return;
+          }
+          
+          removeFromQueue(currentPlayer);
+          console.log(`Player ${currentPlayer.username} left queue. Queue size: ${queue.length}`);
           break;
         }
 
         case 'join-game': {
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Not authenticated',
+              } as ServerMsg)
+            );
+            return;
+          }
+          
           const gameId = msg.gameId;
           const room = games.get(gameId);
 
@@ -168,32 +288,20 @@ wss.on('connection', (ws: WebSocket) => {
             return;
           }
 
-          // Determine player color based on available slots
-          let playerColor: 'white' | 'black' | null = null;
-
-          // Check if this websocket is already in the game
-          if (room.players.has(ws)) {
-            playerColor = room.players.get(ws)!;
-          } else {
-            // New connection - assign to available slot
-            if (!Array.from(room.players.values()).includes('white')) {
-              playerColor = 'white';
-              room.players.set(ws, 'white');
-            } else if (!Array.from(room.players.values()).includes('black')) {
-              playerColor = 'black';
-              room.players.set(ws, 'black');
-            }
-          }
-
-          if (playerColor) {
-            playerToGame.set(ws, gameId);
+          // Check if player belongs to this game
+          const playerInfo = room.players.get(currentPlayer.userId);
+          
+          if (playerInfo) {
+            // Player is already in the game
+            playerToGame.set(currentPlayer.userId, gameId);
 
             // Send joined message with color
             ws.send(
               JSON.stringify({
                 type: 'joined',
                 gameId,
-                color: playerColor,
+                color: playerInfo.color,
+                players: getPlayerUsernames(room),
               } as ServerMsg)
             );
 
@@ -203,7 +311,7 @@ wss.on('connection', (ws: WebSocket) => {
             ws.send(
               JSON.stringify({
                 type: 'error',
-                message: 'Game is full',
+                message: 'You are not a player in this game',
               } as ServerMsg)
             );
           }
@@ -211,7 +319,17 @@ wss.on('connection', (ws: WebSocket) => {
         }
 
         case 'move': {
-          const gameId = playerToGame.get(ws);
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Not authenticated',
+              } as ServerMsg)
+            );
+            return;
+          }
+          
+          const gameId = playerToGame.get(currentPlayer.userId);
           if (!gameId) {
             ws.send(
               JSON.stringify({
@@ -233,8 +351,8 @@ wss.on('connection', (ws: WebSocket) => {
             return;
           }
 
-          const playerColor = room.players.get(ws);
-          if (playerColor !== room.game.turn) {
+          const playerInfo = room.players.get(currentPlayer.userId);
+          if (!playerInfo || playerInfo.color !== room.game.turn) {
             ws.send(
               JSON.stringify({
                 type: 'error',
@@ -270,7 +388,17 @@ wss.on('connection', (ws: WebSocket) => {
         }
 
         case 'ban': {
-          const gameId = playerToGame.get(ws);
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Not authenticated',
+              } as ServerMsg)
+            );
+            return;
+          }
+          
+          const gameId = playerToGame.get(currentPlayer.userId);
           if (!gameId) {
             ws.send(
               JSON.stringify({
@@ -292,10 +420,8 @@ wss.on('connection', (ws: WebSocket) => {
             return;
           }
 
-          const playerColor = room.players.get(ws);
-          const banningPlayer = room.game.turn;
-
-          if (playerColor !== banningPlayer) {
+          const playerInfo = room.players.get(currentPlayer.userId);
+          if (!playerInfo || playerInfo.color !== room.game.turn) {
             ws.send(
               JSON.stringify({
                 type: 'error',
@@ -343,38 +469,36 @@ wss.on('connection', (ws: WebSocket) => {
 
   ws.on('close', () => {
     console.log('Client disconnected');
-
-    // Remove from queue if in it
-    removeFromQueue(ws);
-
-    // Handle game disconnection
-    const gameId = playerToGame.get(ws);
-    if (gameId) {
-      const room = games.get(gameId);
-      if (room) {
-        // Only clean up if this ws was actually playing (not just from queue)
-        if (room.players.has(ws)) {
-          // Notify other player
-          room.players.forEach((color, player) => {
-            if (player !== ws && player.readyState === WebSocket.OPEN) {
-              player.send(
-                JSON.stringify({
-                  type: 'error',
-                  message: 'Opponent disconnected',
-                } as ServerMsg)
-              );
+    
+    if (currentPlayer) {
+      // Remove from authenticated players
+      authenticatedPlayers.delete(ws);
+      
+      // Remove from queue if in it
+      removeFromQueue(currentPlayer);
+      
+      // Handle game disconnection (but don't remove from game - allow reconnection)
+      const gameId = playerToGame.get(currentPlayer.userId);
+      if (gameId) {
+        const room = games.get(gameId);
+        if (room) {
+          // Notify other player about disconnection
+          room.players.forEach((playerInfo, userId) => {
+            if (userId !== currentPlayer!.userId) {
+              const otherPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
+              if (otherPlayer && otherPlayer.ws.readyState === WebSocket.OPEN) {
+                otherPlayer.ws.send(
+                  JSON.stringify({
+                    type: 'error',
+                    message: `${currentPlayer!.username} disconnected`,
+                  } as ServerMsg)
+                );
+              }
             }
           });
-
-          // Remove this connection from the game
-          room.players.delete(ws);
         }
-
-        // Clean up mapping
-        playerToGame.delete(ws);
-
-        // Don't delete the game - players will reconnect with new WebSockets
-        // Only delete if game is truly abandoned (could add timeout logic here)
+        
+        console.log(`Player ${currentPlayer.username} disconnected from game ${gameId} (can reconnect)`);
       }
     }
   });

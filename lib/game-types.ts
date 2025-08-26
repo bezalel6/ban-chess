@@ -11,6 +11,7 @@ export type {
 import type { Move, Ban, HistoryEntry } from 'ban-chess.ts';
 
 export type ClientMsg =
+  | { type: 'authenticate'; userId: string; username: string }
   | { type: 'join-queue' }
   | { type: 'leave-queue' }
   | { type: 'join-game'; gameId: string }
@@ -28,11 +29,13 @@ export type ServerMsg =
       history?: HistoryEntry[];
       turn: 'white' | 'black';
       gameId: string;
+      players?: { white?: string; black?: string }; // usernames
     }
   | { type: 'error'; message: string; error?: string }
+  | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
-  | { type: 'matched'; gameId: string; color: 'white' | 'black' }
-  | { type: 'joined'; gameId: string; color: 'white' | 'black' };
+  | { type: 'matched'; gameId: string; color: 'white' | 'black'; opponent?: string }
+  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players?: { white?: string; black?: string } };
 
 export interface GameState {
   fen: string;
@@ -44,4 +47,5 @@ export interface GameState {
   turn: 'white' | 'black';
   gameId: string;
   playerColor?: 'white' | 'black';
+  players?: { white?: string; black?: string };
 }

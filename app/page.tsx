@@ -1,89 +1,32 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueue } from "@/lib/ws-client";
 
 export default function HomePage() {
-  const [inQueue, setInQueue] = useState(false);
-  const [queuePosition, setQueuePosition] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const wsRef = useRef<WebSocket | null>(null);
   const { user, isAuthenticated } = useAuth();
+  const { position, matched, error, connected, authenticated, joinQueue, leaveQueue } = 
+    useQueue(user ? { userId: user.userId, username: user.username } : undefined);
 
   useEffect(() => {
-    return () => {
-      // Clean up WebSocket on unmount
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, []);
+    if (matched) {
+      // Redirect to game when matched
+      router.push(`/game/${matched.gameId}`);
+    }
+  }, [matched, router]);
 
-  const joinQueue = () => {
+  const handleJoinQueue = () => {
     if (!isAuthenticated || !user) {
-      setError("Please set a username first");
+      // This shouldn't happen as button is disabled, but handle it anyway
       return;
     }
-
-    setInQueue(true);
-    setError(null);
-
-    const ws = new WebSocket("ws://localhost:8081");
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      // Send user ID with join-queue message
-      ws.send(
-        JSON.stringify({
-          type: "join-queue",
-          userId: user.userId,
-          username: user.username,
-        })
-      );
-    };
-
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-
-      if (msg.type === "queued") {
-        setQueuePosition(msg.position);
-        // Store player ID for later use
-        if (msg.playerId) {
-          sessionStorage.setItem(`playerId`, msg.playerId);
-        }
-      } else if (msg.type === "matched") {
-        // Store game info in sessionStorage for the game page
-        sessionStorage.setItem(`gameColor-${msg.gameId}`, msg.color);
-        sessionStorage.setItem(`playerId-${msg.gameId}`, msg.playerId);
-        // Redirect to game
-        router.push(`/game/${msg.gameId}`);
-      } else if (msg.type === "error") {
-        setError(msg.message);
-        setInQueue(false);
-      }
-    };
-
-    ws.onerror = () => {
-      setError("Connection failed");
-      setInQueue(false);
-    };
-
-    ws.onclose = () => {
-      setInQueue(false);
-      setQueuePosition(null);
-    };
+    joinQueue();
   };
 
-  const leaveQueue = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: "leave-queue" }));
-      wsRef.current.close();
-    }
-    setInQueue(false);
-    setQueuePosition(null);
-  };
+  const inQueue = position !== null;
 
   return (
     <div className="container-custom">
@@ -94,31 +37,38 @@ export default function HomePage() {
           opponent&apos;s moves!
         </p>
 
-        {user && (
-          <div className="mb-8 text-lg text-success-400">
-            Playing as: <strong>{user.username}</strong>
-          </div>
-        )}
-
         <div className="game-info max-w-lg mx-auto">
           {!inQueue ? (
             <>
               <h2 className="mb-8 text-gray-100">Ready to Play?</h2>
               <button
-                onClick={joinQueue}
-                className="text-2xl px-10 py-5 w-full max-w-xs"
+                onClick={handleJoinQueue}
+                disabled={!isAuthenticated || !connected || !authenticated}
+                className="text-2xl px-10 py-5 w-full max-w-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Join Queue
+                {!isAuthenticated ? "Login Required" : 
+                 !connected ? "Connecting..." :
+                 !authenticated ? "Authenticating..." :
+                 "Join Queue"}
               </button>
+              {!isAuthenticated && (
+                <p className="text-sm text-dark-300 mt-3">
+                  Please set a username in the top-right corner first
+                </p>
+              )}
             </>
           ) : (
             <>
               <h2 className="mb-8 text-gray-100">Finding Opponent...</h2>
               <div className="mb-8">
                 <div className="loading-spinner" />
-                {queuePosition && (
-                  <p className="text-lg mt-5">
-                    Position in queue: {queuePosition}
+                <p className="text-lg mt-5">
+                  Position in queue: {position}
+                </p>
+                {matched && (
+                  <p className="text-success-400 mt-3">
+                    Matched! Playing as {matched.color}
+                    {matched.opponent && ` against ${matched.opponent}`}
                   </p>
                 )}
               </div>
