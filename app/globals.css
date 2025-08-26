@@ -7,24 +7,24 @@
   --color-primary-600: #2563eb;
   --color-primary-700: #1d4ed8;
 
-  /* Dark theme colors */
-  --color-dark-100: #e0e0e0;
-  --color-dark-200: #a0a0a0;
-  --color-dark-300: #b0b0b0;
-  --color-dark-400: #1a1a2e;
-  --color-dark-500: #16213e;
-  --color-dark-600: #1e1e2d;
-  --color-dark-700: #16213e;
-  --color-dark-800: #1a1a2e;
-  --color-dark-900: #0f0f23;
+  /* Dark theme colors - consistent slate palette */
+  --color-dark-100: #f1f5f9; /* slate-100 */
+  --color-dark-200: #e2e8f0; /* slate-200 */
+  --color-dark-300: #cbd5e1; /* slate-300 */
+  --color-dark-400: #94a3b8; /* slate-400 */
+  --color-dark-500: #64748b; /* slate-500 */
+  --color-dark-600: #475569; /* slate-600 */
+  --color-dark-700: #334155; /* slate-700 */
+  --color-dark-800: #1e293b; /* slate-800 */
+  --color-dark-900: #0f172a; /* slate-900 */
 
   /* Success colors (green) */
-  --color-success-400: #4caf50;
-  --color-success-500: #45a049;
+  --color-success-400: #4ade80; /* green-400 */
+  --color-success-500: #22c55e; /* green-500 */
 
   /* Error colors */
-  --color-error-400: #f44336;
-  --color-error-500: #ff6b6b;
+  --color-error-400: #f87171; /* red-400 */
+  --color-error-500: #ef4444; /* red-500 */
 
   /* Custom spacing values */
   --spacing-15: 3.75rem;
@@ -36,8 +36,17 @@
 
 * {
   box-sizing: border-box;
-  padding: 0;
+}
+
+/* Reset margin for common block elements, but preserve default padding */
+body, h1, h2, h3, h4, h5, h6, p, ol, ul {
   margin: 0;
+}
+
+/* Preserve default padding for form elements and buttons */
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
 }
 
 html,
@@ -50,9 +59,10 @@ body {
 }
 
 body {
-  @apply text-dark-100;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  @apply text-gray-100;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   background-attachment: fixed;
+  min-height: 100vh;
 }
 
 a {
@@ -60,20 +70,7 @@ a {
   text-decoration: none;
 }
 
-/* Base button styles - can be overridden with Tailwind classes */
-button {
-  @apply cursor-pointer border-0 px-5 py-2.5 rounded text-base bg-success-400 text-white transition-all duration-300;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-button:hover {
-  @apply bg-success-500 -translate-y-px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-button:disabled {
-  @apply bg-gray-700 cursor-not-allowed opacity-60;
-}
+/* Remove global button styles - use Tailwind classes directly in components */
 
 /* Utility classes using @apply */
 @layer components {
@@ -82,20 +79,19 @@ button:disabled {
   }
 
   .game-info {
-    @apply bg-dark-600/95 rounded-xl p-5 shadow-2xl mb-5 border border-white/10;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    @apply bg-slate-800/90 rounded-xl p-8 shadow-2xl border border-slate-700/50 backdrop-blur-sm;
   }
 
   .status {
-    @apply text-lg font-bold mb-2.5 text-gray-100;
+    @apply text-lg font-bold mb-2.5 text-white;
   }
 
   .error {
-    @apply text-error-500 p-2.5 bg-red-500/10 rounded border border-red-500/30 my-2.5;
+    @apply text-error-400 p-4 bg-error-400/10 rounded-lg border border-error-400/30;
   }
 
   .loading-spinner {
-    @apply w-15 h-15 mx-auto animate-spin rounded-full border-4 border-gray-700 border-t-success-400;
+    @apply w-12 h-12 mx-auto animate-spin rounded-full border-4 border-slate-700 border-t-success-400;
   }
 
   /* Volume slider custom styling */
@@ -104,7 +100,7 @@ button:disabled {
     appearance: none;
     width: 16px;
     height: 16px;
-    background: #4caf50;
+    background: #4ade80;
     border-radius: 50%;
     cursor: pointer;
   }
@@ -112,7 +108,7 @@ button:disabled {
   input[type="range"]::-moz-range-thumb {
     width: 16px;
     height: 16px;
-    background: #4caf50;
+    background: #4ade80;
     border-radius: 50%;
     cursor: pointer;
     border: none;

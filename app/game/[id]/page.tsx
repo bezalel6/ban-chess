@@ -29,10 +29,15 @@ export default function GamePage() {
 
   if (!connected || !authenticated) {
     return (
-      <div className="container-custom">
-        <div className="game-info text-center">
-          <h2>{!connected ? "Connecting to game server..." : "Authenticating..."}</h2>
-          <p>Please wait while we establish a connection.</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="container-custom">
+          <div className="game-info text-center">
+            <div className="loading-spinner mb-4"></div>
+            <h2 className="text-xl font-semibold text-white mb-2">
+              {!connected ? "Connecting to game server..." : "Authenticating..."}
+            </h2>
+            <p className="text-gray-400">Please wait while we establish a connection.</p>
+          </div>
         </div>
       </div>
     );
@@ -40,10 +45,12 @@ export default function GamePage() {
 
   if (error) {
     return (
-      <div className="container-custom">
-        <div className="error">
-          <h2>Error</h2>
-          <p>{error}</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="container-custom">
+          <div className="error text-center">
+            <h2 className="text-xl font-semibold mb-2">Error</h2>
+            <p>{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -51,9 +58,12 @@ export default function GamePage() {
 
   if (!gameState) {
     return (
-      <div className="container-custom">
-        <div className="game-info text-center">
-          <h2>Loading game...</h2>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="container-custom">
+          <div className="game-info text-center">
+            <div className="loading-spinner mb-4"></div>
+            <h2 className="text-xl font-semibold text-white">Loading game...</h2>
+          </div>
         </div>
       </div>
     );
@@ -91,11 +101,11 @@ export default function GamePage() {
     return (
       <div className="mb-4">
         <span
-          className={`inline-block w-5 h-5 rounded-full border-2 border-gray-500 mr-2.5 align-middle ${
-            currentPlayer === "white" ? "bg-white" : "bg-gray-800"
+          className={`inline-block w-5 h-5 rounded-full border-2 mr-2.5 align-middle ${
+            currentPlayer === "white" ? "bg-white border-gray-400" : "bg-gray-900 border-gray-600"
           }`}
         />
-        <span className="text-lg font-bold">
+        <span className="text-lg font-bold text-white">
           {currentPlayer === "white" ? "White" : "Black"} to {nextAction}
         </span>
       </div>
@@ -106,15 +116,15 @@ export default function GamePage() {
     <div className="container-custom">
       <SoundControl />
       <div className="text-center mb-5">
-        <h1>♟️ Ban Chess</h1>
-        <p className="text-dark-200">Game ID: {gameId}</p>
+        <h1 className="text-3xl font-bold text-white mb-2">♟️ Ban Chess</h1>
+        <p className="text-gray-400">Game ID: {gameId}</p>
         <button
           onClick={copyGameLink}
-          className={`text-sm px-4 py-1 mt-2.5 transition-colors ${
-            copied ? "bg-success-400" : "bg-blue-600 hover:bg-blue-700"
+          className={`text-sm px-4 py-2 mt-2 rounded transition-all ${
+            copied ? "bg-success-400 text-white" : "bg-slate-700 hover:bg-slate-600 text-white"
           }`}
         >
-          {copied ? "Link Copied!" : "Copy Game Link"}
+          {copied ? "✓ Link Copied!" : "Copy Game Link"}
         </button>
       </div>
 
@@ -123,38 +133,40 @@ export default function GamePage() {
         <div className="status">{getStatusText()}</div>
 
         {gameState.playerColor && (
-          <div className="mt-2.5 text-dark-300">
+          <div className="mt-3 text-gray-400">
             You are playing as:{" "}
-            <strong className="text-gray-100">{gameState.playerColor}</strong>
+            <strong className="text-white">{gameState.playerColor}</strong>
           </div>
         )}
 
         {gameState.players && (
-          <div className="mt-2.5 text-dark-300">
-            <div>⚪ White: {gameState.players.white || "Waiting..."}</div>
-            <div>⚫ Black: {gameState.players.black || "Waiting..."}</div>
+          <div className="mt-3 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+            <div className="text-sm text-gray-300">
+              <div className="mb-1">⚪ White: <span className="font-semibold text-white">{gameState.players.white || "Waiting..."}</span></div>
+              <div>⚫ Black: <span className="font-semibold text-white">{gameState.players.black || "Waiting..."}</span></div>
+            </div>
           </div>
         )}
 
         <div className="mt-4">
           <details>
-            <summary className="cursor-pointer font-bold">
+            <summary className="cursor-pointer font-bold text-white">
               Game History ({gameState.history.length} actions)
             </summary>
-            <div className="mt-2.5 max-h-50 overflow-y-auto p-2.5 bg-slate-700/80 rounded">
+            <div className="mt-2.5 max-h-50 overflow-y-auto p-3 bg-slate-900/50 rounded border border-slate-700/50">
               {gameState.history.length === 0 ? (
-                <p>No moves yet</p>
+                <p className="text-gray-500">No moves yet</p>
               ) : (
                 gameState.history.map((entry, idx) => (
-                  <div key={idx} className="mb-1">
-                    {entry.turnNumber}. {entry.player}:
+                  <div key={idx} className="mb-1 text-sm text-gray-300">
+                    <span className="text-success-400 font-semibold">{entry.turnNumber}.</span> {entry.player}:
                     {entry.actionType === "ban" ? (
-                      <span>
+                      <span className="text-error-400">
                         {" "}
                         banned {entry.action.from}-{entry.action.to}
                       </span>
                     ) : (
-                      <span>
+                      <span className="text-white">
                         {" "}
                         {entry.san || `${entry.action.from}-${entry.action.to}`}
                       </span>
@@ -175,7 +187,7 @@ export default function GamePage() {
       />
 
       <div className="text-center mt-5">
-        <p className="text-dark-200 text-sm">
+        <p className="text-gray-400 text-sm">
           {gameState.nextAction === "ban"
             ? "Click on an opponent piece, then click its destination to ban that move"
             : "Click on your piece, then click its destination to move"}
