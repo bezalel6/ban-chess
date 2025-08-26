@@ -31,7 +31,7 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
       movable: {
         free: false,
         color: undefined,
-        dests: {},
+        dests: new Map(),
         showDests: true,
       },
       premovable: {
@@ -41,12 +41,12 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
 
     if (gameState.nextAction === 'move' && gameState.turn === playerColor) {
       // Player's turn to move
-      const dests: Record<string, string[]> = {};
+      const dests = new Map<string, string[]>();
       gameState.legalMoves.forEach((move) => {
-        if (!dests[move.from]) {
-          dests[move.from] = [];
+        if (!dests.has(move.from)) {
+          dests.set(move.from, []);
         }
-        dests[move.from].push(move.to);
+        dests.get(move.from)!.push(move.to);
       });
 
       baseConfig.movable = {
@@ -67,12 +67,12 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
       };
     } else if (gameState.nextAction === 'ban' && gameState.turn === playerColor) {
       // Player's turn to ban opponent's move
-      const dests: Record<string, string[]> = {};
+      const dests = new Map<string, string[]>();
       gameState.legalBans.forEach((ban) => {
-        if (!dests[ban.from]) {
-          dests[ban.from] = [];
+        if (!dests.has(ban.from)) {
+          dests.set(ban.from, []);
         }
-        dests[ban.from].push(ban.to);
+        dests.get(ban.from)!.push(ban.to);
       });
 
       // During ban phase, show opponent's pieces as movable (these are the moves you can ban)
@@ -105,7 +105,7 @@ export default function ChessBoard({ gameState, onMove, onBan, playerColor }: Ch
       baseConfig.movable = {
         free: false,
         color: undefined,
-        dests: {},
+        dests: new Map(),
         showDests: false,
       };
     }
