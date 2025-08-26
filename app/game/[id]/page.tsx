@@ -94,104 +94,103 @@ export default function GamePage() {
     }
   };
 
-  const getTurnIndicator = () => {
-    const currentPlayer = gameState.turn;
-    const nextAction = gameState.nextAction;
-
-    return (
-      <div className="mb-4">
-        <span
-          className={`inline-block w-5 h-5 rounded-full border-2 mr-2.5 align-middle ${
-            currentPlayer === "white" ? "bg-white border-gray-400" : "bg-gray-900 border-gray-600"
-          }`}
-        />
-        <span className="text-lg font-bold text-white">
-          {currentPlayer === "white" ? "White" : "Black"} to {nextAction}
-        </span>
-      </div>
-    );
-  };
 
   return (
-    <div className="container-custom">
-      <SoundControl />
-      <div className="text-center mb-5">
-        <h1 className="text-3xl font-bold text-white mb-2">♟️ Ban Chess</h1>
-        <p className="text-gray-400">Game ID: {gameId}</p>
-        <button
-          onClick={copyGameLink}
-          className={`text-sm px-4 py-2 mt-2 rounded transition-all ${
-            copied ? "bg-success-400 text-white" : "bg-slate-700 hover:bg-slate-600 text-white"
-          }`}
-        >
-          {copied ? "✓ Link Copied!" : "Copy Game Link"}
-        </button>
-      </div>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-[1400px] flex gap-6">
+        {/* Left Column - Chess Board */}
+        <div className="flex-[7] flex flex-col items-center justify-center">
+          <ChessBoard
+            gameState={gameState}
+            onMove={sendMove}
+            onBan={sendBan}
+            playerColor={gameState.playerColor}
+          />
+        </div>
 
-      <div className="game-info">
-        {getTurnIndicator()}
-        <div className="status">{getStatusText()}</div>
-
-        {gameState.playerColor && (
-          <div className="mt-3 text-gray-400">
-            You are playing as:{" "}
-            <strong className="text-white">{gameState.playerColor}</strong>
-          </div>
-        )}
-
-        {gameState.players && (
-          <div className="mt-3 p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
-            <div className="text-sm text-gray-300">
-              <div className="mb-1">⚪ White: <span className="font-semibold text-white">{gameState.players.white || "Waiting..."}</span></div>
-              <div>⚫ Black: <span className="font-semibold text-white">{gameState.players.black || "Waiting..."}</span></div>
+        {/* Right Column - Sidebar */}
+        <div className="flex-[3] min-w-[300px] max-w-[400px] flex flex-col h-[600px] bg-slate-900/30 rounded-lg">
+          {/* Status Section */}
+          <div className="p-4 pb-3">
+            <div className="text-lg font-semibold text-white">
+              {gameState.turn === "white" ? "White" : "Black"} to {gameState.nextAction}
+            </div>
+            <div className="text-sm text-gray-400 mt-1">
+              {getStatusText()}
             </div>
           </div>
-        )}
 
-        <div className="mt-4">
-          <details>
-            <summary className="cursor-pointer font-bold text-white">
-              Game History ({gameState.history.length} actions)
-            </summary>
-            <div className="mt-2.5 max-h-50 overflow-y-auto p-3 bg-slate-900/50 rounded border border-slate-700/50">
+          {/* Player Information */}
+          <div className="px-4 pb-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-white border border-gray-400"></span>
+                <span className="text-sm font-medium text-gray-300">White</span>
+              </div>
+              <span className="text-sm font-semibold text-white">
+                {gameState.players?.white || "Waiting..."}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-gray-800 border border-gray-600"></span>
+                <span className="text-sm font-medium text-gray-300">Black</span>
+              </div>
+              <span className="text-sm font-semibold text-white">
+                {gameState.players?.black || "Waiting..."}
+              </span>
+            </div>
+          </div>
+
+          {/* Move Log */}
+          <div className="flex-1 flex flex-col px-4 pb-4 min-h-0">
+            <div className="text-sm font-medium text-gray-400 mb-2">
+              Moves
+            </div>
+            <div className="flex-1 bg-slate-800/30 rounded-lg p-3 overflow-y-auto">
               {gameState.history.length === 0 ? (
-                <p className="text-gray-500">No moves yet</p>
+                <p className="text-sm text-gray-500">No moves yet</p>
               ) : (
-                gameState.history.map((entry, idx) => (
-                  <div key={idx} className="mb-1 text-sm text-gray-300">
-                    <span className="text-success-400 font-semibold">{entry.turnNumber}.</span> {entry.player}:
-                    {entry.actionType === "ban" ? (
-                      <span className="text-error-400">
-                        {" "}
-                        banned {entry.action.from}-{entry.action.to}
+                <div className="space-y-1">
+                  {gameState.history.map((entry, idx) => (
+                    <div key={idx} className="text-sm flex gap-2">
+                      <span className="text-gray-500 font-mono">
+                        {entry.turnNumber}.
                       </span>
-                    ) : (
-                      <span className="text-white">
-                        {" "}
-                        {entry.san || `${entry.action.from}-${entry.action.to}`}
+                      <span className="text-gray-300">
+                        {entry.player === "white" ? "White" : "Black"}
                       </span>
-                    )}
-                  </div>
-                ))
+                      {entry.actionType === "ban" ? (
+                        <span className="text-red-400 font-medium">
+                          banned {entry.action.from}-{entry.action.to}
+                        </span>
+                      ) : (
+                        <span className="text-white">
+                          {entry.san || `${entry.action.from}-${entry.action.to}`}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          </details>
+          </div>
+
+          {/* Bottom Controls */}
+          <div className="p-4 pt-0 flex items-center justify-between">
+            <SoundControl />
+            <button
+              onClick={copyGameLink}
+              className={`text-xs px-3 py-1.5 rounded transition-all ${
+                copied 
+                  ? "bg-green-600 text-white" 
+                  : "bg-slate-700 hover:bg-slate-600 text-gray-300"
+              }`}
+            >
+              {copied ? "✓ Copied" : "Share"}
+            </button>
+          </div>
         </div>
-      </div>
-
-      <ChessBoard
-        gameState={gameState}
-        onMove={sendMove}
-        onBan={sendBan}
-        playerColor={gameState.playerColor}
-      />
-
-      <div className="text-center mt-5">
-        <p className="text-gray-400 text-sm">
-          {gameState.nextAction === "ban"
-            ? "Click on an opponent piece, then click its destination to ban that move"
-            : "Click on your piece, then click its destination to move"}
-        </p>
       </div>
     </div>
   );

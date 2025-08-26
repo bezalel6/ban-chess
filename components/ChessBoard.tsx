@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef } from "react";
 import Chessground, {
   Dests,
   DrawShape,
   Key,
   ReactChessGroundProps,
-} from 'react-chessground';
-import 'react-chessground/dist/styles/chessground.css';
-import type { Move, Ban, GameState, HistoryEntry } from '@/lib/game-types';
-import soundManager from '@/lib/sound-manager';
+} from "react-chessground";
+import "react-chessground/dist/styles/chessground.css";
+import type { Move, Ban, GameState, HistoryEntry } from "@/lib/game-types";
+import soundManager from "@/lib/sound-manager";
 
 interface ChessBoardProps {
   gameState: GameState;
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
-  playerColor?: 'white' | 'black';
+  playerColor?: "white" | "black";
 }
 
 export default function ChessBoard({
@@ -31,7 +31,7 @@ export default function ChessBoard({
   // Play game start sound when first joining
   useEffect(() => {
     if (!hasPlayedGameStartRef.current && gameState.history.length === 0) {
-      soundManager.play('game-start');
+      soundManager.play("game-start");
       hasPlayedGameStartRef.current = true;
     }
   }, []);
@@ -46,11 +46,11 @@ export default function ChessBoard({
       const lastEntry = currentHistory[currentHistory.length - 1];
 
       // Play sound for bans
-      if (lastEntry.actionType === 'ban') {
-        soundManager.play('ban');
+      if (lastEntry.actionType === "ban") {
+        soundManager.play("ban");
         // Store the banned move for visual indication
         lastBannedMoveRef.current = lastEntry.action as Ban;
-      } else if (lastEntry.actionType === 'move') {
+      } else if (lastEntry.actionType === "move") {
         const move = lastEntry.action as Move;
         const isOpponent = lastEntry.player !== playerColor;
 
@@ -64,32 +64,32 @@ export default function ChessBoard({
         };
 
         // Check for capture (if 'x' is in the SAN notation)
-        if (lastEntry.san && lastEntry.san.includes('x')) {
+        if (lastEntry.san && lastEntry.san.includes("x")) {
           moveDetails.capture = true;
         }
 
         // Check for castling
         if (
           lastEntry.san &&
-          (lastEntry.san === 'O-O' || lastEntry.san === 'O-O-O')
+          (lastEntry.san === "O-O" || lastEntry.san === "O-O-O")
         ) {
           moveDetails.castle = true;
         }
 
         // Check for check
-        if (lastEntry.san && lastEntry.san.includes('+')) {
+        if (lastEntry.san && lastEntry.san.includes("+")) {
           moveDetails.check = true;
         }
 
         // Check for checkmate (game end)
-        if (lastEntry.san && lastEntry.san.includes('#')) {
-          soundManager.play('game-end');
+        if (lastEntry.san && lastEntry.san.includes("#")) {
+          soundManager.play("game-end");
         } else if (move.promotion) {
           moveDetails.promotion = true;
         }
 
         // Play the appropriate sound
-        if (!lastEntry.san?.includes('#')) {
+        if (!lastEntry.san?.includes("#")) {
           soundManager.playMoveSound(moveDetails);
         }
       }
@@ -107,7 +107,7 @@ export default function ChessBoard({
     let recentBan: Ban | null = null;
     for (let i = gameState.history.length - 1; i >= 0; i--) {
       const entry = gameState.history[i];
-      if (entry.actionType === 'ban') {
+      if (entry.actionType === "ban") {
         // The ban action itself contains the banned move
         recentBan = entry.action as Ban;
         console.log(`[Ban Visual] Found ban at history[${i}]:`, recentBan);
@@ -122,23 +122,23 @@ export default function ChessBoard({
       );
       // Add red arrow from origin to destination of the banned move
       banShapes.push({
-        orig: recentBan.from as Key,
-        dest: recentBan.to as Key,
-        brush: 'red',
+        orig: recentBan.from,
+        dest: recentBan.to,
+        brush: "red",
       });
       // Add a red circle on the destination square
       banShapes.push({
         orig: recentBan.to as Key,
-        brush: 'red',
+        brush: "red",
       });
       console.log(`[Ban Visual] Created ${banShapes.length} shapes`);
     } else {
-      console.log('[Ban Visual] No ban found in history');
+      console.log("[Ban Visual] No ban found in history");
     }
 
     const baseConfig: ReactChessGroundProps = {
-      fen: gameState.fen.split(' ')[0],
-      orientation: playerColor || 'white',
+      fen: gameState.fen.split(" ")[0],
+      orientation: playerColor || "white",
       coordinates: true,
       autoCastle: true,
       highlight: {
@@ -165,40 +165,40 @@ export default function ChessBoard({
         eraseOnClick: false,
         shapes: banShapes,
         brushes: {
-          green: { key: 'g', color: '#15781B', opacity: 1, lineWidth: 10 },
-          red: { key: 'r', color: '#882020', opacity: 1, lineWidth: 10 },
-          blue: { key: 'b', color: '#003088', opacity: 1, lineWidth: 10 },
-          yellow: { key: 'y', color: '#e68f00', opacity: 1, lineWidth: 10 },
+          green: { key: "g", color: "#15781B", opacity: 1, lineWidth: 10 },
+          red: { key: "r", color: "#882020", opacity: 1, lineWidth: 10 },
+          blue: { key: "b", color: "#003088", opacity: 1, lineWidth: 10 },
+          yellow: { key: "y", color: "#e68f00", opacity: 1, lineWidth: 10 },
           paleBlue: {
-            key: 'pb',
-            color: '#003088',
+            key: "pb",
+            color: "#003088",
             opacity: 0.4,
             lineWidth: 15,
           },
           paleGreen: {
-            key: 'pg',
-            color: '#15781B',
+            key: "pg",
+            color: "#15781B",
             opacity: 0.4,
             lineWidth: 15,
           },
-          paleRed: { key: 'pr', color: '#882020', opacity: 0.4, lineWidth: 15 },
+          paleRed: { key: "pr", color: "#882020", opacity: 0.4, lineWidth: 15 },
           paleGrey: {
-            key: 'pgr',
-            color: '#4a4a4a',
+            key: "pgr",
+            color: "#4a4a4a",
             opacity: 0.35,
             lineWidth: 15,
           },
           purple: {
-            key: 'purple',
-            color: '#68217a',
+            key: "purple",
+            color: "#68217a",
             opacity: 0.65,
             lineWidth: 10,
           },
-          pink: { key: 'pink', color: '#ee2080', opacity: 0.5, lineWidth: 10 },
-          white: { key: 'white', color: 'white', opacity: 1, lineWidth: 10 },
+          pink: { key: "pink", color: "#ee2080", opacity: 0.5, lineWidth: 10 },
+          white: { key: "white", color: "white", opacity: 1, lineWidth: 10 },
           paleWhite: {
-            key: 'pwhite',
-            color: 'white',
+            key: "pwhite",
+            color: "white",
             opacity: 0.6,
             lineWidth: 10,
           },
@@ -206,7 +206,7 @@ export default function ChessBoard({
       },
     };
 
-    if (gameState.nextAction === 'move' && gameState.turn === playerColor) {
+    if (gameState.nextAction === "move" && gameState.turn === playerColor) {
       // Player's turn to move
       const dests: Dests = new Map<Key, Key[]>();
       gameState.legalMoves.forEach((move) => {
@@ -233,7 +233,7 @@ export default function ChessBoard({
         },
       };
     } else if (
-      gameState.nextAction === 'ban' &&
+      gameState.nextAction === "ban" &&
       gameState.turn === playerColor
     ) {
       // Player's turn to ban opponent's move
@@ -246,7 +246,7 @@ export default function ChessBoard({
       });
 
       // During ban phase, show opponent's pieces as movable (these are the moves you can ban)
-      const opponentColor = gameState.turn === 'white' ? 'black' : 'white';
+      const opponentColor = gameState.turn === "white" ? "black" : "white";
 
       baseConfig.movable = {
         free: false,
@@ -277,7 +277,7 @@ export default function ChessBoard({
             tos.map((to) => ({
               orig: from,
               dest: to,
-              brush: 'yellow',
+              brush: "yellow",
             }))
           ),
         ],
