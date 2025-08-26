@@ -1,3 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  /* Primary colors */
+  --color-primary-50: #f0f9ff;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+
+  /* Dark theme colors */
+  --color-dark-100: #e0e0e0;
+  --color-dark-200: #a0a0a0;
+  --color-dark-300: #b0b0b0;
+  --color-dark-400: #1a1a2e;
+  --color-dark-500: #16213e;
+  --color-dark-600: #1e1e2d;
+  --color-dark-700: #16213e;
+  --color-dark-800: #1a1a2e;
+  --color-dark-900: #0f0f23;
+  
+  /* Success colors (green) */
+  --color-success-400: #4caf50;
+  --color-success-500: #45a049;
+  
+  /* Error colors */
+  --color-error-400: #f44336;
+  --color-error-500: #ff6b6b;
+  
+  /* Custom spacing values */
+  --spacing-15: 3.75rem;
+  --spacing-50: 12.5rem;
+  
+  /* Custom max heights */
+  --max-height-50: 12.5rem;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
@@ -14,7 +50,7 @@ body {
 }
 
 body {
-  color: #e0e0e0;
+  @apply text-dark-100;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   background-attachment: fixed;
 }
@@ -24,57 +60,94 @@ a {
   text-decoration: none;
 }
 
+/* Base button styles - can be overridden with Tailwind classes */
 button {
-  cursor: pointer;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-size: 16px;
-  background: #4caf50;
-  color: white;
-  transition: all 0.3s;
+  @apply cursor-pointer border-0 px-5 py-2.5 rounded text-base bg-success-400 text-white transition-all duration-300;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 button:hover {
-  background: #45a049;
-  transform: translateY(-1px);
+  @apply bg-success-500 -translate-y-px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 button:disabled {
-  background: #444;
-  cursor: not-allowed;
-  opacity: 0.6;
+  @apply bg-gray-700 cursor-not-allowed opacity-60;
 }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
+/* Utility classes using @apply */
+@layer components {
+  .container-custom {
+    @apply max-w-6xl mx-auto px-5;
+  }
 
-.game-info {
-  background: rgba(30, 30, 45, 0.95);
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-  margin-bottom: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
+  .game-info {
+    @apply bg-dark-600/95 rounded-xl p-5 shadow-2xl mb-5 border border-white/10;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
 
-.status {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #f0f0f0;
-}
+  .status {
+    @apply text-lg font-bold mb-2.5 text-gray-100;
+  }
 
-.error {
-  color: #ff6b6b;
-  padding: 10px;
-  background: rgba(244, 67, 54, 0.1);
-  border-radius: 5px;
-  margin: 10px 0;
-  border: 1px solid rgba(244, 67, 54, 0.3);
+  .error {
+    @apply text-error-500 p-2.5 bg-red-500/10 rounded border border-red-500/30 my-2.5;
+  }
+
+  .loading-spinner {
+    @apply w-15 h-15 mx-auto animate-spin rounded-full border-4 border-gray-700 border-t-success-400;
+  }
+
+  /* Volume slider custom styling */
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #4caf50;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #4caf50;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+
+  /* Chess board styles */
+  .chess-board-container {
+    --board-size: 500px;
+    --board-size-mobile: min(85vw, 400px);
+    @apply flex justify-center items-center p-4 bg-black/20 rounded-2xl mx-auto w-fit overflow-hidden;
+  }
+
+  /* Set size for the Chessground component */
+  .chess-board-container .cg-wrap {
+    width: var(--board-size);
+    height: var(--board-size);
+  }
+
+  /* Ensure the container fills the wrapper */
+  .chess-board-container .cg-container {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Responsive sizing */
+  @media (max-width: 768px) {
+    .chess-board-container .cg-wrap {
+      width: var(--board-size-mobile);
+      height: var(--board-size-mobile);
+    }
+  }
+
+  /* Ensure proper aspect ratio */
+  .chess-board-container .cg-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
 }

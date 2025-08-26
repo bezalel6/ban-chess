@@ -6,16 +6,22 @@
     "dev": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run ws-server\"",
     "dev:next": "portio --mine 3000 && next dev",
     "dev:ws": "portio --mine 8081 && nodemon server/ws-server.ts",
+    "dev:optimized": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run ws-server:optimized\"",
     "build": "next build",
     "start": "next start",
     "ws-server": "portio --mine 8081 && tsx server/ws-server.ts",
+    "ws-server:optimized": "portio --mine 8081 && tsx server/ws-server-optimized-fixed.ts",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "analyze": "npm run type-check && npm run lint"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
     "ban-chess.ts": "^1.1.3",
     "howler": "^2.2.4",
+    "iron-session": "^8.0.4",
+    "nanoid": "^5.1.5",
     "next": "14.2.18",
     "react": "^18",
     "react-chessground": "^1.5.0",
@@ -40,6 +46,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "nodemon": "^3.1.10",
+    "tailwindcss": "^4.1.12",
     "tsx": "^4.7.0",
     "typescript": "^5"
   }

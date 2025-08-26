@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useWebSocket } from '@/lib/ws-client';
@@ -27,8 +27,8 @@ export default function GamePage() {
 
   if (!connected) {
     return (
-      <div className="container">
-        <div className="game-info" style={{ textAlign: 'center' }}>
+      <div className="container-custom">
+        <div className="game-info text-center">
           <h2>Connecting to game server...</h2>
           <p>Please wait while we establish a connection.</p>
         </div>
@@ -38,7 +38,7 @@ export default function GamePage() {
 
   if (error) {
     return (
-      <div className="container">
+      <div className="container-custom">
         <div className="error">
           <h2>Error</h2>
           <p>{error}</p>
@@ -49,8 +49,8 @@ export default function GamePage() {
 
   if (!gameState) {
     return (
-      <div className="container">
-        <div className="game-info" style={{ textAlign: 'center' }}>
+      <div className="container-custom">
+        <div className="game-info text-center">
           <h2>Loading game...</h2>
         </div>
       </div>
@@ -85,20 +85,13 @@ export default function GamePage() {
     const nextAction = gameState.nextAction;
 
     return (
-      <div style={{ marginBottom: '15px' }}>
+      <div className="mb-4">
         <span
-          style={{
-            display: 'inline-block',
-            width: '20px',
-            height: '20px',
-            borderRadius: '50%',
-            backgroundColor: currentPlayer === 'white' ? '#fff' : '#333',
-            border: '2px solid #666',
-            marginRight: '10px',
-            verticalAlign: 'middle',
-          }}
+          className={`inline-block w-5 h-5 rounded-full border-2 border-gray-500 mr-2.5 align-middle ${
+            currentPlayer === 'white' ? 'bg-white' : 'bg-gray-800'
+          }`}
         />
-        <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
+        <span className="text-lg font-bold">
           {currentPlayer === 'white' ? 'White' : 'Black'} to {nextAction}
         </span>
       </div>
@@ -106,19 +99,16 @@ export default function GamePage() {
   };
 
   return (
-    <div className="container">
+    <div className="container-custom">
       <SoundControl />
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+      <div className="text-center mb-5">
         <h1>♟️ Ban Chess</h1>
-        <p style={{ color: '#a0a0a0' }}>Game ID: {gameId}</p>
+        <p className="text-dark-200">Game ID: {gameId}</p>
         <button
           onClick={copyGameLink}
-          style={{
-            fontSize: '14px',
-            padding: '5px 15px',
-            marginTop: '10px',
-            background: copied ? '#4CAF50' : '#2196F3',
-          }}
+          className={`text-sm px-4 py-1 mt-2.5 transition-colors ${
+            copied ? 'bg-success-400' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
           {copied ? 'Link Copied!' : 'Copy Game Link'}
         </button>
@@ -129,34 +119,25 @@ export default function GamePage() {
         <div className="status">{getStatusText()}</div>
 
         {gameState.playerColor && (
-          <div style={{ marginTop: '10px', color: '#b0b0b0' }}>
+          <div className="mt-2.5 text-dark-300">
             You are playing as:{' '}
-            <strong style={{ color: '#f0f0f0' }}>
+            <strong className="text-gray-100">
               {gameState.playerColor}
             </strong>
           </div>
         )}
 
-        <div style={{ marginTop: '15px' }}>
+        <div className="mt-4">
           <details>
-            <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
+            <summary className="cursor-pointer font-bold">
               Game History ({gameState.history.length} actions)
             </summary>
-            <div
-              style={{
-                marginTop: '10px',
-                maxHeight: '200px',
-                overflowY: 'auto',
-                padding: '10px',
-                background: 'rgba(40, 40, 55, 0.8)',
-                borderRadius: '5px',
-              }}
-            >
+            <div className="mt-2.5 max-h-50 overflow-y-auto p-2.5 bg-slate-700/80 rounded">
               {gameState.history.length === 0 ? (
                 <p>No moves yet</p>
               ) : (
                 gameState.history.map((entry, idx) => (
-                  <div key={idx} style={{ marginBottom: '5px' }}>
+                  <div key={idx} className="mb-1">
                     {entry.turnNumber}. {entry.player}:
                     {entry.actionType === 'ban' ? (
                       <span>
@@ -184,8 +165,8 @@ export default function GamePage() {
         playerColor={gameState.playerColor}
       />
 
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        <p style={{ color: '#a0a0a0', fontSize: '14px' }}>
+      <div className="text-center mt-5">
+        <p className="text-dark-200 text-sm">
           {gameState.nextAction === 'ban'
             ? 'Click on an opponent piece, then click its destination to ban that move'
             : 'Click on your piece, then click its destination to move'}

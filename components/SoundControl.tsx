@@ -26,10 +26,10 @@ export default function SoundControl() {
   };
 
   return (
-    <div className="sound-control">
+    <div className="fixed top-5 right-5 flex items-center gap-2.5 bg-dark-600/95 px-3 py-2 rounded-lg shadow-2xl border border-white/10 z-40 md:top-5 md:right-5 max-md:top-2.5 max-md:right-2.5 max-md:px-2.5 max-md:py-1.5">
       <button
         onClick={handleToggle}
-        className="sound-toggle"
+        className="bg-transparent border-none text-2xl cursor-pointer p-1 flex items-center justify-center transition-transform hover:scale-110 max-md:text-xl"
         title={isEnabled ? 'Mute sounds' : 'Enable sounds'}
       >
         {isEnabled ? '🔊' : '🔇'}
@@ -43,91 +43,13 @@ export default function SoundControl() {
           step="0.1"
           value={volume}
           onChange={handleVolumeChange}
-          className="volume-slider"
+          className="w-20 h-1 appearance-none bg-white/20 rounded-sm outline-none max-md:w-15"
           style={{
             background: `linear-gradient(to right, #4caf50 0%, #4caf50 ${volume * 100}%, rgba(255, 255, 255, 0.2) ${volume * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
           }}
           title={`Volume: ${Math.round(volume * 100)}%`}
         />
       )}
-
-      <style jsx>{`
-        .sound-control {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          background: rgba(30, 30, 45, 0.95);
-          padding: 8px 12px;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          z-index: 1000;
-        }
-
-        .sound-toggle {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          padding: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: transform 0.2s;
-        }
-
-        .sound-toggle:hover {
-          transform: scale(1.1);
-        }
-
-        .volume-slider {
-          width: 80px;
-          height: 4px;
-          -webkit-appearance: none;
-          appearance: none;
-          background: rgba(255, 255, 255, 0.2);
-          border-radius: 2px;
-          outline: none;
-        }
-
-        .volume-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 16px;
-          height: 16px;
-          background: #4caf50;
-          border-radius: 50%;
-          cursor: pointer;
-        }
-
-        .volume-slider::-moz-range-thumb {
-          width: 16px;
-          height: 16px;
-          background: #4caf50;
-          border-radius: 50%;
-          cursor: pointer;
-          border: none;
-        }
-
-        @media (max-width: 768px) {
-          .sound-control {
-            top: 10px;
-            right: 10px;
-            padding: 6px 10px;
-          }
-
-          .sound-toggle {
-            font-size: 20px;
-          }
-
-          .volume-slider {
-            width: 60px;
-          }
-        }
-      `}</style>
     </div>
   );
 }

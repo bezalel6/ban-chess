@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useMemo, useEffect, useRef } from 'react';
-import './ChessBoard.css';
 import Chessground, {
   Dests,
   DrawShape,
