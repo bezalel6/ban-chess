@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import Chessground from 'react-chessground';
 import 'react-chessground/dist/styles/chessground.css';
-import type { Move, Ban, GameState } from '@/lib/game-types';
+import type { Move, Ban, GameState, HistoryEntry } from '@/lib/game-types';
+import soundManager from '@/lib/sound-manager';
 
 interface ChessBoardProps {
   gameState: GameState;
@@ -13,6 +14,72 @@ interface ChessBoardProps {
 }
 
 export default function ChessBoard({ gameState, onMove, onBan, playerColor }: ChessBoardProps) {
+  const previousHistoryRef = useRef<HistoryEntry[]>([]);
+  const hasPlayedGameStartRef = useRef(false);
+  
+  // Play game start sound when first joining
+  useEffect(() => {
+    if (!hasPlayedGameStartRef.current && gameState.history.length === 0) {
+      soundManager.play('game-start');
+      hasPlayedGameStartRef.current = true;
+    }
+  }, []);
+  
+  // Detect and play sounds for moves
+  useEffect(() => {
+    const previousHistory = previousHistoryRef.current;
+    const currentHistory = gameState.history;
+    
+    // Check if a new move was made
+    if (currentHistory.length > previousHistory.length) {
+      const lastEntry = currentHistory[currentHistory.length - 1];
+      
+      // Only play sound for actual moves, not bans
+      if (lastEntry.actionType === 'move') {
+        const move = lastEntry.action as Move;
+        const isOpponent = lastEntry.player !== playerColor;
+        
+        // Determine move characteristics
+        const moveDetails = {
+          isOpponent,
+          capture: false,
+          castle: false,
+          check: false,
+          promotion: false,
+        };
+        
+        // Check for capture (if 'x' is in the SAN notation)
+        if (lastEntry.san && lastEntry.san.includes('x')) {
+          moveDetails.capture = true;
+        }
+        
+        // Check for castling
+        if (lastEntry.san && (lastEntry.san === 'O-O' || lastEntry.san === 'O-O-O')) {
+          moveDetails.castle = true;
+        }
+        
+        // Check for check
+        if (lastEntry.san && lastEntry.san.includes('+')) {
+          moveDetails.check = true;
+        }
+        
+        // Check for checkmate (game end)
+        if (lastEntry.san && lastEntry.san.includes('#')) {
+          soundManager.play('game-end');
+        } else if (move.promotion) {
+          moveDetails.promotion = true;
+        }
+        
+        // Play the appropriate sound
+        if (!lastEntry.san?.includes('#')) {
+          soundManager.playMoveSound(moveDetails);
+        }
+      }
+    }
+    
+    // Update the reference
+    previousHistoryRef.current = [...currentHistory];
+  }, [gameState.history, playerColor]);
   
   const config = useMemo(() => {
     const baseConfig: any = {
