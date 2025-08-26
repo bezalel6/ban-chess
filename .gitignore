@@ -43,3 +43,8 @@ Thumbs.db
 
 .playwright-mcp
 logs
+out.txt
+node.dmp
+insane.txt
+full.dmp
+export-proc.txt
