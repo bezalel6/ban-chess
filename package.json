@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "portio --mine 3000 && next dev",
+    "dev": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
+    "dev:next": "portio --mine 3000 && next dev",
+    "dev:ws": "portio --mine 8081 && nodemon server/ws-server.ts",
     "build": "next build",
     "start": "next start",
     "ws-server": "portio --mine 8081 && tsx server/ws-server.ts"
@@ -24,6 +26,8 @@
     "@types/react-dom": "^18",
     "@types/uuid": "^9.0.8",
     "@types/ws": "^8.5.10",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.10",
     "tsx": "^4.7.0",
     "typescript": "^5"
   }

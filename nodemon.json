@@ -1,0 +1,9 @@
+{
+  "watch": ["server", "lib"],
+  "ext": "ts,js",
+  "ignore": ["*.test.ts", "*.spec.ts"],
+  "exec": "tsx",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
