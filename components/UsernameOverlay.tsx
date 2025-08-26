@@ -21,8 +21,8 @@ export default function UsernameOverlay() {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-800/95 border border-slate-700/50 rounded-xl shadow-2xl p-8 max-w-md w-full backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-800 border border-slate-700/50 rounded-xl shadow-2xl p-8 max-w-md w-full">
         <div className="text-center mb-6">
           <div className="text-5xl mb-4">♟️</div>
           <h2 className="text-3xl font-bold mb-2 text-white">Welcome to Ban Chess!</h2>
@@ -40,7 +40,7 @@ export default function UsernameOverlay() {
               className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-lg focus:outline-none focus:border-blue-400 focus:bg-slate-900/70 text-white placeholder-gray-500 text-lg transition-all"
               minLength={2}
               maxLength={20}
-              pattern="[a-zA-Z0-9_-]{2,20}"
+              pattern="[a-zA-Z0-9_\-]{2,20}"
               required
               disabled={isPending}
               autoFocus

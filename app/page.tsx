@@ -7,11 +7,11 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-4xl">
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-2xl p-8 md:p-12">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700/50 shadow-2xl p-8 md:p-12">
             
             {/* Title Section */}
             <div className="text-center mb-8">
-              <div className="text-7xl mb-4 animate-pulse">♟️</div>
+              <div className="text-7xl mb-4">♟️</div>
               <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
                 Ban Chess Web
               </h1>

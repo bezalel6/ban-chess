@@ -29,7 +29,7 @@ export default function SoundControl() {
   return (
     <div className="fixed bottom-4 left-4 z-40">
       <div 
-        className={`bg-slate-800/90 backdrop-blur-sm rounded-xl border border-slate-700/50 shadow-xl transition-all ${
+        className={`bg-slate-800 rounded-xl border border-slate-700/50 shadow-xl transition-all ${
           isExpanded ? 'p-3' : 'p-2'
         }`}
         onMouseEnter={() => setIsExpanded(true)}

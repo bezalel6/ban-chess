@@ -20,7 +20,7 @@ interface ChessBoardProps {
   playerColor?: "white" | "black";
 }
 
-export default function ChessBoard({
+const ChessBoard = React.memo(function ChessBoard({
   gameState,
   onMove,
   onBan,
@@ -301,4 +301,17 @@ export default function ChessBoard({
       <Chessground {...config} />
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  // Only re-render if game state actually changed
+  return (
+    prevProps.gameState.fen === nextProps.gameState.fen &&
+    prevProps.gameState.nextAction === nextProps.gameState.nextAction &&
+    prevProps.gameState.turn === nextProps.gameState.turn &&
+    prevProps.playerColor === nextProps.playerColor &&
+    prevProps.gameState.legalMoves === nextProps.gameState.legalMoves &&
+    prevProps.gameState.legalBans === nextProps.gameState.legalBans
+  );
+});
+
+export default ChessBoard;

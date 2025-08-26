@@ -9,10 +9,6 @@ export default function UserInfo() {
   const [isPending, startTransition] = useTransition();
 
   const handleSignOut = () => {
-    // Add confirmation dialog
-    const confirmLogout = window.confirm('Are you sure you want to sign out? You will lose any ongoing games.');
-    if (!confirmLogout) return;
-    
     startTransition(async () => {
       await logoutAction();
     });
@@ -24,12 +20,12 @@ export default function UserInfo() {
 
   return (
     <div className="fixed top-4 right-4 z-40">
-      <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl border border-slate-700/50 shadow-xl p-3 flex items-center gap-3">
+      <div className="bg-slate-800 rounded-xl border border-slate-700/50 shadow-xl p-3 flex items-center gap-3">
         {/* Online Status */}
         <div className="flex items-center gap-2.5">
           <div className="relative">
             <div className="w-2.5 h-2.5 bg-green-500 rounded-full"></div>
-            <div className="absolute inset-0 w-2.5 h-2.5 bg-green-500 rounded-full animate-ping"></div>
+            {/* Removed animate-ping for performance */}
           </div>
           <div className="flex flex-col">
             <span className="text-xs text-gray-500 leading-none">Playing as</span>

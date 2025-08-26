@@ -168,8 +168,10 @@ wss.on('connection', (ws: WebSocket) => {
           
           // Check if this user is already connected
           const existingPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
-          if (existingPlayer) {
-            // Close the old connection
+          if (existingPlayer && existingPlayer.ws !== ws) {
+            // Close the old connection only if it's a different websocket
+            console.log(`Closing old connection for ${username}`);
+            authenticatedPlayers.delete(existingPlayer.ws);
             existingPlayer.ws.close();
           }
           

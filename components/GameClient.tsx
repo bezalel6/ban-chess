@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { useWebSocket } from '@/lib/ws-hooks';
+import { useWebSocket } from '@/lib/ws-hooks-optimized';
 import SoundControl from '@/components/SoundControl';
 import type { SessionData } from '@/lib/auth-unified';
 import GameStatus from '@/components/GameStatus';

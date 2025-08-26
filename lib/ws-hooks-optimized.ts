@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, useCallback, useMemo } from 'react';
 import type { Move, Ban, GameState, ServerMsg } from './game-types';
 
 interface WebSocketStore {
@@ -13,8 +13,8 @@ interface WebSocketStore {
   matched: { gameId: string; color: 'white' | 'black'; opponent?: string } | null;
 }
 
-// Global map to track WebSocket instances by user
-const globalConnections = new Map<string, WebSocketManager>();
+// Global singleton management
+const globalManagers = new Map<string, WebSocketManager>();
 
 class WebSocketManager {
   private store: WebSocketStore = {
@@ -32,33 +32,35 @@ class WebSocketManager {
   private isIntentionalDisconnect = false;
   private connectionKey: string;
 
-  constructor(
-    // eslint-disable-next-line no-unused-vars
-    private _url: string,
-    // eslint-disable-next-line no-unused-vars
-    private _gameId?: string,
-    // eslint-disable-next-line no-unused-vars
-    private _user?: { userId: string; username: string }
-  ) {
-    this.connectionKey = _user ? `${_user.userId}-${_gameId || 'queue'}` : 'anonymous';
+  static getInstance(
+    url: string,
+    gameId?: string,
+    user?: { userId: string; username: string }
+  ): WebSocketManager {
+    const key = user ? `${user.userId}-${gameId || 'queue'}` : 'anonymous';
     
-    // Check if a connection already exists for this user
-    const existing = globalConnections.get(this.connectionKey);
-    if (existing) {
-      // Return the existing connection instead of creating a new one
-      return existing;
+    let instance = globalManagers.get(key);
+    if (!instance) {
+      instance = new WebSocketManager(url, gameId, user, key);
+      globalManagers.set(key, instance);
     }
     
-    // Register this connection globally
-    globalConnections.set(this.connectionKey, this);
+    return instance;
+  }
+
+  private constructor(
+    private _url: string,
+    private _gameId?: string,
+    private _user?: { userId: string; username: string },
+    connectionKey?: string
+  ) {
+    this.connectionKey = connectionKey || 'default';
     this.connect();
   }
 
   private connect() {
-    // Don't reconnect if intentionally disconnected
     if (this.isIntentionalDisconnect) return;
     
-    // Don't create multiple connections
     if (this.store.ws?.readyState === WebSocket.CONNECTING || 
         this.store.ws?.readyState === WebSocket.OPEN) {
       return;
@@ -70,11 +72,12 @@ class WebSocketManager {
       this.store.ws.onopen = () => {
         console.log('WebSocket connected');
         this.updateStore({ connected: true, error: null });
-        // Clear any pending reconnect
+        
         if (this.reconnectTimeout) {
           clearTimeout(this.reconnectTimeout);
           this.reconnectTimeout = null;
         }
+        
         if (this._user) {
           this.authenticate();
         }
@@ -91,7 +94,7 @@ class WebSocketManager {
 
       this.store.ws.onclose = () => {
         this.updateStore({ connected: false, authenticated: false });
-        // Only attempt reconnection if not intentionally disconnected
+        
         if (!this.isIntentionalDisconnect && !this.reconnectTimeout) {
           this.reconnectTimeout = setTimeout(() => {
             this.reconnectTimeout = null;
@@ -126,20 +129,22 @@ class WebSocketManager {
         break;
       
       case 'state':
-        this.updateStore({
-          gameState: {
-            fen: msg.fen,
-            pgn: msg.pgn,
-            nextAction: msg.nextAction,
-            legalMoves: msg.legalMoves || [],
-            legalBans: msg.legalBans || [],
-            history: msg.history || [],
-            turn: msg.turn,
-            gameId: msg.gameId,
-            playerColor: this.store.gameState?.playerColor,
-            players: msg.players,
-          }
-        });
+        // Only update if state actually changed
+        const newState = {
+          fen: msg.fen,
+          pgn: msg.pgn,
+          nextAction: msg.nextAction,
+          legalMoves: msg.legalMoves || [],
+          legalBans: msg.legalBans || [],
+          history: msg.history || [],
+          turn: msg.turn,
+          gameId: msg.gameId,
+          playerColor: this.store.gameState?.playerColor,
+          players: msg.players,
+        };
+        
+        // Deep equality check could be added here for further optimization
+        this.updateStore({ gameState: newState });
         break;
       
       case 'joined':
@@ -153,7 +158,9 @@ class WebSocketManager {
         break;
       
       case 'queued':
-        this.updateStore({ position: msg.position });
+        if (this.store.position !== msg.position) {
+          this.updateStore({ position: msg.position });
+        }
         break;
       
       case 'matched':
@@ -167,8 +174,19 @@ class WebSocketManager {
   }
 
   private updateStore(updates: Partial<WebSocketStore>) {
-    this.store = { ...this.store, ...updates };
-    this.listeners.forEach(listener => listener());
+    // Only notify listeners if something actually changed
+    let hasChanges = false;
+    for (const [key, value] of Object.entries(updates)) {
+      if (this.store[key as keyof WebSocketStore] !== value) {
+        hasChanges = true;
+        break;
+      }
+    }
+    
+    if (hasChanges) {
+      this.store = { ...this.store, ...updates };
+      this.listeners.forEach(listener => listener());
+    }
   }
 
   private joinGame(gameId: string) {
@@ -233,8 +251,7 @@ class WebSocketManager {
       this.store.ws.close();
       this.store.ws = null;
     }
-    // Remove from global connections
-    globalConnections.delete(this.connectionKey);
+    globalManagers.delete(this.connectionKey);
   }
 }
 
@@ -244,27 +261,26 @@ export function useWebSocket(
 ) {
   const managerRef = useRef<WebSocketManager | null>(null);
   
-  // Create manager once on first render if user is provided
-  if (!managerRef.current && user) {
-    managerRef.current = new WebSocketManager(
-      process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081',
-      gameId,
-      user
-    );
-  }
-  
-  // Cleanup only on unmount
+  // Get or create manager instance
   useEffect(() => {
+    if (user && !managerRef.current) {
+      managerRef.current = WebSocketManager.getInstance(
+        process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081',
+        gameId,
+        user
+      );
+    }
+    
     return () => {
-      if (managerRef.current) {
-        managerRef.current.disconnect();
-        managerRef.current = null;
-      }
+      // Don't disconnect on unmount - let the global instance persist
+      // Only disconnect when the component using this hook is truly done
     };
-  }, []); // Empty dependency array - only cleanup on unmount
+  }, [gameId, user]);
   
-  // Create a stable empty store for when no manager exists
-  const emptyStore = useRef<WebSocketStore>({
+  const manager = managerRef.current;
+  
+  // Create stable empty store for initial render
+  const emptyStore = useMemo<WebSocketStore>(() => ({
     ws: null,
     gameState: null,
     error: null,
@@ -272,22 +288,38 @@ export function useWebSocket(
     authenticated: false,
     position: null,
     matched: null,
-  }).current;
+  }), []);
   
-  const manager = managerRef.current;
   const store = useSyncExternalStore(
     manager ? manager.subscribe : () => () => {},
     manager ? manager.getSnapshot : () => emptyStore,
     manager ? manager.getSnapshot : () => emptyStore
   );
   
-  return {
+  // Memoize action functions to prevent re-renders
+  const sendMove = useCallback((move: Move) => {
+    manager?.sendMove(move);
+  }, [manager]);
+  
+  const sendBan = useCallback((ban: Ban) => {
+    manager?.sendBan(ban);
+  }, [manager]);
+  
+  const joinQueue = useCallback(() => {
+    manager?.joinQueue();
+  }, [manager]);
+  
+  const leaveQueue = useCallback(() => {
+    manager?.leaveQueue();
+  }, [manager]);
+  
+  return useMemo(() => ({
     ...store,
-    sendMove: manager ? manager.sendMove : () => {},
-    sendBan: manager ? manager.sendBan : () => {},
-    joinQueue: manager ? manager.joinQueue : () => {},
-    leaveQueue: manager ? manager.leaveQueue : () => {},
-  };
+    sendMove,
+    sendBan,
+    joinQueue,
+    leaveQueue,
+  }), [store, sendMove, sendBan, joinQueue, leaveQueue]);
 }
 
 export function useQueue(user?: { userId: string; username: string }) {

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useQueue } from '@/lib/ws-hooks';
+import { useQueue } from '@/lib/ws-hooks-optimized';
 
 export default function QueueSection() {
   const router = useRouter();

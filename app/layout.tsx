@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { getCurrentUser } from "@/lib/auth-unified";
 import UserInfoWrapper from "@/components/UserInfoWrapper";
+import ReactScanProvider from "@/components/ReactScanProvider";
 
 export const metadata: Metadata = {
   title: "2Ban 2Chess - Multiplayer Ban Chess",
@@ -24,6 +25,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="bg-slate-950 text-white">
+        <ReactScanProvider />
         <AuthProvider userPromise={userPromise}>
           <Suspense fallback={null}>
             <UserInfoWrapper />
