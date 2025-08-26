@@ -100,3 +100,42 @@ Nodemon watches `server/` and `lib/` directories for TypeScript changes and rest
 - Strict mode enabled
 - Path alias `@/*` maps to project root
 - Target ES2017 for server compatibility
+- Type support for the react-chessground library is declared in `types/react-chessground.d.ts` 
+
+## React-Chessground Configuration
+
+The chess board uses react-chessground with the following configuration options:
+
+### Key Configuration Properties
+
+- **fen**: Chess position in Forsyth notation
+- **orientation**: Board perspective (`'white'` or `'black'`)
+- **coordinates**: Show board coordinates (a-h, 1-8)
+- **autoCastle**: Auto-move rook when castling
+- **highlight**: Object for highlighting last move and check
+- **animation**: Control piece animations (duration in ms)
+- **movable**: Configure piece movement, valid moves, and event handlers
+- **drawable**: Configure arrow/circle drawing for visual indicators
+
+### Ban Chess Visual Indicators
+
+The board uses the drawable configuration to show:
+
+- **Red arrows/circles**: Indicate the last banned move
+- **Yellow highlights**: Show available moves to ban during ban phase
+
+Example drawable configuration for ban indicators:
+
+```javascript
+drawable: {
+  enabled: true,
+  visible: true,
+  defaultSnapToValidMove: false,
+  eraseOnClick: false,
+  shapes: [...],  // Dynamic shapes array
+  brushes: {
+    red: { key: 'red', color: '#ff6b6b', opacity: 0.8, lineWidth: 10 },
+    yellow: { key: 'yellow', color: '#ffeb3b', opacity: 0.6, lineWidth: 10 }
+  }
+}
+```
