@@ -8,7 +8,8 @@
     "dev:ws": "portio --mine 8081 && nodemon server/ws-server.ts",
     "build": "next build",
     "start": "next start",
-    "ws-server": "portio --mine 8081 && tsx server/ws-server.ts"
+    "ws-server": "portio --mine 8081 && tsx server/ws-server.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "ban-chess.ts": "^1.1.3",

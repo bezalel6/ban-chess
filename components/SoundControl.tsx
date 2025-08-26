@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import soundManager from "@/lib/sound-manager";
+import React, { useState, useEffect } from 'react';
+import soundManager from '@/lib/sound-manager';
 
 export default function SoundControl() {
   const [isEnabled, setIsEnabled] = useState(true);
@@ -30,9 +30,9 @@ export default function SoundControl() {
       <button
         onClick={handleToggle}
         className="sound-toggle"
-        title={isEnabled ? "Mute sounds" : "Enable sounds"}
+        title={isEnabled ? 'Mute sounds' : 'Enable sounds'}
       >
-        {isEnabled ? "🔊" : "🔇"}
+        {isEnabled ? '🔊' : '🔇'}
       </button>
 
       {isEnabled && (
@@ -45,7 +45,7 @@ export default function SoundControl() {
           onChange={handleVolumeChange}
           className="volume-slider"
           style={{
-            background: `linear-gradient(to right, #4caf50 0%, #4caf50 ${volume * 100}%, rgba(255, 255, 255, 0.2) ${volume * 100}%, rgba(255, 255, 255, 0.2) 100%)`
+            background: `linear-gradient(to right, #4caf50 0%, #4caf50 ${volume * 100}%, rgba(255, 255, 255, 0.2) ${volume * 100}%, rgba(255, 255, 255, 0.2) 100%)`,
           }}
           title={`Volume: ${Math.round(volume * 100)}%`}
         />

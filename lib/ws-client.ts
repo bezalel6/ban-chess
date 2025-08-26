@@ -16,7 +16,7 @@ export function useWebSocket(gameId: string | null) {
     let isConnecting = true;
 
     // Get player color from sessionStorage (set by queue match)
-    const storedColor =Math.random()%2==0?"white":"black"
+    const storedColor = Math.random() % 2 == 0 ? 'white' : 'black';
     // const storedColor = sessionStorage.getItem(`gameColor-${gameId}`) as 'white' | 'black' | null;
     console.log('Stored color from sessionStorage:', storedColor);
     if (storedColor) {
@@ -39,10 +39,10 @@ export function useWebSocket(gameId: string | null) {
 
       ws.onopen = () => {
         if (!isConnecting) return;
-        
+
         setConnected(true);
         setError(null);
-        
+
         // Join the game
         const joinMsg: ClientMsg = { type: 'join-game', gameId };
         ws?.send(JSON.stringify(joinMsg));
@@ -50,11 +50,11 @@ export function useWebSocket(gameId: string | null) {
 
       ws.onmessage = (event) => {
         if (!isConnecting) return;
-        
+
         const msg: ServerMsg = JSON.parse(event.data);
-        
+
         if (msg.type === 'state') {
-          setGameState(prev => ({
+          setGameState((prev) => ({
             fen: msg.fen,
             pgn: msg.pgn,
             nextAction: msg.nextAction,
@@ -80,17 +80,21 @@ export function useWebSocket(gameId: string | null) {
           });
         } else if (msg.type === 'joined') {
           console.log('Received joined message with color:', msg.color);
-          setGameState(prev => prev ? { ...prev, playerColor: msg.color } : {
-            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-            pgn: '',
-            nextAction: 'ban',
-            legalMoves: [],
-            legalBans: [],
-            history: [],
-            turn: 'black',
-            gameId,
-            playerColor: msg.color,
-          });
+          setGameState((prev) =>
+            prev
+              ? { ...prev, playerColor: msg.color }
+              : {
+                  fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+                  pgn: '',
+                  nextAction: 'ban',
+                  legalMoves: [],
+                  legalBans: [],
+                  history: [],
+                  turn: 'black',
+                  gameId,
+                  playerColor: msg.color,
+                }
+          );
         } else if (msg.type === 'error') {
           setError(msg.message);
         }
@@ -119,19 +123,25 @@ export function useWebSocket(gameId: string | null) {
     };
   }, [gameId]);
 
-  const sendMove = useCallback((move: Move) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && gameId) {
-      const moveMsg: ClientMsg = { type: 'move', gameId, move };
-      wsRef.current.send(JSON.stringify(moveMsg));
-    }
-  }, [gameId]);
+  const sendMove = useCallback(
+    (move: Move) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN && gameId) {
+        const moveMsg: ClientMsg = { type: 'move', gameId, move };
+        wsRef.current.send(JSON.stringify(moveMsg));
+      }
+    },
+    [gameId]
+  );
 
-  const sendBan = useCallback((ban: Ban) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && gameId) {
-      const banMsg: ClientMsg = { type: 'ban', gameId, ban };
-      wsRef.current.send(JSON.stringify(banMsg));
-    }
-  }, [gameId]);
+  const sendBan = useCallback(
+    (ban: Ban) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN && gameId) {
+        const banMsg: ClientMsg = { type: 'ban', gameId, ban };
+        wsRef.current.send(JSON.stringify(banMsg));
+      }
+    },
+    [gameId]
+  );
 
   return {
     gameState,

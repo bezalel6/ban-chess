@@ -6,7 +6,8 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Ban Chess Web',
-  description: 'Online platform for playing Ban Chess - a chess variant where opponents can ban moves',
+  description:
+    'Online platform for playing Ban Chess - a chess variant where opponents can ban moves',
 };
 
 export default function RootLayout({

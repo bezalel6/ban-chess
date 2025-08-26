@@ -1,14 +1,14 @@
 // Custom type definitions for react-chessground
 // Based on @types/react-chessground but with all types exported
 
-declare module "react-chessground" {
-  import React from "react";
+declare module 'react-chessground' {
+  import React from 'react';
 
-  export type Color = "white" | "black";
-  export type Role = "pawn" | "knight" | "bishop" | "rook" | "queen" | "king";
-  export type File = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h";
-  export type Rank = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8";
-  export type Key = "a0" | `${File}${Rank}`;
+  export type Color = 'white' | 'black';
+  export type Role = 'pawn' | 'knight' | 'bishop' | 'rook' | 'queen' | 'king';
+  export type File = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h';
+  export type Rank = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8';
+  export type Key = 'a0' | `${File}${Rank}`;
   export type SquareClasses = Map<Key, string>;
   export type Dests = Map<Key, Key[]>;
 
@@ -39,7 +39,7 @@ declare module "react-chessground" {
 
   export interface MovableOptions {
     free?: boolean;
-    color?: Color | "both";
+    color?: Color | 'both';
     dests?: Dests;
     showDests?: boolean;
     events?: {
@@ -94,7 +94,7 @@ declare module "react-chessground" {
     brush?: string;
     modifiers?: DrawModifiers;
     piece?: DrawShapePiece;
-    customSvg?: { html: string; center?: "orig" | "dest" | "label" };
+    customSvg?: { html: string; center?: 'orig' | 'dest' | 'label' };
     label?: { text: string; fill?: string };
   }
 
@@ -127,7 +127,7 @@ declare module "react-chessground" {
   export interface ReactChessGroundProps
     extends Omit<
       React.HTMLAttributes<HTMLDivElement>,
-      "draggable" | "onSelect"
+      'draggable' | 'onSelect'
     > {
     width?: string | number;
     height?: string | number;

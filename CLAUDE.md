@@ -1,141 +1,216 @@
-# CLAUDE.md
+# Next.js 14 Project Configuration
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Project Context
+
+This is a Next.js 14 application (2ban-2chess) using:
+
+- **App Router** (not Pages Router)
+- **React 18** with Server Components by default
+- **TypeScript** for type safety
+- **Server Actions** for mutations
+- **WebSocket server** for real-time game communication
+
+## Security Best Practices
+
+1. **Always validate Server Actions input** with Zod or similar
+2. **Authenticate and authorize** in Server Actions and middleware
+3. **Sanitize user input** before rendering
+4. **Use environment variables correctly**:
+   - `NEXT_PUBLIC_*` for client-side
+   - Others stay server-side only
+5. **Implement rate limiting** for public actions
+6. **Configure CSP headers** in next.config.js
+
+## Performance Optimization
+
+1. **Use Server Components** to reduce bundle size
+2. **Implement streaming** with Suspense boundaries
+3. **Optimize images** with next/image component
+4. **Use dynamic imports** for code splitting
+5. **Configure proper caching** strategies
+6. **Monitor Core Web Vitals**
+
+## File Conventions
+
+Always use these file names in the `app/` directory:
+
+- `page.tsx` - Route page component
+- `layout.tsx` - Shared layout wrapper
+- `loading.tsx` - Loading UI (Suspense fallback)
+- `error.tsx` - Error boundary (must be Client Component)
+- `not-found.tsx` - 404 page
+- `route.ts` - API route handler
+- `template.tsx` - Re-rendered layout
+- `default.tsx` - Parallel route fallback
+
+## Data Fetching Patterns
+
+```typescript
+// ✅ GOOD: Fetch in Server Component
+async function ProductList() {
+  const products = await db.products.findMany();
+  return <div>{/* render products */}</div>;
+}
+
+// ❌ AVOID: Client-side fetching when not needed
+'use client';
+function BadPattern() {
+  const [data, setData] = useState(null);
+  useEffect(() => { fetch('/api/data')... }, []);
+}
+```
+
+## Linting and Code Quality
+
+### Available Commands
+
+```bash
+# Type checking
+npm run type-check      # Run TypeScript type checking
+
+# Linting
+npm run lint            # Run ESLint to check for errors
+npm run lint:fix        # Auto-fix ESLint issues where possible
+
+# Formatting
+npm run format          # Format all files with Prettier
+npm run format:check    # Check if files are properly formatted
+
+# Combined commands
+npm run check-all       # Run type-check, lint, and format:check
+npm run fix-all         # Run lint:fix and format
+```
+
+### Configuration Files
+
+- **TypeScript**: `tsconfig.json` - Strict mode enabled
+- **ESLint**: `eslint.config.mjs` - ESLint v9 flat config with TypeScript rules
+- **Prettier**: `.prettierrc.json` - Windows-compatible formatting (CRLF endings)
+- **Husky**: `.husky/pre-commit` - Runs lint-staged on commit
+- **Lint-staged**: `.lintstagedrc.json` - Runs ESLint and Prettier on staged files
+
+### Key Rules
+
+- **No explicit `any` types**: TypeScript's `strict` mode and ESLint's `@typescript-eslint/no-explicit-any` rule
+- **Unused variables**: Must prefix with underscore (e.g., `_unusedVar`)
+- **Console statements**: Only `console.warn` and `console.error` allowed
+- **Windows line endings**: CRLF configured in Prettier
 
 ## Development Commands
 
-### Running the Application
-
 ```bash
-# Start both Next.js and WebSocket server concurrently
-npm run dev
-
-# Start individual services
-npm run dev:next    # Next.js app on port 3000
-npm run dev:ws       # WebSocket server on port 8081
-
-# Production build
-npm run build
-npm run start
+npm run dev          # Start dev server with WebSocket server
+npm run dev:next     # Start Next.js dev server only
+npm run dev:ws       # Start WebSocket server only
+npm run build        # Production build
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run type-check   # TypeScript validation
 ```
 
-### WebSocket Server
+## Testing Approach
 
-```bash
-# Run WebSocket server standalone
-npm run ws-server
+- **Unit tests**: Jest/Vitest for logic and utilities
+- **Component tests**: React Testing Library
+- **E2E tests**: Playwright or Cypress
+- **Server Components**: Test data fetching logic separately
+- **Server Actions**: Mock and test validation/business logic
 
-# Development with auto-reload (uses nodemon)
-npm run dev:ws
+## Project Structure
+
+```text
+app/
+├── game/
+│   └── [id]/        # Dynamic game routes
+│       └── page.tsx
+├── api/             # API routes (if needed)
+├── layout.tsx       # Root layout
+├── page.tsx         # Home page
+└── globals.css      # Global styles
+
+components/          # React components
+├── ChessBoard.tsx
+└── SoundControl.tsx
+
+lib/                # Utilities and types
+├── game-types.ts
+├── sound-manager.ts
+└── ws-client.ts
+
+server/             # Backend services
+└── ws-server.ts    # WebSocket server
 ```
 
-## Architecture Overview
+## Server Components First
 
-### Core Structure
+- **Default to Server Components** - Only use Client Components when you need interactivity
+- **Data fetching on the server** - Direct database access, no API routes needed for SSR
+- **Zero client-side JavaScript** for static content
+- **Async components** are supported and encouraged
 
-This is a real-time multiplayer Ban Chess web application built with:
+## Caching Strategy
 
-- **Next.js 14** with App Router for the frontend
-- **WebSocket server** (ws library) for real-time game synchronization
-- **ban-chess.ts** library for game logic enforcement
-- **react-chessground** for the interactive chess board UI
+- Use `fetch()` with Next.js extensions for HTTP caching
+- Configure with `{ next: { revalidate: 3600, tags: ['products'] } }`
+- Use `revalidatePath()` and `revalidateTag()` for on-demand updates
+- Consider `unstable_cache()` for expensive computations
 
-### Key Components
+## Server Action with Form
 
-#### WebSocket Communication
+```typescript
+// actions.ts
+'use server';
+export async function createItem(prevState: any, formData: FormData) {
+  // Validate, mutate, revalidate
+  const validated = schema.parse(Object.fromEntries(formData));
+  await db.items.create({ data: validated });
+  revalidatePath('/items');
+}
 
-- **Server**: `server/ws-server.ts` manages game rooms, player matching, and game state
-- **Client Hook**: `lib/ws-client.ts` provides React hook for WebSocket connection
-- **Message Types**: `lib/game-types.ts` defines TypeScript interfaces for client/server messages
-
-#### Game Flow
-
-1. Players join queue from landing page (`app/page.tsx`)
-2. Server matches players and creates game room
-3. Game page (`app/game/[id]/page.tsx`) connects via WebSocket
-4. ChessBoard component (`components/ChessBoard.tsx`) handles UI interactions
-5. All moves/bans validated server-side by ban-chess.ts engine
-
-### WebSocket Protocol
-
-#### Client Messages
-
-- `join-queue`: Enter matchmaking queue
-- `leave-queue`: Exit matchmaking queue
-- `join-game`: Connect to specific game by ID
-- `move`: Submit a chess move
-- `ban`: Submit a ban on opponent's move
-
-#### Server Messages
-
-- `state`: Current game state with FEN, PGN, legal actions
-- `queued`: Queue position update
-- `matched`: Game created with assigned color
-- `joined`: Successfully joined game
-- `error`: Error message
-
-### Ban Chess Rules
-
-The game alternates between ban and move phases:
-
-1. Black bans one of White's opening moves
-2. White moves (with ban applied)
-3. White bans one of Black's responses
-4. Black moves (with ban applied)
-5. Continue pattern: Ban → Move → Ban → Move
-
-### Development Notes
-
-#### Port Usage
-
-- Next.js: 3000 (uses portio to ensure availability)
-- WebSocket: 8081 (uses portio to ensure availability)
-
-#### Auto-reload Configuration
-
-Nodemon watches `server/` and `lib/` directories for TypeScript changes and restarts using tsx.
-
-#### TypeScript Configuration
-
-- Strict mode enabled
-- Path alias `@/*` maps to project root
-- Target ES2017 for server compatibility
-- Type support for the react-chessground library is declared in `types/react-chessground.d.ts` 
-
-## React-Chessground Configuration
-
-The chess board uses react-chessground with the following configuration options:
-
-### Key Configuration Properties
-
-- **fen**: Chess position in Forsyth notation
-- **orientation**: Board perspective (`'white'` or `'black'`)
-- **coordinates**: Show board coordinates (a-h, 1-8)
-- **autoCastle**: Auto-move rook when castling
-- **highlight**: Object for highlighting last move and check
-- **animation**: Control piece animations (duration in ms)
-- **movable**: Configure piece movement, valid moves, and event handlers
-- **drawable**: Configure arrow/circle drawing for visual indicators
-
-### Ban Chess Visual Indicators
-
-The board uses the drawable configuration to show:
-
-- **Red arrows/circles**: Indicate the last banned move
-- **Yellow highlights**: Show available moves to ban during ban phase
-
-Example drawable configuration for ban indicators:
-
-```javascript
-drawable: {
-  enabled: true,
-  visible: true,
-  defaultSnapToValidMove: false,
-  eraseOnClick: false,
-  shapes: [...],  // Dynamic shapes array
-  brushes: {
-    red: { key: 'red', color: '#ff6b6b', opacity: 0.8, lineWidth: 10 },
-    yellow: { key: 'yellow', color: '#ffeb3b', opacity: 0.6, lineWidth: 10 }
-  }
+// form.tsx
+'use client';
+import { useActionState } from 'react';
+export function Form() {
+  const [state, formAction] = useActionState(createItem, {});
+  return <form action={formAction}>...</form>;
 }
 ```
+
+## Optimistic Updates
+
+```typescript
+'use client';
+import { useOptimistic } from 'react';
+export function OptimisticList({ items, addItem }) {
+  const [optimisticItems, addOptimisticItem] = useOptimistic(
+    items,
+    (state, newItem) => [...state, newItem]
+  );
+  // Use optimisticItems for immediate UI update
+}
+```
+
+## Deployment Checklist
+
+- [ ] Environment variables configured
+- [ ] Build succeeds locally
+- [ ] Tests pass
+- [ ] Security headers configured
+- [ ] Error tracking setup (Sentry)
+- [ ] Analytics configured
+- [ ] SEO metadata in place
+- [ ] Performance monitoring active
+
+## Debugging Tips
+
+1. Check React Developer Tools for Server/Client components
+2. Use `console.log` in Server Components (appears in terminal)
+3. Check Network tab for RSC payloads
+4. Verify caching with `x-nextjs-cache` headers
+5. Use `{ cache: 'no-store' }` to debug caching issues
+
+## Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [React Documentation](https://react.dev)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)

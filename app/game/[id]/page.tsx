@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import dynamic from "next/dynamic";
-import { useWebSocket } from "@/lib/ws-client";
-import SoundControl from "@/components/SoundControl";
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import { useWebSocket } from '@/lib/ws-client';
+import SoundControl from '@/components/SoundControl';
 
-const ChessBoard = dynamic(() => import("@/components/ChessBoard"), {
+const ChessBoard = dynamic(() => import('@/components/ChessBoard'), {
   ssr: false,
 });
 
@@ -19,7 +19,7 @@ export default function GamePage() {
 
   const copyGameLink = () => {
     // Remove the create parameter when sharing
-    const url = window.location.href.replace("?create=true", "");
+    const url = window.location.href.replace('?create=true', '');
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -28,7 +28,7 @@ export default function GamePage() {
   if (!connected) {
     return (
       <div className="container">
-        <div className="game-info" style={{ textAlign: "center" }}>
+        <div className="game-info" style={{ textAlign: 'center' }}>
           <h2>Connecting to game server...</h2>
           <p>Please wait while we establish a connection.</p>
         </div>
@@ -50,7 +50,7 @@ export default function GamePage() {
   if (!gameState) {
     return (
       <div className="container">
-        <div className="game-info" style={{ textAlign: "center" }}>
+        <div className="game-info" style={{ textAlign: 'center' }}>
           <h2>Loading game...</h2>
         </div>
       </div>
@@ -62,18 +62,18 @@ export default function GamePage() {
     const actionType = gameState.nextAction;
 
     if (!gameState.playerColor) {
-      return "Spectating";
+      return 'Spectating';
     }
 
-    if (actionType === "ban") {
+    if (actionType === 'ban') {
       if (isMyTurn) {
-        return `Your turn: Ban one of ${gameState.turn === "white" ? "Black" : "White"}'s moves`;
+        return `Your turn: Ban one of ${gameState.turn === 'white' ? 'Black' : 'White'}'s moves`;
       } else {
         return `Waiting for ${gameState.turn} to ban a move`;
       }
     } else {
       if (isMyTurn) {
-        return "Your turn: Make a move";
+        return 'Your turn: Make a move';
       } else {
         return `Waiting for ${gameState.turn} to move`;
       }
@@ -85,21 +85,21 @@ export default function GamePage() {
     const nextAction = gameState.nextAction;
 
     return (
-      <div style={{ marginBottom: "15px" }}>
+      <div style={{ marginBottom: '15px' }}>
         <span
           style={{
-            display: "inline-block",
-            width: "20px",
-            height: "20px",
-            borderRadius: "50%",
-            backgroundColor: currentPlayer === "white" ? "#fff" : "#333",
-            border: "2px solid #666",
-            marginRight: "10px",
-            verticalAlign: "middle",
+            display: 'inline-block',
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            backgroundColor: currentPlayer === 'white' ? '#fff' : '#333',
+            border: '2px solid #666',
+            marginRight: '10px',
+            verticalAlign: 'middle',
           }}
         />
-        <span style={{ fontSize: "18px", fontWeight: "bold" }}>
-          {currentPlayer === "white" ? "White" : "Black"} to {nextAction}
+        <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
+          {currentPlayer === 'white' ? 'White' : 'Black'} to {nextAction}
         </span>
       </div>
     );
@@ -108,19 +108,19 @@ export default function GamePage() {
   return (
     <div className="container">
       <SoundControl />
-      <div style={{ textAlign: "center", marginBottom: "20px" }}>
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <h1>♟️ Ban Chess</h1>
-        <p style={{ color: "#a0a0a0" }}>Game ID: {gameId}</p>
+        <p style={{ color: '#a0a0a0' }}>Game ID: {gameId}</p>
         <button
           onClick={copyGameLink}
           style={{
-            fontSize: "14px",
-            padding: "5px 15px",
-            marginTop: "10px",
-            background: copied ? "#4CAF50" : "#2196F3",
+            fontSize: '14px',
+            padding: '5px 15px',
+            marginTop: '10px',
+            background: copied ? '#4CAF50' : '#2196F3',
           }}
         >
-          {copied ? "Link Copied!" : "Copy Game Link"}
+          {copied ? 'Link Copied!' : 'Copy Game Link'}
         </button>
       </div>
 
@@ -129,40 +129,43 @@ export default function GamePage() {
         <div className="status">{getStatusText()}</div>
 
         {gameState.playerColor && (
-          <div style={{ marginTop: "10px", color: "#b0b0b0" }}>
-            You are playing as: <strong style={{ color: "#f0f0f0" }}>{gameState.playerColor}</strong>
+          <div style={{ marginTop: '10px', color: '#b0b0b0' }}>
+            You are playing as:{' '}
+            <strong style={{ color: '#f0f0f0' }}>
+              {gameState.playerColor}
+            </strong>
           </div>
         )}
 
-        <div style={{ marginTop: "15px" }}>
+        <div style={{ marginTop: '15px' }}>
           <details>
-            <summary style={{ cursor: "pointer", fontWeight: "bold" }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
               Game History ({gameState.history.length} actions)
             </summary>
             <div
               style={{
-                marginTop: "10px",
-                maxHeight: "200px",
-                overflowY: "auto",
-                padding: "10px",
-                background: "rgba(40, 40, 55, 0.8)",
-                borderRadius: "5px",
+                marginTop: '10px',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                padding: '10px',
+                background: 'rgba(40, 40, 55, 0.8)',
+                borderRadius: '5px',
               }}
             >
               {gameState.history.length === 0 ? (
                 <p>No moves yet</p>
               ) : (
                 gameState.history.map((entry, idx) => (
-                  <div key={idx} style={{ marginBottom: "5px" }}>
+                  <div key={idx} style={{ marginBottom: '5px' }}>
                     {entry.turnNumber}. {entry.player}:
-                    {entry.actionType === "ban" ? (
+                    {entry.actionType === 'ban' ? (
                       <span>
-                        {" "}
+                        {' '}
                         banned {entry.action.from}-{entry.action.to}
                       </span>
                     ) : (
                       <span>
-                        {" "}
+                        {' '}
                         {entry.san || `${entry.action.from}-${entry.action.to}`}
                       </span>
                     )}
@@ -181,11 +184,11 @@ export default function GamePage() {
         playerColor={gameState.playerColor}
       />
 
-      <div style={{ textAlign: "center", marginTop: "20px" }}>
-        <p style={{ color: "#a0a0a0", fontSize: "14px" }}>
-          {gameState.nextAction === "ban"
-            ? "Click on an opponent piece, then click its destination to ban that move"
-            : "Click on your piece, then click its destination to move"}
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <p style={{ color: '#a0a0a0', fontSize: '14px' }}>
+          {gameState.nextAction === 'ban'
+            ? 'Click on an opponent piece, then click its destination to ban that move'
+            : 'Click on your piece, then click its destination to move'}
         </p>
       </div>
     </div>
