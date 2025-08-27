@@ -19,6 +19,7 @@ export default [
   ...compat.extends('next/core-web-vitals'),
   {
     files: ['**/*.{ts,tsx}'],
+    ignores: ['e2e/**', 'playwright.config.ts'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
@@ -43,7 +44,29 @@ export default [
       'no-console': 'off', // Allow console logs for debugging
     },
   },
+  // Specific configuration for E2E test files
   {
-    ignores: ['.next/**', 'node_modules/**', '.git/**'],
+    files: ['e2e/**/*.{ts,tsx}', 'playwright.config.ts'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': typescript,
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-unused-vars': 'off',
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'no-console': 'off',
+    },
+  },
+  {
+    ignores: ['.next/**', 'node_modules/**', '.git/**', 'playwright-report/**', 'test-results/**'],
   },
 ];

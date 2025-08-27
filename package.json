@@ -12,7 +12,20 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "analyze": "npm run type-check && npm run lint"
+    "analyze": "npm run type-check && npm run lint",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "test:auth": "playwright test e2e/auth.spec.ts",
+    "test:game": "playwright test e2e/game.spec.ts",
+    "test:a11y": "playwright test e2e/accessibility.spec.ts",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:mobile": "playwright test --project=\"Mobile Chrome\" --project=\"Mobile Safari\"",
+    "test:report": "playwright show-report",
+    "test:codegen": "playwright codegen http://localhost:3000"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.12",
@@ -30,8 +43,10 @@
     "zod": "^4.1.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.34.0",
+    "@playwright/test": "^1.55.0",
     "@types/howler": "^2.2.12",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -47,6 +62,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "nodemon": "^3.1.10",
+    "playwright": "^1.55.0",
     "react-scan": "^0.4.3",
     "tailwindcss": "^4.1.12",
     "tsx": "^4.7.0",

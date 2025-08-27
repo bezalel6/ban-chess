@@ -1,0 +1,211 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+jobs:
+  test:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+        node-version: [20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Build Next.js application
+        run: npm run build
+
+      - name: Run E2E tests - ${{ matrix.browser }}
+        run: npm run test:${{ matrix.browser }}
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ matrix.browser }}
+          path: |
+            test-results/
+            playwright-report/
+            e2e/screenshots/
+          retention-days: 7
+
+      - name: Upload test videos
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-videos-${{ matrix.browser }}
+          path: test-results/**/video.webm
+          retention-days: 3
+
+  accessibility:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run accessibility tests
+        run: npm run test:a11y
+        env:
+          CI: true
+
+      - name: Generate accessibility report
+        if: always()
+        run: |
+          echo "# Accessibility Test Results" > accessibility-report.md
+          echo "" >> accessibility-report.md
+          echo "Tests run on: $(date)" >> accessibility-report.md
+          echo "" >> accessibility-report.md
+          if [ -f test-results.json ]; then
+            echo "## Test Summary" >> accessibility-report.md
+            cat test-results.json | jq -r '.suites[] | "- \(.title): \(.specs | length) tests"' >> accessibility-report.md
+          fi
+
+      - name: Upload accessibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-report
+          path: accessibility-report.md
+          retention-days: 30
+
+  mobile:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright with mobile browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run mobile tests
+        run: npm run test:mobile
+        env:
+          CI: true
+
+      - name: Upload mobile test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-test-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  coverage:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    needs: [test, accessibility]
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Generate coverage summary
+        run: |
+          echo "# Test Coverage Report" > coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "## E2E Test Results" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "### Browser Coverage" >> coverage-summary.md
+          echo "- ✅ Chromium" >> coverage-summary.md
+          echo "- ✅ Firefox" >> coverage-summary.md
+          echo "- ✅ WebKit" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "### Test Categories" >> coverage-summary.md
+          echo "- Authentication flows" >> coverage-summary.md
+          echo "- Game mechanics" >> coverage-summary.md
+          echo "- Accessibility compliance" >> coverage-summary.md
+          echo "- Mobile responsiveness" >> coverage-summary.md
+          echo "" >> coverage-summary.md
+          echo "Generated on: $(date)" >> coverage-summary.md
+
+      - name: Upload coverage summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage-summary.md
+          retention-days: 30
+
+  # Optional: Deploy test results to GitHub Pages
+  publish-results:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: coverage
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Download test reports
+        uses: actions/download-artifact@v4
+        with:
+          path: reports
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: reports
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
