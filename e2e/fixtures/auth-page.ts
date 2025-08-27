@@ -9,16 +9,20 @@ export class AuthPage {
   readonly loginForm: Locator;
   readonly logoutButton: Locator;
   readonly errorMessage: Locator;
+  readonly usernameOverlay: Locator;
+  readonly signOutButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.usernameInput = page.locator('input[placeholder*="username"]');
-    this.setUsernameButton = page.getByRole('button', { name: /set username/i });
-    this.currentUsername = page.locator('[data-testid="current-username"]');
+    this.usernameInput = page.locator('input[name="username"]');
+    this.setUsernameButton = page.getByRole('button', { name: /let's play/i });
+    this.currentUsername = page.locator('span:has-text("Playing as") + span');
     this.userStats = page.locator('[data-testid="user-stats"]');
-    this.loginForm = page.locator('[data-testid="login-form"]');
-    this.logoutButton = page.getByRole('button', { name: /logout/i });
-    this.errorMessage = page.locator('[data-testid="error-message"]');
+    this.loginForm = page.locator('form').first();
+    this.logoutButton = page.getByRole('button', { name: /sign out/i });
+    this.signOutButton = page.getByRole('button', { name: /sign out/i });
+    this.errorMessage = page.locator('.text-red-400');
+    this.usernameOverlay = page.locator('.fixed.inset-0.bg-black\\/90');
   }
 
   async setUsername(username: string) {
@@ -27,15 +31,19 @@ export class AuthPage {
   }
 
   async logout() {
-    await this.logoutButton.click();
+    await this.signOutButton.click();
   }
 
   async waitForLogin() {
-    await this.currentUsername.waitFor({ state: 'visible' });
+    // Wait for the overlay to disappear and the username to be shown
+    await this.usernameOverlay.waitFor({ state: 'hidden', timeout: 10000 });
+    await this.page.waitForTimeout(500); // Small delay for state to settle
   }
 
   async getUsername() {
-    return await this.currentUsername.textContent();
+    // Get the username from the "Playing as" display
+    const usernameElement = await this.page.locator('span:has-text("Playing as")').locator('..').locator('span.text-white');
+    return await usernameElement.textContent();
   }
 
   async getUserStats() {

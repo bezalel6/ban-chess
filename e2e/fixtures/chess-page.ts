@@ -18,11 +18,11 @@ export class ChessPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.board = page.locator('[data-testid="chess-board"]');
-    this.moveInput = page.locator('input[placeholder*="move"]');
-    this.submitMoveButton = page.getByRole('button', { name: /submit move/i });
+    this.board = page.locator('.cg-board').first();
+    this.moveInput = page.locator('input[type="text"]').first();
+    this.submitMoveButton = page.getByRole('button', { name: /submit|make move/i });
     this.banWordInput = page.locator('input[placeholder*="ban"]');
-    this.submitBanButton = page.getByRole('button', { name: /ban word/i });
+    this.submitBanButton = page.getByRole('button', { name: /ban/i });
     this.timer = page.locator('[data-testid="game-timer"]');
     this.playerTurn = page.locator('[data-testid="player-turn"]');
     this.moveHistory = page.locator('[data-testid="move-history"]');
