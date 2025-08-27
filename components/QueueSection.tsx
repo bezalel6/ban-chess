@@ -8,10 +8,17 @@ import { useQueue } from '@/lib/ws-hooks-optimized';
 export default function QueueSection() {
   const router = useRouter();
   const { user } = useAuth();
+  
+  // Debug logging
+  console.log('[QueueSection] User state:', { user, hasUserId: !!user?.userId, hasUsername: !!user?.username });
+  
   const { position, matched, error, connected, authenticated, joinQueue, leaveQueue } = 
     useQueue(user && user.userId && user.username 
       ? { userId: user.userId, username: user.username } 
       : undefined);
+  
+  // Debug WebSocket state
+  console.log('[QueueSection] WebSocket state:', { connected, authenticated, position, matched, error });
 
   useEffect(() => {
     if (matched) {

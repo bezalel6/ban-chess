@@ -3,12 +3,18 @@
 import { useTransition } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { logoutAction } from '@/app/actions/auth';
+import { disconnectUserWebSockets } from '@/lib/ws-hooks-optimized';
 
 export default function UserInfo() {
   const { user } = useAuth();
   const [isPending, startTransition] = useTransition();
 
   const handleSignOut = () => {
+    // Disconnect WebSocket before logging out
+    if (user?.userId) {
+      disconnectUserWebSockets(user.userId);
+    }
+    
     startTransition(async () => {
       await logoutAction();
     });

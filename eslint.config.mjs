@@ -40,7 +40,7 @@ export default [
       }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-console': 'off', // Allow console logs for debugging
     },
   },
   {

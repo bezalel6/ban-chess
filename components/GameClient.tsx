@@ -31,6 +31,11 @@ export default function GameClient({ gameId, user }: GameClientProps) {
   };
 
   if (!connected || !authenticated) {
+    // Check if we're in production without proper WebSocket config
+    const isProductionWithoutWS = typeof window !== 'undefined' && 
+      window.location.hostname !== 'localhost' && 
+      !process.env.NEXT_PUBLIC_WS_URL;
+    
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="container-custom">
@@ -40,6 +45,19 @@ export default function GameClient({ gameId, user }: GameClientProps) {
               {!connected ? "Connecting to game server..." : "Authenticating..."}
             </h2>
             <p className="text-gray-400">Please wait while we establish a connection.</p>
+            
+            {isProductionWithoutWS && (
+              <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <p className="text-red-400 font-semibold mb-2">WebSocket Server Not Configured</p>
+                <p className="text-red-300 text-sm">
+                  The game server URL is not configured for production. 
+                  Please contact the administrator or check the deployment configuration.
+                </p>
+                <p className="text-gray-400 text-xs mt-2">
+                  Technical: NEXT_PUBLIC_WS_URL environment variable is missing
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

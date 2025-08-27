@@ -278,9 +278,12 @@ wss.on('connection', (ws: WebSocket) => {
           }
           
           const gameId = msg.gameId;
+          console.log(`Player ${currentPlayer.username} (${currentPlayer.userId}) attempting to join game ${gameId}`);
+          
           const room = games.get(gameId);
 
           if (!room) {
+            console.log(`Game ${gameId} not found`);
             ws.send(
               JSON.stringify({
                 type: 'error',
@@ -290,11 +293,17 @@ wss.on('connection', (ws: WebSocket) => {
             return;
           }
 
+          // Log the players in this game room
+          console.log(`Game ${gameId} players:`, Array.from(room.players.entries()).map(([id, info]) => 
+            `${id} (${info.username}, ${info.color})`
+          ));
+
           // Check if player belongs to this game
           const playerInfo = room.players.get(currentPlayer.userId);
           
           if (playerInfo) {
             // Player is already in the game
+            console.log(`Player ${currentPlayer.username} successfully joining as ${playerInfo.color}`);
             playerToGame.set(currentPlayer.userId, gameId);
 
             // Send joined message with color
@@ -310,6 +319,7 @@ wss.on('connection', (ws: WebSocket) => {
             // Send current game state
             setTimeout(() => sendGameState(gameId), 50);
           } else {
+            console.log(`Player ${currentPlayer.username} (${currentPlayer.userId}) is not in game ${gameId}`);
             ws.send(
               JSON.stringify({
                 type: 'error',
@@ -506,8 +516,41 @@ wss.on('connection', (ws: WebSocket) => {
   });
 });
 
-process.on('SIGTERM', () => {
+// Graceful shutdown handling
+const shutdown = (signal: string) => {
+  console.log(`\n[WebSocket] Received ${signal}, shutting down gracefully...`);
+  
+  // Close all client connections
+  wss.clients.forEach((ws) => {
+    ws.close();
+  });
+  
+  // Close the server
   wss.close(() => {
+    console.log('[WebSocket] Server closed');
     process.exit(0);
   });
+  
+  // Force exit after 5 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('[WebSocket] Forced shutdown after timeout');
+    process.exit(1);
+  }, 5000);
+};
+
+// Handle various shutdown signals
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));  // Ctrl+C
+process.on('SIGHUP', () => shutdown('SIGHUP'));   // Terminal closed
+process.on('SIGUSR2', () => shutdown('SIGUSR2')); // Nodemon restart
+
+// Handle uncaught errors
+process.on('uncaughtException', (error) => {
+  console.error('[WebSocket] Uncaught exception:', error);
+  shutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[WebSocket] Unhandled rejection at:', promise, 'reason:', reason);
+  shutdown('unhandledRejection');
 });

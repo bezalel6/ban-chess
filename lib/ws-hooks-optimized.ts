@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore, useCallback, useMemo } from 'react';
+import { useEffect, useSyncExternalStore, useCallback, useMemo } from 'react';
 import type { Move, Ban, GameState, ServerMsg } from './game-types';
 
 interface WebSocketStore {
@@ -16,6 +16,15 @@ interface WebSocketStore {
 // Global singleton management
 const globalManagers = new Map<string, WebSocketManager>();
 
+// Function to disconnect all WebSocket connections for a user
+export function disconnectUserWebSockets(userId: string) {
+  const manager = globalManagers.get(userId);
+  if (manager) {
+    console.log(`[WebSocket] Disconnecting WebSocket for user ${userId}`);
+    manager.disconnect();
+  }
+}
+
 class WebSocketManager {
   private store: WebSocketStore = {
     ws: null,
@@ -28,7 +37,7 @@ class WebSocketManager {
   };
   
   private listeners = new Set<() => void>();
-  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private isIntentionalDisconnect = false;
   private connectionKey: string;
 
@@ -37,23 +46,39 @@ class WebSocketManager {
     gameId?: string,
     user?: { userId: string; username: string }
   ): WebSocketManager {
-    const key = user ? `${user.userId}-${gameId || 'queue'}` : 'anonymous';
+    // Use same instance for both queue and game for a given user
+    // This prevents disconnection when transitioning from queue to game
+    const key = user ? user.userId : 'anonymous';
     
     let instance = globalManagers.get(key);
     if (!instance) {
       instance = new WebSocketManager(url, gameId, user, key);
       globalManagers.set(key, instance);
+    } else {
+      // Update gameId if transitioning from queue to game
+      if (gameId && gameId !== instance.gameId) {
+        console.log(`[WebSocket] Updating gameId from ${instance.gameId || 'queue'} to ${gameId}`);
+        instance.gameId = gameId;
+        // If already authenticated, join the game immediately
+        if (instance.store.authenticated && instance.store.ws?.readyState === WebSocket.OPEN) {
+          instance.joinGame(gameId);
+        }
+      }
     }
     
     return instance;
   }
 
   private constructor(
-    private _url: string,
-    private _gameId?: string,
-    private _user?: { userId: string; username: string },
+    private url: string,
+    private gameId?: string,
+    private user?: { userId: string; username: string },
     connectionKey?: string
   ) {
+    // Store parameters for use in class methods
+    this.url = url;
+    this.gameId = gameId;
+    this.user = user;
     this.connectionKey = connectionKey || 'default';
     this.connect();
   }
@@ -67,10 +92,13 @@ class WebSocketManager {
     }
     
     try {
-      this.store.ws = new WebSocket(this._url);
+      console.log(`[WebSocket] Attempting to connect to: ${this.url}`);
+      console.log(`[WebSocket] Connection key: ${this.connectionKey}`);
+      console.log(`[WebSocket] GameId: ${this.gameId || 'none (queue mode)'}`);
+      this.store.ws = new WebSocket(this.url);
       
       this.store.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('[WebSocket] Connected successfully!');
         this.updateStore({ connected: true, error: null });
         
         if (this.reconnectTimeout) {
@@ -78,7 +106,7 @@ class WebSocketManager {
           this.reconnectTimeout = null;
         }
         
-        if (this._user) {
+        if (this.user) {
           this.authenticate();
         }
       };
@@ -88,14 +116,17 @@ class WebSocketManager {
         this.handleMessage(msg);
       };
 
-      this.store.ws.onerror = () => {
+      this.store.ws.onerror = (error) => {
+        console.error('[WebSocket] Connection error:', error);
         this.updateStore({ error: 'Connection error occurred' });
       };
 
-      this.store.ws.onclose = () => {
+      this.store.ws.onclose = (event) => {
+        console.log('[WebSocket] Connection closed:', { code: event.code, reason: event.reason });
         this.updateStore({ connected: false, authenticated: false });
         
         if (!this.isIntentionalDisconnect && !this.reconnectTimeout) {
+          console.log('[WebSocket] Will reconnect in 3 seconds...');
           this.reconnectTimeout = setTimeout(() => {
             this.reconnectTimeout = null;
             this.connect();
@@ -110,25 +141,33 @@ class WebSocketManager {
   }
 
   private authenticate() {
-    if (!this._user || !this.store.ws) return;
+    if (!this.user || !this.store.ws) {
+      console.log('[WebSocket] Cannot authenticate - missing user or ws:', { user: this.user, ws: !!this.store.ws });
+      return;
+    }
     
+    console.log('[WebSocket] Sending authentication:', { userId: this.user.userId, username: this.user.username });
     this.store.ws.send(JSON.stringify({
       type: 'authenticate',
-      userId: this._user.userId,
-      username: this._user.username,
+      userId: this.user.userId,
+      username: this.user.username,
     }));
   }
 
   private handleMessage(msg: ServerMsg) {
     switch (msg.type) {
       case 'authenticated':
+        console.log('[WebSocket] Authentication confirmed');
         this.updateStore({ authenticated: true });
-        if (this._gameId) {
-          this.joinGame(this._gameId);
+        if (this.gameId) {
+          console.log('[WebSocket] Joining game:', this.gameId);
+          this.joinGame(this.gameId);
+        } else {
+          console.log('[WebSocket] No gameId - in queue mode');
         }
         break;
       
-      case 'state':
+      case 'state': {
         // Only update if state actually changed
         const newState = {
           fen: msg.fen,
@@ -143,11 +182,20 @@ class WebSocketManager {
           players: msg.players,
         };
         
+        console.log('[WebSocket] Game state received:', { 
+          gameId: msg.gameId, 
+          players: msg.players,
+          turn: msg.turn,
+          nextAction: msg.nextAction 
+        });
+        
         // Deep equality check could be added here for further optimization
         this.updateStore({ gameState: newState });
         break;
+      }
       
       case 'joined':
+        console.log('[WebSocket] Joined game successfully:', { color: msg.color, players: msg.players });
         this.updateStore({
           gameState: {
             ...this.store.gameState!,
@@ -164,10 +212,12 @@ class WebSocketManager {
         break;
       
       case 'matched':
+        console.log('[WebSocket] Matched with opponent:', msg);
         this.updateStore({ matched: msg });
         break;
       
       case 'error':
+        console.error('[WebSocket] Server error:', msg.message);
         this.updateStore({ error: msg.message });
         break;
     }
@@ -190,8 +240,13 @@ class WebSocketManager {
   }
 
   private joinGame(gameId: string) {
-    if (!this.store.ws || !this.store.authenticated) return;
+    if (!this.store.ws || !this.store.authenticated) {
+      console.log('[WebSocket] Cannot join game - not connected or authenticated:', 
+        { connected: !!this.store.ws, authenticated: this.store.authenticated });
+      return;
+    }
     
+    console.log('[WebSocket] Sending join-game request for:', gameId);
     this.store.ws.send(JSON.stringify({
       type: 'join-game',
       gameId,
@@ -206,21 +261,21 @@ class WebSocketManager {
   };
 
   sendMove = (move: Move) => {
-    if (!this.store.ws || !this._gameId) return;
+    if (!this.store.ws || !this.gameId) return;
     
     this.store.ws.send(JSON.stringify({
       type: 'move',
-      gameId: this._gameId,
+      gameId: this.gameId,
       move,
     }));
   };
 
   sendBan = (ban: Ban) => {
-    if (!this.store.ws || !this._gameId) return;
+    if (!this.store.ws || !this.gameId) return;
     
     this.store.ws.send(JSON.stringify({
       type: 'ban',
-      gameId: this._gameId,
+      gameId: this.gameId,
       ban,
     }));
   };
@@ -259,25 +314,47 @@ export function useWebSocket(
   gameId?: string,
   user?: { userId: string; username: string }
 ) {
-  const managerRef = useRef<WebSocketManager | null>(null);
-  
-  // Get or create manager instance
-  useEffect(() => {
-    if (user && !managerRef.current) {
-      managerRef.current = WebSocketManager.getInstance(
-        process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081',
-        gameId,
-        user
-      );
-    }
+  // Get or create manager instance immediately if user exists
+  // This ensures the manager is available on first render
+  const manager = useMemo(() => {
+    if (!user) return null;
     
-    return () => {
-      // Don't disconnect on unmount - let the global instance persist
-      // Only disconnect when the component using this hook is truly done
-    };
-  }, [gameId, user]);
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081';
+    
+    console.log('[WebSocket] Creating/getting manager for user:', user.username);
+    
+    return WebSocketManager.getInstance(
+      wsUrl,
+      gameId,
+      user
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameId, user?.userId, user?.username]); // Only recreate if user identity actually changes
   
-  const manager = managerRef.current;
+  // Handle production warning and cleanup
+  useEffect(() => {
+    if (user) {
+      // If we're in production and no explicit WS_URL is set, show an error
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !process.env.NEXT_PUBLIC_WS_URL) {
+        console.error('[WebSocket] Production deployment detected but NEXT_PUBLIC_WS_URL is not configured!');
+        console.error('[WebSocket] Please set NEXT_PUBLIC_WS_URL to your WebSocket server URL');
+      }
+      
+      // Clean up WebSocket on page unload
+      const handleUnload = () => {
+        console.log('[WebSocket] Page unloading, disconnecting WebSocket');
+        if (user.userId) {
+          disconnectUserWebSockets(user.userId);
+        }
+      };
+      
+      window.addEventListener('beforeunload', handleUnload);
+      
+      return () => {
+        window.removeEventListener('beforeunload', handleUnload);
+      };
+    }
+  }, [user]);
   
   // Create stable empty store for initial render
   const emptyStore = useMemo<WebSocketStore>(() => ({
