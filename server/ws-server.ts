@@ -14,6 +14,7 @@ interface GameRoom {
   players: Map<string, { color: 'white' | 'black'; username: string }>; // userId -> player info
   whitePlayerId?: string;
   blackPlayerId?: string;
+  isSoloGame?: boolean; // New flag for solo games
 }
 
 const wss = new WebSocketServer({ port: 8081 });
@@ -50,7 +51,15 @@ function getPlayerUsernames(room: GameRoom): { white?: string; black?: string } 
   
   if (room.blackPlayerId) {
     const blackPlayer = room.players.get(room.blackPlayerId);
-    if (blackPlayer) usernames.black = blackPlayer.username;
+    if (blackPlayer) {
+      usernames.black = blackPlayer.username;
+      
+      // For solo games, if it's the same player controlling both colors,
+      // ensure both white and black names are set
+      if (room.isSoloGame && room.whitePlayerId === room.blackPlayerId) {
+        usernames.white = blackPlayer.username;
+      }
+    }
   }
   
   return usernames;
@@ -61,6 +70,27 @@ function sendGameState(gameId: string) {
   if (!room) return;
 
   const { game } = room;
+  
+  // Determine game status and winner
+  let status: 'playing' | 'checkmate' | 'stalemate' | 'draw' = 'playing';
+  let winner: 'white' | 'black' | 'draw' | undefined = undefined;
+  
+  if (game.inCheckmate()) {
+    status = 'checkmate';
+    // The player whose turn it is has been checkmated (they lost)
+    winner = game.turn === 'white' ? 'black' : 'white';
+    console.log(`Game ${gameId}: Checkmate! ${winner} wins`);
+  } else if (game.inStalemate()) {
+    status = 'stalemate';
+    winner = 'draw';
+    console.log(`Game ${gameId}: Stalemate - Draw`);
+  } else if (game.gameOver()) {
+    // Other draw conditions (insufficient material, threefold repetition, etc.)
+    status = 'draw';
+    winner = 'draw';
+    console.log(`Game ${gameId}: Game Over - Draw`);
+  }
+  
   const stateMsg: ServerMsg = {
     type: 'state',
     fen: game.fen(),
@@ -73,6 +103,9 @@ function sendGameState(gameId: string) {
     turn: game.turn,
     gameId,
     players: getPlayerUsernames(room),
+    status,
+    winner,
+    isSoloGame: room.isSoloGame,
   };
 
   broadcastToRoom(gameId, stateMsg);
@@ -169,10 +202,21 @@ wss.on('connection', (ws: WebSocket) => {
           // Check if this user is already connected
           const existingPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
           if (existingPlayer && existingPlayer.ws !== ws) {
-            // Close the old connection only if it's a different websocket
-            console.log(`Closing old connection for ${username}`);
-            authenticatedPlayers.delete(existingPlayer.ws);
-            existingPlayer.ws.close();
+            // Check if the existing connection is still alive
+            if (existingPlayer.ws.readyState === WebSocket.OPEN) {
+              console.log(`User ${username} already has an active connection, rejecting new connection`);
+              // Reject the new connection instead of closing the old one
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'User already connected in another session'
+              } as ServerMsg));
+              ws.close(1008, 'Duplicate connection'); // 1008 = Policy Violation
+              return;
+            } else {
+              // Old connection is dead, clean it up
+              console.log(`Cleaning up dead connection for ${username}`);
+              authenticatedPlayers.delete(existingPlayer.ws);
+            }
           }
           
           // Create or update player
@@ -266,6 +310,49 @@ wss.on('connection', (ws: WebSocket) => {
           break;
         }
 
+        case 'create-solo-game': {
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message: 'Not authenticated',
+              } as ServerMsg)
+            );
+            return;
+          }
+          
+          // Create a new solo game
+          const gameId = uuidv4();
+          const room: GameRoom = {
+            game: new BanChess(),
+            players: new Map(),
+            whitePlayerId: currentPlayer.userId,
+            blackPlayerId: currentPlayer.userId, // Same player controls both colors
+            isSoloGame: true,
+          };
+          
+          // Add player to the room for both colors
+          room.players.set(currentPlayer.userId, { 
+            color: 'white', // Player starts as white but can play both
+            username: currentPlayer.username 
+          });
+          
+          games.set(gameId, room);
+          playerToGame.set(currentPlayer.userId, gameId);
+          
+          console.log(`Solo game ${gameId} created for ${currentPlayer.username}`);
+          
+          // Send game created message
+          ws.send(
+            JSON.stringify({
+              type: 'solo-game-created',
+              gameId,
+            } as ServerMsg)
+          );
+          
+          break;
+        }
+
         case 'join-game': {
           if (!currentPlayer) {
             ws.send(
@@ -307,12 +394,15 @@ wss.on('connection', (ws: WebSocket) => {
             playerToGame.set(currentPlayer.userId, gameId);
 
             // Send joined message with color
+            // For solo games, always send the current turn as the player's color
+            const effectiveColor = room.isSoloGame ? room.game.turn : playerInfo.color;
             ws.send(
               JSON.stringify({
                 type: 'joined',
                 gameId,
-                color: playerInfo.color,
+                color: effectiveColor,
                 players: getPlayerUsernames(room),
+                isSoloGame: room.isSoloGame,
               } as ServerMsg)
             );
 
@@ -364,7 +454,8 @@ wss.on('connection', (ws: WebSocket) => {
           }
 
           const playerInfo = room.players.get(currentPlayer.userId);
-          if (!playerInfo || playerInfo.color !== room.game.turn) {
+          // In solo games, allow playing both colors
+          if (!room.isSoloGame && (!playerInfo || playerInfo.color !== room.game.turn)) {
             ws.send(
               JSON.stringify({
                 type: 'error',
@@ -433,7 +524,8 @@ wss.on('connection', (ws: WebSocket) => {
           }
 
           const playerInfo = room.players.get(currentPlayer.userId);
-          if (!playerInfo || playerInfo.color !== room.game.turn) {
+          // In solo games, allow banning for both colors
+          if (!room.isSoloGame && (!playerInfo || playerInfo.color !== room.game.turn)) {
             ws.send(
               JSON.stringify({
                 type: 'error',
