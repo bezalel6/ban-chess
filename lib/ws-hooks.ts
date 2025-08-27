@@ -33,11 +33,11 @@ class WebSocketManager {
   private connectionKey: string;
 
   constructor(
-    // eslint-disable-next-line no-unused-vars
+     
     private _url: string,
-    // eslint-disable-next-line no-unused-vars
+     
     private _gameId?: string,
-    // eslint-disable-next-line no-unused-vars
+     
     private _user?: { userId: string; username: string }
   ) {
     this.connectionKey = _user ? `${_user.userId}-${_gameId || 'queue'}` : 'anonymous';

@@ -91,7 +91,7 @@ export default function GameClient({ gameId, user }: GameClientProps) {
               gameState={gameState}
               onMove={sendMove}
               onBan={sendBan}
-              playerColor={gameState.playerColor}
+              playerColor={gameState.isSoloGame ? gameState.turn : gameState.playerColor}
             />
           </Suspense>
         </div>

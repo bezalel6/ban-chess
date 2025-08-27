@@ -14,6 +14,7 @@ export type ClientMsg =
   | { type: 'authenticate'; userId: string; username: string }
   | { type: 'join-queue' }
   | { type: 'leave-queue' }
+  | { type: 'create-solo-game' }
   | { type: 'join-game'; gameId: string }
   | { type: 'ban'; gameId: string; ban: Ban }
   | { type: 'move'; gameId: string; move: Move }
@@ -31,12 +32,16 @@ export type ServerMsg =
       turn: 'white' | 'black';
       gameId: string;
       players?: { white?: string; black?: string }; // usernames
+      status: 'playing' | 'checkmate' | 'stalemate' | 'draw';
+      winner?: 'white' | 'black' | 'draw';
+      isSoloGame?: boolean;
     }
   | { type: 'error'; message: string; error?: string }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
   | { type: 'matched'; gameId: string; color: 'white' | 'black'; opponent?: string }
-  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players?: { white?: string; black?: string } }
+  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players?: { white?: string; black?: string }; isSoloGame?: boolean }
+  | { type: 'solo-game-created'; gameId: string }
   | { type: 'pong' };
 
 export interface GameState {
@@ -50,4 +55,7 @@ export interface GameState {
   gameId: string;
   playerColor?: 'white' | 'black';
   players?: { white?: string; black?: string };
+  status: 'playing' | 'checkmate' | 'stalemate' | 'draw';
+  winner?: 'white' | 'black' | 'draw';
+  isSoloGame?: boolean;
 }

@@ -125,6 +125,13 @@ class WebSocketManager {
         console.log('[WebSocket] Connection closed:', { code: event.code, reason: event.reason });
         this.updateStore({ connected: false, authenticated: false });
         
+        // Don't reconnect if closed due to duplicate connection (code 1008)
+        if (event.code === 1008 && event.reason === 'Duplicate connection') {
+          console.log('[WebSocket] Connection closed due to duplicate session, not reconnecting');
+          this.updateStore({ error: 'Already connected in another tab or window' });
+          return;
+        }
+        
         if (!this.isIntentionalDisconnect && !this.reconnectTimeout) {
           console.log('[WebSocket] Will reconnect in 3 seconds...');
           this.reconnectTimeout = setTimeout(() => {
@@ -169,7 +176,7 @@ class WebSocketManager {
       
       case 'state': {
         // Only update if state actually changed
-        const newState = {
+        const newState: GameState = {
           fen: msg.fen,
           pgn: msg.pgn,
           nextAction: msg.nextAction,
@@ -180,13 +187,18 @@ class WebSocketManager {
           gameId: msg.gameId,
           playerColor: this.store.gameState?.playerColor,
           players: msg.players,
+          status: msg.status,
+          winner: msg.winner,
+          isSoloGame: msg.isSoloGame,
         };
         
         console.log('[WebSocket] Game state received:', { 
           gameId: msg.gameId, 
           players: msg.players,
           turn: msg.turn,
-          nextAction: msg.nextAction 
+          nextAction: msg.nextAction,
+          status: msg.status,
+          winner: msg.winner
         });
         
         // Deep equality check could be added here for further optimization
@@ -340,9 +352,19 @@ export function useWebSocket(
         console.error('[WebSocket] Please set NEXT_PUBLIC_WS_URL to your WebSocket server URL');
       }
       
-      // Clean up WebSocket on page unload
-      const handleUnload = () => {
-        console.log('[WebSocket] Page unloading, disconnecting WebSocket');
+      // Log out user on page unload to free up the session
+      const handleUnload = (e: BeforeUnloadEvent) => {
+        console.log('[WebSocket] Page unloading, logging out user');
+        
+        // Send logout request using sendBeacon for reliability
+        // sendBeacon ensures the request completes even as page unloads
+        if (navigator.sendBeacon) {
+          const formData = new FormData();
+          formData.append('action', 'logout');
+          navigator.sendBeacon('/api/auth/logout', formData);
+        }
+        
+        // Also disconnect WebSocket immediately
         if (user.userId) {
           disconnectUserWebSockets(user.userId);
         }
@@ -396,6 +418,7 @@ export function useWebSocket(
     sendBan,
     joinQueue,
     leaveQueue,
+    ws: store.ws, // Expose WebSocket instance for custom messages
   }), [store, sendMove, sendBan, joinQueue, leaveQueue]);
 }
 
