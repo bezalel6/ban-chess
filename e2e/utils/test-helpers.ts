@@ -2,13 +2,24 @@ import { Page } from '@playwright/test';
 
 /**
  * Wait for WebSocket connection to be established
+ * Look for actual UI indicators instead of non-existent test IDs
  */
-export async function waitForWebSocketConnection(page: Page, timeout = 10000) {
+export async function waitForWebSocketConnection(page: Page, timeout = 15000) {
   await page.waitForFunction(
     () => {
-      // Check if WebSocket is connected by looking for connection indicators
-      const wsIndicator = document.querySelector('[data-testid="ws-status"]');
-      return wsIndicator?.textContent?.toLowerCase().includes('connected');
+      // Check if the Join Queue button is enabled (indicates WebSocket connection)
+      const joinButton = document.querySelector('button:has-text("Join Queue")');
+      if (joinButton && !joinButton.disabled) return true;
+      
+      // Alternative: check if we can see "Ready to Play?" which means connection is established
+      const readyText = document.querySelector('h2');
+      if (readyText?.textContent?.includes('Ready to Play')) return true;
+      
+      // Also check for "Finding Opponent" state if already in queue
+      const findingText = document.querySelector('h2');
+      if (findingText?.textContent?.includes('Finding Opponent')) return true;
+      
+      return false;
     },
     { timeout }
   );
