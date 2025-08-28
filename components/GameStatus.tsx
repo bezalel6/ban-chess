@@ -76,11 +76,11 @@ export default function GameStatus({ gameState }: GameStatusProps) {
   return (
     <div className="p-4 pb-3">
       <div className={`text-lg font-semibold ${
-        gameState.status !== 'playing' ? 'text-yellow-400' : 'text-white'
+        gameState.status !== 'playing' ? 'text-warning-500' : 'text-foreground'
       }`}>
         {getMainStatus()}
       </div>
-      <div className="text-sm text-gray-400 mt-1">
+      <div className="text-sm text-foreground-muted mt-1">
         {getStatusText()}
       </div>
     </div>

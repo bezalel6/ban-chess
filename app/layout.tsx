@@ -1,18 +1,18 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import React, { Suspense } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { getCurrentUser } from "@/lib/auth-unified";
 import UserInfoWrapper from "@/components/UserInfoWrapper";
 import ReactScanProvider from "@/components/ReactScanProvider";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "2Ban 2Chess - Multiplayer Ban Chess",
+  title: "Ban Chess - Strategic Chess Variant",
   description:
-    "Online platform for playing Ban Chess - a chess variant where opponents can ban moves",
+    "Play Ban Chess online - A strategic chess variant where you can ban your opponent's moves",
 };
-
-import React from 'react';
 
 export default async function RootLayout({
   children,
@@ -23,14 +23,18 @@ export default async function RootLayout({
   const userPromise = getCurrentUser();
 
   return (
-    <html lang="en">
-      <body className="bg-slate-950 text-white">
+    <html lang="en" className="dark">
+      <body className="bg-background text-foreground min-h-screen flex flex-col">
         <ReactScanProvider />
         <AuthProvider userPromise={userPromise}>
           <Suspense fallback={null}>
             <UserInfoWrapper />
           </Suspense>
-          {children}
+          <Header />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>

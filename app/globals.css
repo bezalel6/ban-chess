@@ -1,30 +1,49 @@
 @import "tailwindcss";
 
 @theme {
-  /* Primary colors */
-  --color-primary-50: #f0f9ff;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
+  /* Lichess-inspired Brand Colors */
+  --color-lichess-brown-400: #b8946d;
+  --color-lichess-brown-500: #a17d52;
+  --color-lichess-brown-600: #8a6642;
+  --color-lichess-orange-400: #ff9f43;
+  --color-lichess-orange-500: #ff8c00;
+  --color-lichess-orange-600: #e57600;
 
-  /* Dark theme colors - consistent slate palette */
-  --color-dark-100: #f1f5f9; /* slate-100 */
-  --color-dark-200: #e2e8f0; /* slate-200 */
-  --color-dark-300: #cbd5e1; /* slate-300 */
-  --color-dark-400: #94a3b8; /* slate-400 */
-  --color-dark-500: #64748b; /* slate-500 */
-  --color-dark-600: #475569; /* slate-600 */
-  --color-dark-700: #334155; /* slate-700 */
-  --color-dark-800: #1e293b; /* slate-800 */
-  --color-dark-900: #0f172a; /* slate-900 */
+  /* Background System */
+  --color-background: #161512;
+  --color-background-secondary: #2b2925;
+  --color-background-tertiary: #3d3a33;
+  
+  /* Foreground System */
+  --color-foreground: #f8fafc;
+  --color-foreground-muted: #a8a29e;
+  --color-foreground-subtle: #78716c;
 
-  /* Success colors (green) */
-  --color-success-400: #4ade80; /* green-400 */
-  --color-success-500: #22c55e; /* green-500 */
+  /* Chess Board */
+  --color-board-light: #d4c4a0;
+  --color-board-dark: #b8946d;
 
-  /* Error colors */
-  --color-error-400: #f87171; /* red-400 */
-  --color-error-500: #ef4444; /* red-500 */
+  /* Status Colors */
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-lichess-green: #629924;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-400: #f87171;
+  --color-destructive-500: #ef4444;
+  --color-warning-500: #f59e0b;
+
+  /* Borders */
+  --color-border: #3d3a33;
+  --color-input: #3d3a33;
+  --color-ring: #ff8c00;
+
+  /* Legacy support */
+  --color-dark-700: #3d3a33;
+  --color-dark-800: #2b2925;
+  --color-dark-900: #161512;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
 
   /* Custom spacing values */
   --spacing-15: 3.75rem;
@@ -59,8 +78,8 @@ body {
 }
 
 body {
-  @apply text-gray-100;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  @apply text-foreground;
+  background: linear-gradient(135deg, #2b2925 0%, #161512 100%);
   background-attachment: fixed;
   min-height: 100vh;
 }
@@ -79,20 +98,26 @@ a {
   }
 
   .game-info {
-    @apply bg-slate-800/90 rounded-xl p-8 shadow-2xl border border-slate-700/50 backdrop-blur-sm;
+    @apply bg-background-secondary/90 rounded-xl p-8 shadow-2xl border border-border backdrop-blur-sm;
   }
 
   .status {
-    @apply text-lg font-bold mb-2.5 text-white;
+    @apply text-lg font-bold mb-2.5 text-foreground;
   }
 
   .error {
-    @apply text-error-400 p-4 bg-error-400/10 rounded-lg border border-error-400/30;
+    @apply text-destructive-400 p-4 bg-destructive-400/10 rounded-lg border border-destructive-400/30;
   }
 
   .loading-spinner {
-    @apply w-12 h-12 mx-auto animate-spin rounded-full border-4 border-slate-700 border-t-success-400;
+    @apply w-12 h-12 mx-auto animate-spin rounded-full border-4 border-border border-t-lichess-orange-500;
   }
+
+  /* Typography Scale */
+  .text-hero { @apply text-4xl font-bold leading-tight; }
+  .text-page-title { @apply text-3xl font-bold leading-tight; }
+  .text-section { @apply text-2xl font-bold leading-tight; }
+  .text-card-title { @apply text-xl font-semibold leading-tight; }
 
   /* Volume slider custom styling */
   input[type="range"]::-webkit-slider-thumb {
@@ -118,7 +143,7 @@ a {
   .chess-board-container {
     --board-size: 500px;
     --board-size-mobile: min(85vw, 400px);
-    @apply flex justify-center items-center p-4 bg-black/20 rounded-2xl mx-auto w-fit overflow-hidden;
+    @apply flex justify-center items-center p-4 bg-background-tertiary rounded-2xl mx-auto w-fit overflow-hidden;
   }
 
   /* Set size for the Chessground component */
@@ -145,5 +170,19 @@ a {
   .chess-board-container .cg-container canvas {
     width: 100% !important;
     height: 100% !important;
+  }
+
+  /* Enhanced Chess Board Wrapper */
+  .chess-board-wrapper {
+    @apply relative bg-board-dark rounded-lg overflow-hidden;
+    width: min(100%, 600px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 768px) {
+    .chess-board-wrapper {
+      width: min(100vw - 2rem, 400px);
+    }
   }
 }

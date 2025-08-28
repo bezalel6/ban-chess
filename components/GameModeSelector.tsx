@@ -1,101 +1,69 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useQueue } from '@/lib/ws-hooks-optimized';
+import { useWebSocket } from '@/lib/ws-hooks';
 
 export default function GameModeSelector() {
   const router = useRouter();
   const { user } = useAuth();
-  const [mode, setMode] = useState<'none' | 'solo' | 'queue'>('none');
-  
-  const { position, matched, error, connected, authenticated, joinQueue, leaveQueue, ws } = 
-    useQueue(user && user.userId && user.username 
-      ? { userId: user.userId, username: user.username } 
-      : undefined);
+  const [mode, setMode] = useState<'solo' | 'multiplayer' | null>(null);
+  const { 
+    authenticated, 
+    matched, 
+    position, 
+    createSoloGame, 
+    joinQueue, 
+    leaveQueue 
+  } = useWebSocket(undefined, user && user.userId && user.username ? { userId: user.userId, username: user.username } : undefined);
 
   useEffect(() => {
     if (matched) {
-      // Redirect to game when matched
       router.push(`/game/${matched.gameId}`);
     }
   }, [matched, router]);
 
-  const handleCreateSoloGame = () => {
-    if (!user || !ws || !connected || !authenticated) {
-      return;
-    }
-    
+  const handleSoloGame = () => {
     setMode('solo');
-    
-    // Send create-solo-game message
-    ws.send(JSON.stringify({ type: 'create-solo-game' }));
-    
-    // Listen for response
-    const handleMessage = (event: MessageEvent) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'solo-game-created') {
-        // Redirect to the solo game
-        router.push(`/game/${msg.gameId}`);
-        ws.removeEventListener('message', handleMessage);
-      }
-    };
-    
-    ws.addEventListener('message', handleMessage);
+    createSoloGame();
   };
 
-  const handleJoinQueue = () => {
-    if (!user) {
-      return;
-    }
-    setMode('queue');
+  const handleMultiplayer = () => {
+    setMode('multiplayer');
     joinQueue();
   };
 
   const handleCancel = () => {
-    if (mode === 'queue') {
+    if (mode === 'multiplayer') {
       leaveQueue();
     }
-    setMode('none');
+    setMode(null);
   };
 
-  const inQueue = position !== null;
-
-  if (mode === 'solo') {
+  if (!authenticated) {
     return (
-      <div className="mb-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-white mb-6">
-            Creating Solo Game...
-          </h2>
-          <div className="loading-spinner mb-4" />
-          <p className="text-lg text-gray-300">
-            Setting up your practice game
-          </p>
+      <div className="game-mode-selector">
+        <div className="text-center text-foreground-muted">
+          <div className="loading-spinner mb-4"></div>
+          <p>Connecting to game server...</p>
         </div>
       </div>
     );
   }
 
-  if (mode === 'queue' || inQueue) {
+  if (position !== null) {
     return (
-      <div className="mb-8">
+      <div className="game-mode-selector">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold text-white mb-6">
-            Finding Opponent...
-          </h2>
-          <div className="mb-6">
-            <div className="loading-spinner mb-4" />
-            <p className="text-lg text-gray-300">
-              Position in queue: <span className="font-bold text-white">{position}</span>
-            </p>
-          </div>
+          <div className="loading-spinner mb-4"></div>
+          <h3 className="text-xl font-semibold text-foreground mb-2">Finding Opponent...</h3>
+          <p className="text-foreground-muted mb-4">Position in queue: {position}</p>
           <button
             onClick={handleCancel}
-            className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] font-medium"
+            className="px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-colors"
           >
-            Leave Queue
+            Cancel
           </button>
         </div>
       </div>
@@ -103,56 +71,39 @@ export default function GameModeSelector() {
   }
 
   return (
-    <div className="mb-8">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold text-white mb-6">
-          Choose Game Mode
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-          {/* Solo Play Button */}
-          <button
-            onClick={handleCreateSoloGame}
-            disabled={!user || !connected || !authenticated}
-            className="p-6 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:from-gray-600 disabled:to-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-xl"
-          >
-            <div className="text-3xl mb-2">🎯</div>
-            <div className="text-xl font-semibold mb-2">Play Solo</div>
-            <div className="text-sm text-purple-100">
-              Practice by playing both sides
-            </div>
-          </button>
-          
-          {/* Multiplayer Button */}
-          <button
-            onClick={handleJoinQueue}
-            disabled={!user || !connected || !authenticated}
-            className="p-6 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-xl"
-          >
-            <div className="text-3xl mb-2">⚔️</div>
-            <div className="text-xl font-semibold mb-2">Play Online</div>
-            <div className="text-sm text-green-100">
-              Challenge another player
-            </div>
-          </button>
-        </div>
-        
-        {!user && (
-          <p className="text-sm text-gray-500 mt-6">
-            Please set your username to start playing
+    <div className="game-mode-selector">
+      <h2 className="text-2xl font-bold text-foreground mb-6 text-center">Select Game Mode</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          onClick={handleSoloGame}
+          disabled={mode === 'solo'}
+          className="p-6 bg-background-secondary hover:bg-background-tertiary rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 border border-border"
+        >
+          <div className="text-4xl mb-3">🎯</div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Solo Game</h3>
+          <p className="text-sm text-foreground-muted">
+            Play both sides and practice the Ban Chess mechanics
           </p>
-        )}
-        
-        {user && (!connected || !authenticated) && (
-          <p className="text-sm text-gray-500 mt-6">
-            {!connected ? "Connecting to server..." : "Authenticating..."}
+        </button>
+
+        <button
+          onClick={handleMultiplayer}
+          disabled={mode === 'multiplayer'}
+          className="p-6 bg-background-secondary hover:bg-background-tertiary rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 border border-border"
+        >
+          <div className="text-4xl mb-3">⚔️</div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Multiplayer</h3>
+          <p className="text-sm text-foreground-muted">
+            Challenge another player online
           </p>
-        )}
+        </button>
       </div>
 
-      {error && (
-        <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-center">
-          <p className="text-red-400">{error}</p>
+      {mode === 'solo' && (
+        <div className="mt-4 text-center text-foreground-muted">
+          <div className="loading-spinner mb-2"></div>
+          <p>Creating solo game...</p>
         </div>
       )}
     </div>
