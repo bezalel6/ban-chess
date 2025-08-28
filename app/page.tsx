@@ -1,85 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
+import { useGameWebSocket } from '@/contexts/WebSocketContext';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [inQueue, setInQueue] = useState(false);
-  const [queuePosition, setQueuePosition] = useState(0);
-  const router = useRouter();
   const { user } = useAuth();
+  const { createSoloGame, joinQueue } = useGameWebSocket();
+  const router = useRouter();
 
-  useEffect(() => {
-    if (!user) return;
-
-    // Connect to WebSocket
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081';
-    const socket = new WebSocket(wsUrl);
-
-    socket.onopen = () => {
-      // Authenticate
-      socket.send(JSON.stringify({
-        type: 'authenticate',
-        userId: user.userId,
-        username: user.username
-      }));
-    };
-
-    socket.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      
-      switch (msg.type) {
-        case 'solo-game-created':
-          // Redirect to solo game
-          router.push(`/game/${msg.gameId}`);
-          break;
-          
-        case 'matched':
-          // Matched with another player
-          router.push(`/game/${msg.gameId}`);
-          break;
-          
-        case 'queued':
-          // Update queue position
-          setQueuePosition(msg.position);
-          break;
-      }
-    };
-
-    setWs(socket);
-
-    return () => {
-      socket.close();
-    };
-  }, [user, router]);
-
-  const createSoloGame = () => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      alert('Not connected to server. Please refresh and try again.');
-      return;
-    }
-    ws.send(JSON.stringify({ type: 'create-solo-game' }));
-  };
-
-  const joinQueue = () => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      alert('Not connected to server. Please refresh and try again.');
-      return;
-    }
-    setInQueue(true);
-    ws.send(JSON.stringify({ type: 'join-queue' }));
-  };
-
-  const leaveQueue = () => {
-    if (!ws) return;
-    setInQueue(false);
-    setQueuePosition(0);
-    ws.send(JSON.stringify({ type: 'leave-queue' }));
-  };
-
-  const joinGame = () => {
+  const joinGameById = () => {
     const gameId = prompt('Enter Game ID:');
     if (gameId) {
       router.push(`/game/${gameId}`);
@@ -119,29 +49,14 @@ export default function HomePage() {
               >
                 Play Solo (Practice)
               </button>
-
-              {!inQueue ? (
-                <button
-                  onClick={joinQueue}
-                  className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold"
-                >
-                  Find Opponent
-                </button>
-              ) : (
-                <div className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg text-center">
-                  <p>In queue...</p>
-                  {queuePosition > 0 && <p className="text-sm">Position: {queuePosition}</p>}
-                  <button 
-                    onClick={leaveQueue}
-                    className="text-sm underline mt-2"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-
               <button
-                onClick={joinGame}
+                onClick={joinQueue}
+                className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold"
+              >
+                Find Opponent
+              </button>
+              <button
+                onClick={joinGameById}
                 className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground"
               >
                 Join with Game ID
