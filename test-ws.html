@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <button onclick="testConnection()">Test Connection Flow</button>
+    <button onclick="testNavigate()">Test Navigate to Game</button>
+    <pre id="log"></pre>
+    
+    <script>
+        const log = (msg) => {
+            document.getElementById('log').innerText += msg + '\n';
+            console.log(msg);
+        };
+        
+        async function testConnection() {
+            log('=== Testing WebSocket Connection Flow ===');
+            
+            // First sign in
+            const signInRes = await fetch('http://localhost:3000/auth/signin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username: 'TestUser' + Date.now() })
+            });
+            log('Sign in: ' + signInRes.status);
+            
+            // Get current user
+            const userRes = await fetch('http://localhost:3000/api/auth/me', {
+                credentials: 'include'
+            });
+            const user = await userRes.json();
+            log('User: ' + JSON.stringify(user));
+            
+            // Create WebSocket
+            const ws = new WebSocket('ws://localhost:8081');
+            
+            ws.onopen = () => {
+                log('WS: Connected');
+                ws.send(JSON.stringify({
+                    type: 'authenticate',
+                    userId: user.userId,
+                    username: user.username
+                }));
+            };
+            
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                log('WS Received: ' + msg.type);
+                
+                if (msg.type === 'authenticated') {
+                    log('WS: Authenticated! Creating solo game...');
+                    ws.send(JSON.stringify({ type: 'create-solo-game' }));
+                } else if (msg.type === 'solo-game-created') {
+                    log('WS: Game created: ' + msg.gameId);
+                    log('WS: Joining game...');
+                    ws.send(JSON.stringify({ type: 'join-game', gameId: msg.gameId }));
+                } else if (msg.type === 'joined') {
+                    log('WS: Successfully joined game!');
+                    log('=== Test Complete ===');
+                }
+            };
+            
+            ws.onerror = (err) => log('WS Error: ' + err);
+        }
+        
+        function testNavigate() {
+            log('Opening app in new window to test navigation...');
+            window.open('http://localhost:3000', '_blank');
+        }
+    </script>
+</body>
+</html>

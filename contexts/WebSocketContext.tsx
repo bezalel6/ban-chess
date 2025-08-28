@@ -168,7 +168,23 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       unsubscribe();
       clearInterval(interval);
     };
-  }, [user, router]); // Remove gameId from deps to avoid infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router]); // Intentionally omit gameId to avoid infinite loop
+  
+  // Handle game joins when URL changes
+  useEffect(() => {
+    if (!connected) return;
+    
+    const path = window.location.pathname;
+    if (path.startsWith('/game/')) {
+      const id = path.split('/')[2];
+      if (id && id !== gameId) {
+        console.log('[WSContext] URL changed, joining game:', id);
+        setGameId(id);
+        wsConnection.send({ type: 'join-game', gameId: id });
+      }
+    }
+  }, [connected, gameId]);
   
   // Action handlers
   const sendAction = useCallback((action: Action) => {
