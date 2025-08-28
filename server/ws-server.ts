@@ -189,21 +189,13 @@ wss.on('connection', (ws: WebSocket) => {
         case 'authenticate': {
           const { userId, username } = msg;
           
-          // Handle duplicate connections with session takeover
+          // Handle duplicate connections gracefully by closing the old one silently
           const existingPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
           if (existingPlayer && existingPlayer.ws !== ws) {
-            if (existingPlayer.ws.readyState === WebSocket.OPEN) {
-              console.log(`User ${username} taking over existing session`);
-              existingPlayer.ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Your session has been taken over by another connection'
-              } as SimpleServerMsg));
-              existingPlayer.ws.close(1000, 'Session takeover');
-              authenticatedPlayers.delete(existingPlayer.ws);
-              removeFromQueue(existingPlayer);
-            } else {
-              authenticatedPlayers.delete(existingPlayer.ws);
-            }
+            console.log(`User ${username} establishing new connection, closing old one.`);
+            existingPlayer.ws.close(1000, 'New connection established');
+            authenticatedPlayers.delete(existingPlayer.ws);
+            removeFromQueue(existingPlayer);
           }
           
           currentPlayer = { userId, username, ws };

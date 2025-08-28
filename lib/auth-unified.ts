@@ -135,6 +135,7 @@ export async function logout(): Promise<void> {
   }
   
   session.destroy();
+  await session.save();
 }
 
 // Update user activity
