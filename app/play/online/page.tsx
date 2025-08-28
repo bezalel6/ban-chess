@@ -3,12 +3,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useGameWebSocket } from '@/contexts/WebSocketContext';
 
 export default function OnlinePlayPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { connected, gameState } = useWebSocket();
+  const { connected, gameState } = useGameWebSocket();
 
   useEffect(() => {
     // If a game is joined (e.g., from a match), redirect to it

@@ -3,12 +3,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useWebSocket } from '@/contexts/WebSocketContext';
+import { useGameWebSocket } from '@/contexts/WebSocketContext';
 
 export default function SoloPlayPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { connected, createSoloGame } = useWebSocket();
+  const { connected, createSoloGame } = useGameWebSocket();
 
   useEffect(() => {
     // Redirect if not logged in
