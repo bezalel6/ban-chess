@@ -54,12 +54,56 @@ function broadcastGameState(gameId: string) {
   const room = games.get(gameId);
   if (!room) return;
   
+  // Get legal moves/bans from the game
+  const fen = room.game.fen();
+  const fenParts = fen.split(' ');
+  const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
+  const banState = fenParts[6]; // 7th field contains ban state
+  const isNextActionBan = banState && banState.includes(':ban');
+  
+  // Get legal actions and convert to simple format
+  const legalActions = isNextActionBan ? room.game.legalBans() : room.game.legalMoves();
+  console.log(`[broadcastGameState] FEN: ${fen}`);
+  console.log(`[broadcastGameState] Chess turn: ${chessTurn}, Next action: ${isNextActionBan ? 'ban' : 'move'}, Legal actions count: ${legalActions.length}`);
+  
+  const simpleLegalActions = legalActions.map((action: string | { from: string; to: string }) => {
+    if (typeof action === 'string') {
+      return action; // Already in "e2e4" format
+    } else if (action && typeof action === 'object' && 'from' in action && 'to' in action) {
+      return action.from + action.to; // Convert {from: "e2", to: "e4"} to "e2e4"
+    }
+    return null;
+  }).filter(Boolean);
+  
+  // For solo games, determine the acting player (who makes the decision)
+  let actingPlayer: 'white' | 'black' = chessTurn;
+  if (room.isSoloGame) {
+    // Ban phase: The player who just moved (or black at start) bans opponent's next moves
+    // Move phase: The current turn player moves
+    if (isNextActionBan) {
+      // At game start (white's turn, ban phase): BLACK bans white's moves
+      // After white moves (black's turn, ban phase): WHITE bans black's moves
+      // After black moves (white's turn, ban phase): BLACK bans white's moves
+      // Pattern: In ban phase, the OTHER player (not current turn) is acting
+      actingPlayer = chessTurn === 'white' ? 'black' : 'white';
+    } else {
+      // In move phase, the current turn player acts
+      actingPlayer = chessTurn;
+    }
+  }
+  
+  console.log(`[broadcastGameState] Acting player: ${actingPlayer} (solo: ${room.isSoloGame})`);
+  
   const stateMsg: SimpleServerMsg = {
     type: 'state',
-    fen: room.game.fen(), // This includes the ban state!
+    fen: fen,
     gameId,
     players: getPlayerUsernames(room),
-    isSoloGame: room.isSoloGame
+    isSoloGame: room.isSoloGame,
+    legalActions: simpleLegalActions,
+    nextAction: isNextActionBan ? 'ban' : 'move',
+    // For solo games, playerColor is the acting player
+    ...(room.isSoloGame && { playerColor: actingPlayer })
   };
   
   // Send to all players in the room
@@ -177,16 +221,34 @@ wss.on('connection', (ws: WebSocket) => {
           if (gameId) {
             const room = games.get(gameId);
             if (room) {
-              const color = room.whitePlayerId === userId ? 'white' : 'black';
+              let color: 'white' | 'black' = room.whitePlayerId === userId ? 'white' : 'black';
+              
+              // For solo games, determine the acting player
+              if (room.isSoloGame) {
+                const fen = room.game.fen();
+                const fenParts = fen.split(' ');
+                const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
+                const banState = fenParts[6];
+                const isNextActionBan = banState && banState.includes(':ban');
+                
+                // Same logic as broadcastGameState
+                if (isNextActionBan) {
+                  color = chessTurn === 'white' ? 'black' : 'white';
+                } else {
+                  color = chessTurn;
+                }
+              }
+              
               ws.send(JSON.stringify({
                 type: 'joined',
                 gameId,
-                color: room.isSoloGame ? 'white' : color, // Solo games always view as white
+                color,
                 players: getPlayerUsernames(room),
                 isSoloGame: room.isSoloGame
               } as SimpleServerMsg));
               
-              setTimeout(() => broadcastGameState(gameId), 50);
+              // Send game state immediately
+              broadcastGameState(gameId);
               console.log(`Player ${username} reconnected to game ${gameId}`);
             }
           }
@@ -230,17 +292,34 @@ wss.on('connection', (ws: WebSocket) => {
           }
           
           playerToGame.set(currentPlayer.userId, gameId);
-          const color = room.whitePlayerId === currentPlayer.userId ? 'white' : 'black';
+          let color: 'white' | 'black' = room.whitePlayerId === currentPlayer.userId ? 'white' : 'black';
+          
+          // For solo games, determine the acting player
+          if (room.isSoloGame) {
+            const fen = room.game.fen();
+            const fenParts = fen.split(' ');
+            const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
+            const banState = fenParts[6];
+            const isNextActionBan = banState && banState.includes(':ban');
+            
+            // Same logic as broadcastGameState
+            if (isNextActionBan) {
+              color = chessTurn === 'white' ? 'black' : 'white';
+            } else {
+              color = chessTurn;
+            }
+          }
           
           ws.send(JSON.stringify({
             type: 'joined',
             gameId,
-            color: room.isSoloGame ? 'white' : color,
+            color,
             players: getPlayerUsernames(room),
             isSoloGame: room.isSoloGame
           } as SimpleServerMsg));
           
-          setTimeout(() => broadcastGameState(gameId), 50);
+          // Send game state immediately, not with a timeout
+          broadcastGameState(gameId);
           break;
         }
         
@@ -258,23 +337,18 @@ wss.on('connection', (ws: WebSocket) => {
             return;
           }
           
-          // In solo games, allow any action. Otherwise check turn
-          if (!room.isSoloGame) {
-            const playerColor = room.whitePlayerId === currentPlayer.userId ? 'white' : 'black';
-            const gameTurn = room.game.turn === 'white' ? 'white' : 'black';
-            if (playerColor !== gameTurn) {
-              ws.send(JSON.stringify({ type: 'error', message: 'Not your turn' } as SimpleServerMsg));
-              return;
-            }
-          }
-          
-          // Let ban-chess.ts handle all validation
+          // BanChess handles ALL validation
           const result = room.game.play(action);
           
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);
+            // WORKAROUND: Re-create the game object from the new FEN.
+            // This prevents potential stale state issues within the ban-chess.ts library.
+            const newFen = room.game.fen();
+            room.game = new BanChess(newFen);
             broadcastGameState(gameId);
           } else {
+            console.log(`Invalid action in game ${gameId}:`, action, 'Error:', result.error);
             ws.send(JSON.stringify({ 
               type: 'error', 
               message: result.error || 'Invalid action' 

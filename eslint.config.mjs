@@ -34,6 +34,7 @@ export default [
       'react-hooks': reactHooks,
     },
     rules: {
+      'no-unused-vars': 'off', // Turn off base rule as it doesn't understand TypeScript
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { 
         argsIgnorePattern: '^_',

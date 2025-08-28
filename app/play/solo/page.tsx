@@ -3,36 +3,25 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useWebSocket } from '@/lib/ws-hooks';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 
 export default function SoloPlayPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { 
-    authenticated, 
-    matched, 
-    createSoloGame 
-  } = useWebSocket(undefined, user && user.userId && user.username ? { userId: user.userId, username: user.username } : undefined);
+  const { connected, createSoloGame } = useWebSocket();
 
   useEffect(() => {
+    // Redirect if not logged in
     if (!user) {
       router.push('/auth/signin');
       return;
     }
-  }, [user, router]);
 
-  useEffect(() => {
-    if (matched) {
-      router.push(`/game/${matched.gameId}`);
-    }
-  }, [matched, router]);
-
-  useEffect(() => {
-    if (authenticated && user) {
-      // Automatically create a solo game when authenticated
+    // Once connected, create the game
+    if (connected) {
       createSoloGame();
     }
-  }, [authenticated, user, createSoloGame]);
+  }, [user, connected, createSoloGame, router]);
 
   if (!user) {
     return (
@@ -40,17 +29,6 @@ export default function SoloPlayPage() {
         <div className="text-center">
           <div className="loading-spinner mb-4"></div>
           <p className="text-foreground-muted">Redirecting to sign in...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!authenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="loading-spinner mb-4"></div>
-          <p className="text-foreground-muted">Connecting to game server...</p>
         </div>
       </div>
     );
@@ -69,7 +47,9 @@ export default function SoloPlayPage() {
           
           <div className="bg-background-secondary rounded-lg p-6 border border-border">
             <div className="loading-spinner mb-4"></div>
-            <p className="text-foreground">Creating your solo game...</p>
+            <p className="text-foreground">
+              {connected ? 'Creating your solo game...' : 'Connecting to server...'}
+            </p>
             <p className="text-foreground-subtle text-sm mt-2">
               You&apos;ll be redirected to the game board momentarily.
             </p>

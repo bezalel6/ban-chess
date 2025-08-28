@@ -1,117 +1,147 @@
-import { Suspense } from 'react';
-import QuickPairing from '@/components/home/QuickPairing';
-import LiveGames from '@/components/home/LiveGames';
-import GameModeGrid from '@/components/home/GameModeGrid';
+'use client';
 
-function QuickPairingSkeleton() {
-  return (
-    <div className="bg-background-secondary rounded-lg p-6 animate-pulse">
-      <div className="h-6 bg-background-tertiary rounded mb-6 w-1/3"></div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-20 bg-background-tertiary rounded-lg"></div>
-        ))}
-      </div>
-      <div className="h-12 bg-background-tertiary rounded-lg"></div>
-    </div>
-  );
-}
-
-function LiveGamesSkeleton() {
-  return (
-    <div className="bg-background-secondary rounded-lg p-6 animate-pulse">
-      <div className="flex items-center justify-between mb-6">
-        <div className="h-6 bg-background-tertiary rounded w-1/3"></div>
-        <div className="h-4 bg-background-tertiary rounded w-16"></div>
-      </div>
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 bg-background-tertiary rounded-lg"></div>
-        ))}
-      </div>
-    </div>
-  );
-}
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function HomePage() {
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [inQueue, setInQueue] = useState(false);
+  const [queuePosition, setQueuePosition] = useState(0);
+  const router = useRouter();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Connect to WebSocket
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8081';
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      // Authenticate
+      socket.send(JSON.stringify({
+        type: 'authenticate',
+        userId: user.userId,
+        username: user.username
+      }));
+    };
+
+    socket.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      
+      switch (msg.type) {
+        case 'solo-game-created':
+          // Redirect to solo game
+          router.push(`/game/${msg.gameId}`);
+          break;
+          
+        case 'matched':
+          // Matched with another player
+          router.push(`/game/${msg.gameId}`);
+          break;
+          
+        case 'queued':
+          // Update queue position
+          setQueuePosition(msg.position);
+          break;
+      }
+    };
+
+    setWs(socket);
+
+    return () => {
+      socket.close();
+    };
+  }, [user, router]);
+
+  const createSoloGame = () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      alert('Not connected to server. Please refresh and try again.');
+      return;
+    }
+    ws.send(JSON.stringify({ type: 'create-solo-game' }));
+  };
+
+  const joinQueue = () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      alert('Not connected to server. Please refresh and try again.');
+      return;
+    }
+    setInQueue(true);
+    ws.send(JSON.stringify({ type: 'join-queue' }));
+  };
+
+  const leaveQueue = () => {
+    if (!ws) return;
+    setInQueue(false);
+    setQueuePosition(0);
+    ws.send(JSON.stringify({ type: 'leave-queue' }));
+  };
+
+  const joinGame = () => {
+    const gameId = prompt('Enter Game ID:');
+    if (gameId) {
+      router.push(`/game/${gameId}`);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">2 Ban 2 Chess</h1>
+          <p className="text-foreground-muted mb-8">Chess where you can ban opponent moves</p>
+          <a href="/auth/signin" className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90">
+            Sign in to play
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-background to-background-secondary py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Quick Pairing - Main CTA */}
-            <div className="lg:col-span-2">
-              <div className="mb-8">
-                <div className="text-6xl mb-4">♟️</div>
-                <h1 className="text-hero font-bold text-foreground mb-6">
-                  Play Ban Chess Online
-                </h1>
-                <p className="text-lg text-foreground-muted mb-8 max-w-2xl">
-                  A strategic chess variant where you can ban your opponent&apos;s moves. 
-                  Test your tactical skills in this unique chess experience.
-                </p>
-              </div>
-              
-              <Suspense fallback={<QuickPairingSkeleton />}>
-                <QuickPairing />
-              </Suspense>
-            </div>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">2 Ban 2 Chess</h1>
+        <p className="text-foreground-muted">Playing as {user.username}</p>
+      </div>
 
-            {/* Live Games Sidebar */}
-            <div>
-              <Suspense fallback={<LiveGamesSkeleton />}>
-                <LiveGames />
-              </Suspense>
-            </div>
+      <div className="flex flex-col gap-4 w-full max-w-sm">
+        <button
+          onClick={createSoloGame}
+          className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
+        >
+          Play Solo (Practice)
+        </button>
+
+        {!inQueue ? (
+          <button
+            onClick={joinQueue}
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
+          >
+            Find Opponent
+          </button>
+        ) : (
+          <div className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg text-center">
+            <p>In queue...</p>
+            {queuePosition > 0 && <p className="text-sm">Position: {queuePosition}</p>}
+            <button 
+              onClick={leaveQueue}
+              className="text-sm underline mt-2"
+            >
+              Cancel
+            </button>
           </div>
-        </div>
-      </section>
+        )}
 
-      {/* Game Modes Section */}
-      <section className="py-16 bg-background-secondary">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="text-section font-bold text-foreground mb-8 text-center">
-            Choose Your Game Mode
-          </h2>
-          <GameModeGrid />
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-section font-bold text-foreground mb-8">
-              Why Ban Chess?
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <div className="text-center">
-                <div className="text-4xl mb-4">🧠</div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">Strategic Depth</h3>
-                <p className="text-foreground-muted">
-                  Banning opponent moves adds a new layer of strategy and planning
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl mb-4">⚡</div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">Fast-Paced</h3>
-                <p className="text-foreground-muted">
-                  Quick games with time controls from 1 minute to classical formats
-                </p>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl mb-4">🌐</div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">Free & Open</h3>
-                <p className="text-foreground-muted">
-                  Completely free to play with open source development
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+        <button
+          onClick={joinGame}
+          className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition"
+        >
+          Join with Game ID
+        </button>
+      </div>
     </div>
   );
 }

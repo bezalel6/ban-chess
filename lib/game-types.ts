@@ -23,11 +23,13 @@ export interface SimpleGameState {
   };
   playerColor?: 'white' | 'black';  // Which color this client is playing
   isSoloGame?: boolean;
+  legalActions?: string[];  // Legal moves/bans from server
+  nextAction?: 'move' | 'ban';  // What action is next
 }
 
 // Server messages - simplified
 export type SimpleServerMsg = 
-  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean }
+  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black' }
   | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
@@ -72,9 +74,10 @@ export function getWhoBans(fen: string): 'white' | 'black' | null {
 
 export function getCurrentBan(fen: string): Ban | null {
   const { banState } = parseFEN(fen);
-  if (banState && !banState.includes(':ban')) {
+  // Check if there's a ban state and it contains a move (not just ":ban")
+  if (banState && banState.includes(':') && !banState.includes(':ban')) {
     const banStr = banState.split(':')[1];
-    if (banStr) {
+    if (banStr && banStr.length >= 4) {
       return {
         from: banStr.substring(0, 2),
         to: banStr.substring(2, 4)
