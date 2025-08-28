@@ -1,18 +1,35 @@
-// True singleton WebSocket that persists across everything
+'use client';
+
+// Client-only singleton WebSocket that persists across everything
 import type { SimpleServerMsg, SimpleClientMsg } from './game-types';
 
 class WebSocketSingleton {
-  private static instance: WebSocketSingleton;
+  private static instance: WebSocketSingleton | null = null;
   private ws: WebSocket | null = null;
   private listeners = new Set<(msg: SimpleServerMsg) => void>();
   private isAuthenticated = false;
   private currentUser: { userId?: string; username?: string } | null = null;
+  private connectInProgress = false;
 
   private constructor() {
     // Private constructor for singleton
+    console.log('[WS Singleton] Constructor called');
   }
 
   static getInstance(): WebSocketSingleton {
+    // Use global window object to ensure true singleton across all modules
+    if (typeof window !== 'undefined') {
+      const win = window as Window & { __wsInstance?: WebSocketSingleton };
+      if (!win.__wsInstance) {
+        console.log('[WS Singleton] Creating new instance');
+        win.__wsInstance = new WebSocketSingleton();
+      } else {
+        console.log('[WS Singleton] Returning existing instance');
+      }
+      return win.__wsInstance;
+    }
+    
+    // Server-side fallback (should not happen in client component)
     if (!WebSocketSingleton.instance) {
       WebSocketSingleton.instance = new WebSocketSingleton();
     }
@@ -23,7 +40,8 @@ class WebSocketSingleton {
     console.log('[WS Singleton] connect() called with user:', user.username, 'Current state:', {
       wsReady: this.ws?.readyState === WebSocket.OPEN,
       isAuth: this.isAuthenticated,
-      sameUser: this.currentUser?.userId === user.userId
+      sameUser: this.currentUser?.userId === user.userId,
+      connectInProgress: this.connectInProgress
     });
     
     // If already connected with same user, do nothing
@@ -32,11 +50,19 @@ class WebSocketSingleton {
         this.isAuthenticated) {
       console.log('[WS Singleton] Already connected and authenticated');
       // Notify listeners that we're already authenticated
-      this.listeners.forEach(listener => listener({ 
-        type: 'authenticated', 
-        userId: user.userId || '', 
-        username: user.username || '' 
-      }));
+      setTimeout(() => {
+        this.listeners.forEach(listener => listener({ 
+          type: 'authenticated', 
+          userId: user.userId || '', 
+          username: user.username || '' 
+        }));
+      }, 0);
+      return;
+    }
+    
+    // If connection is already in progress, don't start another
+    if (this.connectInProgress) {
+      console.log('[WS Singleton] Connection already in progress, skipping');
       return;
     }
 
@@ -51,12 +77,14 @@ class WebSocketSingleton {
 
     // Store user
     this.currentUser = user;
+    this.connectInProgress = true;
 
     // Create new connection
     console.log('[WS Singleton] Creating new connection for', user.username);
     this.ws = new WebSocket('ws://localhost:8081');
 
     this.ws.onopen = () => {
+      this.connectInProgress = false;
       console.log('[WS Singleton] Connected, authenticating...');
       this.send({ 
         type: 'authenticate', 
@@ -134,13 +162,11 @@ export const wsConnection = WebSocketSingleton.getInstance();
 declare global {
   interface Window {
     wsConnection: WebSocketSingleton;
-    wsConnectionInstances: number;
+    __wsInstance: WebSocketSingleton;
   }
 }
 
 if (typeof window !== 'undefined') {
   window.wsConnection = wsConnection;
-  // Track how many times this code runs
-  window.wsConnectionInstances = (window.wsConnectionInstances || 0) + 1;
-  console.log('[WS Singleton] Module loaded, instance count:', window.wsConnectionInstances);
+  console.log('[WS Singleton] Module loaded, global instance:', window.__wsInstance ? 'exists' : 'created');
 }

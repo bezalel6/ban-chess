@@ -54,10 +54,11 @@ function broadcastGameState(gameId: string) {
   const room = games.get(gameId);
   if (!room) return;
   
-  // Check for game over
+  // Check for game over and check state
   const isGameOver = room.game.gameOver();
   const isCheckmate = room.game.inCheckmate();
   const isStalemate = room.game.inStalemate();
+  const isInCheck = room.game.inCheck();
   
   if (isGameOver) {
     console.log(`[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}`);
@@ -111,6 +112,7 @@ function broadcastGameState(gameId: string) {
     isSoloGame: room.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? 'ban' : 'move',
+    inCheck: isInCheck,
     // For solo games, playerColor is the acting player
     ...(room.isSoloGame && { playerColor: actingPlayer }),
     // Add game over state

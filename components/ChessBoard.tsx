@@ -83,7 +83,7 @@ export default function ChessBoard({
     autoCastle: true,
     highlight: {
       lastMove: true,
-      check: gameState.fen.includes("+") || gameState.fen.includes("#"),
+      check: gameState.inCheck === true,
     },
     lastMove: undefined,
     animation: {

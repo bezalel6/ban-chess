@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode,
 import { useRouter } from 'next/navigation';
 import type { SimpleGameState, SimpleServerMsg, Action } from '@/lib/game-types';
 import { useAuth } from '@/components/AuthProvider';
-import { wsConnection } from '@/lib/websocket-singleton';
+import { wsConnection } from '@/lib/websocket-singleton-client';
 import soundManager from '@/lib/sound-manager';
 
 // --- Context Definition ---
@@ -29,9 +29,20 @@ export function useGameWebSocket() {
 }
 
 // --- Provider Component ---
+let providerCount = 0;
+
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const router = useRouter();
+  
+  useEffect(() => {
+    providerCount++;
+    console.log('[WSContext] Provider mounted, count:', providerCount);
+    return () => {
+      providerCount--;
+      console.log('[WSContext] Provider unmounted, count:', providerCount);
+    };
+  }, []);
   
   const [gameState, setGameState] = useState<SimpleGameState | null>(null);
   const [error, setError] = useState<string | null>(null);

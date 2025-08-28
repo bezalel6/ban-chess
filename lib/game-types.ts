@@ -27,11 +27,12 @@ export interface SimpleGameState {
   nextAction?: 'move' | 'ban';  // What action is next
   gameOver?: boolean;
   result?: string;
+  inCheck?: boolean;  // Whether the current position has a check
 }
 
 // Server messages - simplified
 export type SimpleServerMsg = 
-  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string }
+  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean }
   | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
