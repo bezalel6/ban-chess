@@ -20,11 +20,23 @@ class WebSocketSingleton {
   }
 
   connect(user: { userId?: string; username?: string }) {
+    console.log('[WS Singleton] connect() called with user:', user.username, 'Current state:', {
+      wsReady: this.ws?.readyState === WebSocket.OPEN,
+      isAuth: this.isAuthenticated,
+      sameUser: this.currentUser?.userId === user.userId
+    });
+    
     // If already connected with same user, do nothing
     if (this.ws?.readyState === WebSocket.OPEN && 
         this.currentUser?.userId === user.userId && 
         this.isAuthenticated) {
       console.log('[WS Singleton] Already connected and authenticated');
+      // Notify listeners that we're already authenticated
+      this.listeners.forEach(listener => listener({ 
+        type: 'authenticated', 
+        userId: user.userId || '', 
+        username: user.username || '' 
+      }));
       return;
     }
 

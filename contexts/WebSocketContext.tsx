@@ -70,8 +70,27 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user || !user.userId) return;
     
+    console.log('[WSContext] Setting up WebSocket for user:', user.username);
+    
     // Connect the singleton
     wsConnection.connect({ userId: user.userId, username: user.username });
+    
+    // Check initial state
+    const initialState = wsConnection.getState();
+    console.log('[WSContext] Initial state:', initialState);
+    if (initialState.connected && initialState.authenticated) {
+      setConnected(true);
+      // Check if we need to join a game
+      const path = window.location.pathname;
+      if (path.startsWith('/game/')) {
+        const id = path.split('/')[2];
+        if (id && id !== gameId) {
+          console.log('[WSContext] Auto-joining game on mount:', id);
+          setGameId(id);
+          wsConnection.send({ type: 'join-game', gameId: id });
+        }
+      }
+    }
     
     // Subscribe to messages
     const unsubscribe = wsConnection.subscribe((msg: SimpleServerMsg) => {
@@ -149,7 +168,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       unsubscribe();
       clearInterval(interval);
     };
-  }, [user, router, gameId]);
+  }, [user, router]); // Remove gameId from deps to avoid infinite loop
   
   // Action handlers
   const sendAction = useCallback((action: Action) => {
