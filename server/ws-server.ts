@@ -202,16 +202,19 @@ wss.on('connection', (ws: WebSocket) => {
           // Check if this user is already connected
           const existingPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
           if (existingPlayer && existingPlayer.ws !== ws) {
-            // Check if the existing connection is still alive
+            // Check if the existing connection is still alive by trying to ping it
             if (existingPlayer.ws.readyState === WebSocket.OPEN) {
-              console.log(`User ${username} already has an active connection, rejecting new connection`);
-              // Reject the new connection instead of closing the old one
-              ws.send(JSON.stringify({
+              console.log(`User ${username} has an existing connection, taking over the session`);
+              // Close the old connection gracefully
+              existingPlayer.ws.send(JSON.stringify({
                 type: 'error',
-                message: 'User already connected in another session'
+                message: 'Your session has been taken over by another connection'
               } as ServerMsg));
-              ws.close(1008, 'Duplicate connection'); // 1008 = Policy Violation
-              return;
+              existingPlayer.ws.close(1000, 'Session takeover');
+              
+              // Clean up the old connection
+              authenticatedPlayers.delete(existingPlayer.ws);
+              removeFromQueue(existingPlayer);
             } else {
               // Old connection is dead, clean it up
               console.log(`Cleaning up dead connection for ${username}`);

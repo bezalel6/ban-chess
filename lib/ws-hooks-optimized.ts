@@ -125,10 +125,11 @@ class WebSocketManager {
         console.log('[WebSocket] Connection closed:', { code: event.code, reason: event.reason });
         this.updateStore({ connected: false, authenticated: false });
         
-        // Don't reconnect if closed due to duplicate connection (code 1008)
-        if (event.code === 1008 && event.reason === 'Duplicate connection') {
-          console.log('[WebSocket] Connection closed due to duplicate session, not reconnecting');
-          this.updateStore({ error: 'Already connected in another tab or window' });
+        // Handle session takeover (code 1000 with specific reason)
+        if (event.code === 1000 && event.reason === 'Session takeover') {
+          console.log('[WebSocket] Session taken over by another connection');
+          this.updateStore({ error: 'Your session was opened in another tab or window' });
+          // Don't try to reconnect - the other tab has taken over
           return;
         }
         
@@ -230,7 +231,10 @@ class WebSocketManager {
       
       case 'error':
         console.error('[WebSocket] Server error:', msg.message);
-        this.updateStore({ error: msg.message });
+        // Don't show session takeover as an error - it's expected behavior
+        if (!msg.message.includes('session has been taken over')) {
+          this.updateStore({ error: msg.message });
+        }
         break;
     }
   }
@@ -352,29 +356,10 @@ export function useWebSocket(
         console.error('[WebSocket] Please set NEXT_PUBLIC_WS_URL to your WebSocket server URL');
       }
       
-      // Log out user on page unload to free up the session
-      const handleUnload = (e: BeforeUnloadEvent) => {
-        console.log('[WebSocket] Page unloading, logging out user');
-        
-        // Send logout request using sendBeacon for reliability
-        // sendBeacon ensures the request completes even as page unloads
-        if (navigator.sendBeacon) {
-          const formData = new FormData();
-          formData.append('action', 'logout');
-          navigator.sendBeacon('/api/auth/logout', formData);
-        }
-        
-        // Also disconnect WebSocket immediately
-        if (user.userId) {
-          disconnectUserWebSockets(user.userId);
-        }
-      };
-      
-      window.addEventListener('beforeunload', handleUnload);
-      
-      return () => {
-        window.removeEventListener('beforeunload', handleUnload);
-      };
+      // Note: We no longer disconnect on page unload because:
+      // 1. The server now handles session takeover gracefully
+      // 2. This allows users to refresh the page without losing their session
+      // 3. Multiple tabs can be handled by the server's session takeover logic
     }
   }, [user]);
   
