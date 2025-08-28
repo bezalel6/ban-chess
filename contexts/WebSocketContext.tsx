@@ -2,9 +2,10 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import useWebSocket, { ReadyState } from 'react-use-websocket';
-import type { SimpleGameState, SimpleServerMsg, SimpleClientMsg, Action } from '@/lib/game-types';
+import type { SimpleGameState, SimpleServerMsg, Action } from '@/lib/game-types';
 import { useAuth } from '@/components/AuthProvider';
+import { wsConnection } from '@/lib/websocket-singleton';
+import soundManager from '@/lib/sound-manager';
 
 // --- Context Definition ---
 interface WebSocketContextType {
@@ -35,73 +36,50 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<SimpleGameState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gameId, setGameId] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const didAuthRef = useRef(false);
+  const [connected, setConnected] = useState(false);
+  const previousFen = useRef<string | null>(null);
   
-  // WebSocket URL - stable URL that doesn't change
-  const socketUrl = user ? 'ws://localhost:8081' : null;
-  
-  // react-use-websocket hook with auto-reconnect
-  const {
-    sendMessage: wsSend,
-    lastMessage,
-    readyState,
-  } = useWebSocket(socketUrl, {
-    shouldReconnect: () => true,
-    reconnectAttempts: 10,
-    reconnectInterval: (attemptNumber) => Math.min(1000 * Math.pow(2, attemptNumber), 10000),
-    share: true, // CRITICAL: Share the connection across all components and navigation
-    filter: () => false, // Don't filter any messages
-    retryOnError: true,
-    onOpen: () => {
-      console.log('[WSContext] WebSocket connected');
-      didAuthRef.current = false; // Reset auth flag on new connection
-    },
-    onClose: () => {
-      console.log('[WSContext] WebSocket disconnected');
-      setIsAuthenticated(false);
-      didAuthRef.current = false;
-    },
-    onError: (error) => {
-      console.error('[WSContext] WebSocket error:', error);
-      setError('Connection error. Please refresh the page.');
-    },
-  });
-
-  // Send helper that only sends when connected
-  const sendMessage = useCallback((msg: SimpleClientMsg) => {
-    if (readyState === ReadyState.OPEN) {
-      console.log('[WSContext] Sending:', msg.type);
-      wsSend(JSON.stringify(msg));
-    } else {
-      console.warn('[WSContext] Cannot send, WebSocket not open:', msg.type);
-    }
-  }, [readyState, wsSend]);
-
-  // Authenticate when connection opens
+  // --- Sound Effect Logic ---
   useEffect(() => {
-    if (readyState === ReadyState.OPEN && user && !didAuthRef.current) {
-      didAuthRef.current = true;
-      console.log('[WSContext] Authenticating user:', user.username);
-      sendMessage({ 
-        type: 'authenticate', 
-        userId: user.userId, 
-        username: user.username 
-      });
-    }
-  }, [readyState, user, sendMessage]);
+    if (gameState && gameState.fen !== previousFen.current) {
+      // Don't play sound on initial load
+      if (previousFen.current !== null) {
+        const wasCheck = previousFen.current.includes('+');
+        const isCheck = gameState.fen.includes('+');
+        
+        // Simple piece count check for captures
+        const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || []).length;
+        const currentPieces = (gameState.fen.match(/[prnbqk]/gi) || []).length;
 
-  // Handle incoming messages
+        soundManager.playMoveSound({
+          check: !wasCheck && isCheck,
+          capture: currentPieces < prevPieces,
+          // More complex events like castle would require more detailed move info
+        });
+      }
+      
+      if (gameState.gameOver) {
+        soundManager.play('game-end');
+      }
+
+      previousFen.current = gameState.fen;
+    }
+  }, [gameState]);
+
+  // Connect and subscribe to singleton
   useEffect(() => {
-    if (!lastMessage) return;
+    if (!user || !user.userId) return;
     
-    try {
-      const msg = JSON.parse(lastMessage.data) as SimpleServerMsg;
+    // Connect the singleton
+    wsConnection.connect({ userId: user.userId, username: user.username });
+    
+    // Subscribe to messages
+    const unsubscribe = wsConnection.subscribe((msg: SimpleServerMsg) => {
       console.log('[WSContext] Received:', msg.type);
       
       switch (msg.type) {
         case 'authenticated': {
-          setIsAuthenticated(true);
+          setConnected(true);
           
           // Auto-join game based on current URL
           const path = window.location.pathname;
@@ -109,7 +87,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             const id = path.split('/')[2];
             if (id && id !== gameId) {
               setGameId(id);
-              sendMessage({ type: 'join-game', gameId: id });
+              wsConnection.send({ type: 'join-game', gameId: id });
             }
           }
           break;
@@ -132,11 +110,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             playerColor: msg.color,
             isSoloGame: msg.isSoloGame,
           });
+          soundManager.play('game-start');
           break;
           
         case 'solo-game-created':
           // Join the game before navigating
-          sendMessage({ type: 'join-game', gameId: msg.gameId });
+          wsConnection.send({ type: 'join-game', gameId: msg.gameId });
           setGameId(msg.gameId);
           // Small delay to ensure join is processed
           setTimeout(() => {
@@ -146,7 +125,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           
         case 'matched':
           // Join the game before navigating
-          sendMessage({ type: 'join-game', gameId: msg.gameId });
+          wsConnection.send({ type: 'join-game', gameId: msg.gameId });
           setGameId(msg.gameId);
           setTimeout(() => {
             router.push(`/game/${msg.gameId}`);
@@ -158,52 +137,61 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           setTimeout(() => setError(null), 5000);
           break;
       }
-    } catch (err) {
-      console.error('[WSContext] Failed to parse message:', err);
-    }
-  }, [lastMessage, router, sendMessage, gameId]);
-
+    });
+    
+    // Check connection state periodically
+    const interval = setInterval(() => {
+      const state = wsConnection.getState();
+      setConnected(state.connected && state.authenticated);
+    }, 1000);
+    
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, [user, router, gameId]);
+  
   // Action handlers
   const sendAction = useCallback((action: Action) => {
-    if (gameId && isAuthenticated) {
-      sendMessage({ type: 'action', gameId, action });
+    if (gameId && connected) {
+      wsConnection.send({ type: 'action', gameId, action });
     } else {
-      console.warn('[WSContext] Cannot send action: not in game or not authenticated');
+      console.warn('[WSContext] Cannot send action: not in game or not connected');
     }
-  }, [gameId, isAuthenticated, sendMessage]);
-
+  }, [gameId, connected]);
+  
   const createSoloGame = useCallback(() => {
-    if (isAuthenticated) {
-      sendMessage({ type: 'create-solo-game' });
+    if (connected) {
+      wsConnection.send({ type: 'create-solo-game' });
     } else {
       setError('Not connected to server. Please refresh and try again.');
     }
-  }, [isAuthenticated, sendMessage]);
-
+  }, [connected]);
+  
   const joinQueue = useCallback(() => {
-    if (isAuthenticated) {
-      sendMessage({ type: 'join-queue' });
+    if (connected) {
+      wsConnection.send({ type: 'join-queue' });
     } else {
       setError('Not connected to server. Please refresh and try again.');
     }
-  }, [isAuthenticated, sendMessage]);
-
+  }, [connected]);
+  
   const leaveQueue = useCallback(() => {
-    if (isAuthenticated) {
-      sendMessage({ type: 'leave-queue' });
+    if (connected) {
+      wsConnection.send({ type: 'leave-queue' });
     }
-  }, [isAuthenticated, sendMessage]);
-
+  }, [connected]);
+  
   const value = {
     gameState,
     error,
-    connected: readyState === ReadyState.OPEN && isAuthenticated,
+    connected,
     sendAction,
     createSoloGame,
     joinQueue,
     leaveQueue,
   };
-
+  
   return (
     <WebSocketContext.Provider value={value}>
       {children}

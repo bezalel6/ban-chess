@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import GameClient from '@/components/GameClient';
-import { getCurrentUser } from '@/lib/auth-unified';
 
 interface GamePageProps {
   params: Promise<{ id: string }>;
@@ -8,7 +7,6 @@ interface GamePageProps {
 
 export default async function GamePage({ params }: GamePageProps) {
   const { id: gameId } = await params;
-  const user = await getCurrentUser();
 
   return (
     <Suspense fallback={
@@ -16,7 +14,7 @@ export default async function GamePage({ params }: GamePageProps) {
         <div className="loading-spinner" />
       </div>
     }>
-      <GameClient gameId={gameId} user={user} />
+      <GameClient gameId={gameId} />
     </Suspense>
   );
 }

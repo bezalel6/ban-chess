@@ -25,6 +25,8 @@ export interface SimpleGameState {
   isSoloGame?: boolean;
   legalActions?: string[];  // Legal moves/bans from server
   nextAction?: 'move' | 'ban';  // What action is next
+  gameOver?: boolean;
+  result?: string;
 }
 
 // Server messages - simplified
