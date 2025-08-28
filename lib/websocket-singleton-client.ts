@@ -113,11 +113,13 @@ class WebSocketSingleton {
     this.ws.onclose = () => {
       console.log('[WS Singleton] Connection closed');
       this.isAuthenticated = false;
+      this.connectInProgress = false;
       // Don't set ws to null here - let reconnect handle it
     };
 
     this.ws.onerror = (error) => {
       console.error('[WS Singleton] Error:', error);
+      this.connectInProgress = false;
     };
   }
 
