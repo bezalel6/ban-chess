@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import QueueSection from '@/components/QueueSection';
+import GameModeSelector from '@/components/GameModeSelector';
 import HowToPlay from '@/components/HowToPlay';
 
 export default function HomePage() {
@@ -23,14 +23,14 @@ export default function HomePage() {
             {/* Divider */}
             <div className="border-t border-slate-700/50 my-8"></div>
 
-            {/* Queue Section with Suspense */}
+            {/* Game Mode Selection with Suspense */}
             <Suspense fallback={
               <div className="text-center mb-8">
                 <div className="loading-spinner mb-4" />
-                <p className="text-lg text-gray-300">Loading queue...</p>
+                <p className="text-lg text-gray-300">Loading game modes...</p>
               </div>
             }>
-              <QueueSection />
+              <GameModeSelector />
             </Suspense>
 
             {/* Divider */}
