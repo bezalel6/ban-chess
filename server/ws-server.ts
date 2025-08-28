@@ -54,6 +54,15 @@ function broadcastGameState(gameId: string) {
   const room = games.get(gameId);
   if (!room) return;
   
+  // Check for game over
+  const isGameOver = room.game.gameOver();
+  const isCheckmate = room.game.inCheckmate();
+  const isStalemate = room.game.inStalemate();
+  
+  if (isGameOver) {
+    console.log(`[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}`);
+  }
+  
   // Get legal moves/bans from the game
   const fen = room.game.fen();
   const fenParts = fen.split(' ');
@@ -103,7 +112,14 @@ function broadcastGameState(gameId: string) {
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? 'ban' : 'move',
     // For solo games, playerColor is the acting player
-    ...(room.isSoloGame && { playerColor: actingPlayer })
+    ...(room.isSoloGame && { playerColor: actingPlayer }),
+    // Add game over state
+    ...(isGameOver && { 
+      gameOver: true,
+      result: isCheckmate ? 
+        `${chessTurn === 'white' ? 'Black' : 'White'} wins by checkmate!` : 
+        isStalemate ? 'Draw by stalemate' : 'Game over'
+    })
   };
   
   // Send to all players in the room

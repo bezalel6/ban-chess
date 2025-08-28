@@ -1,7 +1,15 @@
-import { Play, Users, Bot, Trophy } from 'lucide-react';
+import { Play, Users, Bot, Trophy, Search } from 'lucide-react';
 import Link from 'next/link';
 
 const gameModes = [
+  {
+    id: 'find-opponent',
+    title: 'Find Opponent',
+    description: 'Play against a random player',
+    icon: Search,
+    href: '/play/online',
+    color: 'lichess-green'
+  },
   {
     id: 'solo-game',
     title: 'Solo Game',
@@ -45,7 +53,7 @@ export default function GameModeGrid() {
           <Link
             key={mode.id}
             href={mode.href}
-            className="group bg-background-tertiary rounded-lg p-6 hover:bg-background-secondary transition-all hover:scale-105 hover:shadow-lg border border-border"
+            className="group bg-background-secondary rounded-lg p-6 transition-all duration-200 ease-in-out shadow-md hover:shadow-lg border-2 border-border hover:border-primary/80"
           >
             <div className={`w-12 h-12 rounded-full bg-${mode.color}-500/20 flex items-center justify-center mb-4 group-hover:bg-${mode.color}-500/30 transition-colors`}>
               <Icon className={`h-6 w-6 text-${mode.color}-500`} />

@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { useRouter } from 'next/navigation';
 import type { SimpleGameState, SimpleServerMsg, Action } from '@/lib/game-types';
 import { useAuth } from '@/components/AuthProvider';
-import { wsClient } from '@/lib/ws-client-singleton';
+import globalWS from '@/lib/global-ws';
 
 // --- Context Definition ---
 interface WebSocketContextType {
@@ -32,32 +32,31 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   
   const [gameState, setGameState] = useState<SimpleGameState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [connected, setConnected] = useState(wsClient.getConnectionState() === 'connected');
-  const [gameId, setGameId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      return path.startsWith('/game/') ? path.split('/')[2] : null;
-    }
-    return null;
-  });
+  const [connected, setConnected] = useState(false);
+  const [gameId, setGameId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
-    wsClient.connect(user).catch(err => {
-      console.error("Failed to connect WebSocket:", err);
-      setError("Failed to connect to the server.");
-    });
+    // Connect the global WebSocket
+    globalWS.connect(user);
 
-    const unsubscribe = wsClient.subscribe((msg: SimpleServerMsg) => {
-      console.log('[Provider] Received:', msg.type, msg);
+    // Subscribe to messages
+    const unsubscribe = globalWS.subscribe((msg: SimpleServerMsg) => {
+      console.log('[WSContext] Received:', msg.type);
+      
       switch (msg.type) {
-        case 'authenticated':
+        case 'authenticated': {
           setConnected(true);
-          if (gameId) {
-            wsClient.send({ type: 'join-game', gameId });
+          // Auto-join game based on current path
+          const path = window.location.pathname;
+          if (path.startsWith('/game/')) {
+            const id = path.split('/')[2];
+            setGameId(id);
+            globalWS.send({ type: 'join-game', gameId: id });
           }
           break;
+        }
         
         case 'state':
           setGameState(msg);
@@ -65,47 +64,52 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         
         case 'joined':
           setGameId(msg.gameId);
-          setGameState(prev => ({
-            ...prev,
-            fen: prev?.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 b:ban',
+          setGameState({
+            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 b:ban',
             gameId: msg.gameId,
             players: msg.players,
             playerColor: msg.color,
             isSoloGame: msg.isSoloGame,
-          }));
+          });
           break;
           
         case 'solo-game-created':
+          // Join the game first
+          globalWS.send({ type: 'join-game', gameId: msg.gameId });
+          setGameId(msg.gameId);
+          // Then navigate
           router.push(`/game/${msg.gameId}`);
           break;
           
         case 'error':
           setError(msg.message);
+          setTimeout(() => setError(null), 5000);
           break;
       }
     });
 
-    // This handles the case where the connection might drop
-    const interval = setInterval(() => {
-      setConnected(wsClient.getConnectionState() === 'connected');
+    // Update connection status periodically
+    const statusInterval = setInterval(() => {
+      setConnected(globalWS.getState() === 'connected');
     }, 1000);
 
     return () => {
       unsubscribe();
-      clearInterval(interval);
+      clearInterval(statusInterval);
+      // Don't disconnect globalWS here - it persists across components
     };
-  }, [user, router, gameId]);
+  }, [user, router]);
 
   const sendAction = useCallback((action: Action) => {
     if (gameId) {
-      wsClient.send({ type: 'action', gameId, action });
+      globalWS.send({ type: 'action', gameId, action });
     } else {
-      console.warn('[Provider] Cannot send action: no game ID.');
+      console.warn('[WSContext] Cannot send action: no game ID');
     }
   }, [gameId]);
 
   const createSoloGame = useCallback(() => {
-    wsClient.send({ type: 'create-solo-game' });
+    globalWS.send({ type: 'create-solo-game' });
   }, []);
 
   const value = {

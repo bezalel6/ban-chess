@@ -101,46 +101,70 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+    <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">2 Ban 2 Chess</h1>
+        <h1 className="text-4xl font-bold mb-2">2 Ban 2 Chess</h1>
         <p className="text-foreground-muted">Playing as {user.username}</p>
       </div>
 
-      <div className="flex flex-col gap-4 w-full max-w-sm">
-        <button
-          onClick={createSoloGame}
-          className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
-        >
-          Play Solo (Practice)
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Left Column: Actions */}
+        <div className="md:col-span-2 space-y-4">
+          <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Play</h2>
+            <div className="flex flex-col gap-4 w-full">
+              <button
+                onClick={createSoloGame}
+                className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground"
+              >
+                Play Solo (Practice)
+              </button>
 
-        {!inQueue ? (
-          <button
-            onClick={joinQueue}
-            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
-          >
-            Find Opponent
-          </button>
-        ) : (
-          <div className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg text-center">
-            <p>In queue...</p>
-            {queuePosition > 0 && <p className="text-sm">Position: {queuePosition}</p>}
-            <button 
-              onClick={leaveQueue}
-              className="text-sm underline mt-2"
-            >
-              Cancel
-            </button>
+              {!inQueue ? (
+                <button
+                  onClick={joinQueue}
+                  className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold"
+                >
+                  Find Opponent
+                </button>
+              ) : (
+                <div className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg text-center">
+                  <p>In queue...</p>
+                  {queuePosition > 0 && <p className="text-sm">Position: {queuePosition}</p>}
+                  <button 
+                    onClick={leaveQueue}
+                    className="text-sm underline mt-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={joinGame}
+                className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground"
+              >
+                Join with Game ID
+              </button>
+            </div>
           </div>
-        )}
+        </div>
 
-        <button
-          onClick={joinGame}
-          className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:opacity-90 transition"
-        >
-          Join with Game ID
-        </button>
+        {/* Right Column: Info */}
+        <div className="space-y-8">
+          <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Live Games</h2>
+            <div className="text-center text-foreground-muted py-8">
+              <p>(Live games will be displayed here)</p>
+            </div>
+          </div>
+          <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Leaderboard</h2>
+            <div className="text-center text-foreground-muted py-8">
+              <p>(Leaderboard will be displayed here)</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
