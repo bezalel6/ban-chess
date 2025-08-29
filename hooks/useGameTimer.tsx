@@ -30,7 +30,10 @@ export function useGameTimer({ clock, isActive, onTimeout }: UseGameTimerProps) 
     }
 
     // Only run countdown if active and have time
-    if (isActive && displayTime > 0) {
+    if (isActive && clock && clock.remaining > 0) {
+      // Reset the lastUpdate ref to current time when starting
+      lastUpdateRef.current = Date.now();
+      
       intervalRef.current = setInterval(() => {
         setDisplayTime(prevTime => {
           const now = Date.now();
@@ -54,7 +57,7 @@ export function useGameTimer({ clock, isActive, onTimeout }: UseGameTimerProps) 
         clearInterval(intervalRef.current);
       }
     };
-  }, [isActive, displayTime, onTimeout]);
+  }, [isActive, clock, onTimeout]); // Remove displayTime from dependencies!
 
   // Format time for display
   const formatTime = (ms: number): string => {
