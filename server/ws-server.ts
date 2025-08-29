@@ -58,7 +58,6 @@ function broadcastGameState(gameId: string) {
   const isGameOver = room.game.gameOver();
   const isCheckmate = room.game.inCheckmate();
   const isStalemate = room.game.inStalemate();
-  const isInCheck = room.game.inCheck();
   
   if (isGameOver) {
     console.log(`[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}`);
@@ -123,6 +122,23 @@ function broadcastGameState(gameId: string) {
         isStalemate ? 'Draw by stalemate' : 'Game over'
     })
   };
+  
+  // CRITICAL FIX: Actually send the message to connected players!
+  const playersToNotify = new Set<string>();
+  if (room.whitePlayerId) playersToNotify.add(room.whitePlayerId);
+  if (room.blackPlayerId) playersToNotify.add(room.blackPlayerId);
+  
+  playersToNotify.forEach(playerId => {
+    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
+    if (player && player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(JSON.stringify(stateMsg));
+      console.log(`[broadcastGameState] SENT state to ${player.username} for game ${gameId}`);
+    } else {
+      console.log(`[broadcastGameState] WARNING: Player ${playerId} not connected for game ${gameId}`);
+    }
+  });
+  
+  console.log(`[broadcastGameState] Broadcast complete for game ${gameId} to ${playersToNotify.size} players`);
 }
 
 function matchPlayers() {
@@ -293,23 +309,6 @@ wss.on('connection', (ws: WebSocket) => {
           }
           
           playerToGame.set(currentPlayer.userId, gameId);
-          let color: 'white' | 'black' = room.whitePlayerId === currentPlayer.userId ? 'white' : 'black';
-          
-          // For solo games, determine the acting player
-          if (room.isSoloGame) {
-            const fen = room.game.fen();
-            const fenParts = fen.split(' ');
-            const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
-            const banState = fenParts[6];
-            const isNextActionBan = banState && banState.includes(':ban');
-            
-            // Same logic as broadcastGameState
-            if (isNextActionBan) {
-              color = chessTurn === 'white' ? 'black' : 'white';
-            } else {
-              color = chessTurn;
-            }
-          }
           
           // Send game state immediately, not with a timeout
           broadcastGameState(gameId);
