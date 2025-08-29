@@ -38,20 +38,6 @@ export default function HomePage() {
     );
   }
 
-  // Show loading state while connecting
-  if (!connected) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">2 Ban 2 Chess</h1>
-          <p className="text-foreground-muted mb-4">Playing as {user.username}</p>
-          <div className="loading-spinner mb-4"></div>
-          <p className="text-foreground-muted">Connecting to game server...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -79,6 +65,31 @@ export default function HomePage() {
                 Find Opponent
               </button>
             </div>
+			{!connected &&
+				<div className="text-center pt-4">
+					<div className="loading-spinner mb-4"></div>
+					<p className="text-foreground-muted">Connecting to game server...</p>
+				</div>
+			}
+          </div>
+
+          <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">How to Play</h2>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>Each player gets to ban one of their opponent's moves at the start of the game.</li>
+              <li>After the bans, the game proceeds like regular chess.</li>
+              <li>The banned moves cannot be played for the entire game.</li>
+              <li>Win by checkmate, resignation, or timeout.</li>
+            </ol>
+          </div>
+
+          <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Rules</h2>
+            <ul className="list-disc list-inside space-y-2">
+              <li>Standard chess rules apply, except for the banned moves.</li>
+              <li>You cannot ban a move that would prevent the king from escaping check.</li>
+              <li>Bans are permanent and cannot be changed.</li>
+            </ul>
           </div>
         </div>
 
