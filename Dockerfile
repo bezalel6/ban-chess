@@ -24,8 +24,7 @@ RUN npm ci --legacy-peer-deps
 COPY next.config.js ./
 COPY tsconfig.json ./
 COPY postcss.config.mjs ./
-COPY tailwind.config.js ./
-COPY .eslintrc.json ./
+COPY eslint.config.mjs ./
 
 # Copy public assets (changes less frequently)
 COPY public ./public
