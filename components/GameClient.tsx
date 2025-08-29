@@ -9,7 +9,28 @@ import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 
 const ResizableBoard = dynamic(
-  () => import("@/components/game/ResizableBoard"),
+  () => import("@/components/game/ResizableBoard").catch((err) => {
+    console.error("Failed to load chess board:", err);
+    // Return a fallback component
+    return {
+      default: () => (
+        <div className="chess-board-wrapper">
+          <div className="chess-board-container flex items-center justify-center">
+            <div className="bg-background-secondary rounded-lg p-8 text-center">
+              <p className="text-foreground-muted mb-4">Chess board failed to load</p>
+              <p className="text-sm text-foreground-muted mb-4">This may be a compatibility issue with React 19</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600"
+              >
+                Reload Page
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    };
+  }),
   {
     ssr: false,
     loading: () => (

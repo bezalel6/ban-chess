@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import ChessBoard from '../ChessBoard';
+import ChessBoardErrorBoundary from '../ChessBoardWrapper';
 import type { SimpleGameState, Move, Ban } from '@/lib/game-types';
 
 interface ResizableBoardProps {
@@ -65,12 +66,14 @@ export default function ResizableBoard({
           height: `${boardSize}px`,
         }}
       >
-        <ChessBoard
-          gameState={gameState}
-          onMove={onMove}
-          onBan={onBan}
-          playerColor={playerColor}
-        />
+        <ChessBoardErrorBoundary>
+          <ChessBoard
+            gameState={gameState}
+            onMove={onMove}
+            onBan={onBan}
+            playerColor={playerColor}
+          />
+        </ChessBoardErrorBoundary>
       </div>
 
       {/* Resize Controls - Lichess Style */}
