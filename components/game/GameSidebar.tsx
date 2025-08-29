@@ -50,9 +50,9 @@ export default function GameSidebar({ gameState, gameEvents = [], onGiveTime, pl
   const topClock = playerIsWhite ? gameState.clocks?.black : gameState.clocks?.white;
   const bottomClock = playerIsWhite ? gameState.clocks?.white : gameState.clocks?.black;
   
-  // Determine if player can give time (only to opponent, only if they're playing)
-  const canGiveTimeToTop = playerColor === 'white' && !playerIsWhite || playerColor === 'black' && playerIsWhite;
-  const canGiveTimeToBottom = playerColor === 'white' && playerIsWhite || playerColor === 'black' && !playerIsWhite;
+  // Determine if player can give time (only to opponent, only if they're playing, never in solo games)
+  const canGiveTimeToTop = !gameState.isSoloGame && (playerColor === 'white' && !playerIsWhite || playerColor === 'black' && playerIsWhite);
+  const canGiveTimeToBottom = !gameState.isSoloGame && (playerColor === 'white' && playerIsWhite || playerColor === 'black' && !playerIsWhite);
 
   return (
     <div className="bg-background-secondary rounded-lg p-4 flex flex-col shadow-lg h-fit">

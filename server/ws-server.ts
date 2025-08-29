@@ -916,6 +916,12 @@ wss.on('connection', (ws: WebSocket, request) => {
             return;
           }
           
+          // Disable give-time for solo games - doesn't make sense when playing against yourself
+          if (gameState.isSoloGame) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Cannot give time in solo games' } as SimpleServerMsg));
+            return;
+          }
+          
           // Security validation: Check if the player is actually in this game
           const isWhitePlayer = currentPlayer.userId === gameState.whitePlayerId;
           const isBlackPlayer = currentPlayer.userId === gameState.blackPlayerId;

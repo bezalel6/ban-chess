@@ -1,46 +1,57 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
-import { useGameState } from '@/hooks/useGameState';
-import type { Move, Ban } from '@/lib/game-types';
-import GameSidebar from './game/GameSidebar';
-import GameStatusPanel from './game/GameStatusPanel';
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { useGameState } from "@/hooks/useGameState";
+import type { Move, Ban } from "@/lib/game-types";
+import GameSidebar from "./game/GameSidebar";
+import GameStatusPanel from "./game/GameStatusPanel";
 
-const ResizableBoard = dynamic(() => import('@/components/game/ResizableBoard'), {
-  ssr: false,
-  loading: () => (
-    <div className="chess-board-wrapper">
-      <div className="chess-board-container flex items-center justify-center">
-        <div className="loading-spinner" />
+const ResizableBoard = dynamic(
+  () => import("@/components/game/ResizableBoard"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="chess-board-wrapper">
+        <div className="chess-board-container flex items-center justify-center">
+          <div className="loading-spinner" />
+        </div>
       </div>
-    </div>
-  ),
-});
+    ),
+  }
+);
 
 interface GameClientProps {
   gameId: string;
 }
 
 export default function GameClient({ gameId }: GameClientProps) {
-  const { gameState, error, connected, sendAction, joinGame, gameEvents, giveTime } = useGameState();
+  const {
+    gameState,
+    error,
+    connected,
+    sendAction,
+    joinGame,
+    gameEvents,
+    giveTime,
+  } = useGameState();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const router = useRouter();
-  
+
   // Check for debug mode in URL or localStorage
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const debugParam = urlParams.get('debug') === 'true';
-    const debugStorage = localStorage.getItem('debugMode') === 'true';
+    const debugParam = urlParams.get("debug") === "true";
+    const debugStorage = localStorage.getItem("debugMode") === "true";
     setDebugMode(debugParam || debugStorage);
   }, []);
-  
+
   // Join game when component mounts and we're connected
   useEffect(() => {
     if (connected && gameId && !hasJoined) {
-      console.log('[GameClient] Joining game:', gameId);
+      console.log("[GameClient] Joining game:", gameId);
       joinGame(gameId);
       setHasJoined(true);
     }
@@ -48,7 +59,7 @@ export default function GameClient({ gameId }: GameClientProps) {
 
   const handleMove = (move: Move) => sendAction({ move });
   const handleBan = (ban: Ban) => sendAction({ ban });
-  const handleNewGame = () => router.push('/');
+  const handleNewGame = () => router.push("/");
 
   // Loading states
   if (!connected) {
@@ -70,7 +81,10 @@ export default function GameClient({ gameId }: GameClientProps) {
             </div>
           </div>
           <div className="flex justify-center">
-            <div className="chess-board-wrapper" style={{ width: '600px', height: '600px' }}>
+            <div
+              className="chess-board-wrapper"
+              style={{ width: "600px", height: "600px" }}
+            >
               <div className="chess-board-container flex items-center justify-center">
                 <div className="loading-spinner" />
               </div>
@@ -87,20 +101,52 @@ export default function GameClient({ gameId }: GameClientProps) {
   return (
     <>
       {/* Desktop Layout - Three column layout with centered board */}
-      <div className={`hidden md:flex min-h-screen justify-center items-center p-2 ${debugMode ? 'border-4 border-red-500 relative' : ''}`}>
-        {debugMode && <div className="absolute top-0 left-0 bg-red-500 text-white p-2 z-50">OUTER CONTAINER</div>}
-        <div className={`grid grid-cols-[14rem_auto_18rem] gap-3 items-center max-h-[calc(100vh-1rem)] ${debugMode ? 'border-4 border-blue-500 relative' : ''}`}>
-          {debugMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-500 text-white p-2 z-50">GRID CONTAINER</div>}
-          
+      <div
+        className={`hidden md:flex justify-center items-center p-2 ${
+          debugMode ? "border-4 border-red-500 relative" : ""
+        }`}
+      >
+        {debugMode && (
+          <div className="absolute top-0 left-0 bg-red-500 text-white p-2 z-50">
+            OUTER CONTAINER
+          </div>
+        )}
+        <div
+          className={`grid grid-cols-[14rem_auto_18rem] gap-3 items-center max-h-[calc(100vh-1rem)] ${
+            debugMode ? "border-4 border-blue-500 relative" : ""
+          }`}
+        >
+          {debugMode && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-500 text-white p-2 z-50">
+              GRID CONTAINER
+            </div>
+          )}
+
           {/* Left Panel - Fixed width, aligned with board */}
-          <div className={`h-fit ${debugMode ? 'border-4 border-green-500 relative' : ''}`}>
-            {debugMode && <div className="absolute top-0 left-0 bg-green-500 text-white p-1 z-50">LEFT</div>}
+          <div
+            className={`h-fit ${
+              debugMode ? "border-4 border-green-500 relative" : ""
+            }`}
+          >
+            {debugMode && (
+              <div className="absolute top-0 left-0 bg-green-500 text-white p-1 z-50">
+                LEFT
+              </div>
+            )}
             <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
           </div>
-          
+
           {/* Center - Board */}
-          <div className={`flex justify-center ${debugMode ? 'border-4 border-yellow-500 relative' : ''}`}>
-            {debugMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-yellow-500 text-black p-1 z-50">CENTER</div>}
+          <div
+            className={`flex justify-center ${
+              debugMode ? "border-4 border-yellow-500 relative" : ""
+            }`}
+          >
+            {debugMode && (
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-yellow-500 text-black p-1 z-50">
+                CENTER
+              </div>
+            )}
             <ResizableBoard
               gameState={gameState}
               onMove={handleMove}
@@ -108,29 +154,37 @@ export default function GameClient({ gameId }: GameClientProps) {
               playerColor={gameState.playerColor}
             />
           </div>
-          
+
           {/* Right Panel - Fixed width, vertically centered */}
-          <div className={`flex items-center justify-center ${debugMode ? 'border-4 border-purple-500 relative' : ''}`}>
-            {debugMode && <div className="absolute top-0 right-0 bg-purple-500 text-white p-1 z-50">RIGHT</div>}
-            <GameSidebar 
-              gameState={gameState} 
+          <div
+            className={`flex items-center justify-center ${
+              debugMode ? "border-4 border-purple-500 relative" : ""
+            }`}
+          >
+            {debugMode && (
+              <div className="absolute top-0 right-0 bg-purple-500 text-white p-1 z-50">
+                RIGHT
+              </div>
+            )}
+            <GameSidebar
+              gameState={gameState}
               gameEvents={gameEvents}
               onGiveTime={giveTime}
               playerColor={gameState.playerColor}
             />
           </div>
         </div>
-        
+
         {/* Debug toggle button */}
         <button
           onClick={() => {
             const newDebugMode = !debugMode;
             setDebugMode(newDebugMode);
-            localStorage.setItem('debugMode', newDebugMode.toString());
+            localStorage.setItem("debugMode", newDebugMode.toString());
           }}
           className="fixed bottom-4 right-4 p-2 bg-background-secondary rounded-lg text-xs opacity-50 hover:opacity-100 transition-opacity"
         >
-          {debugMode ? 'Hide' : 'Show'} Debug
+          {debugMode ? "Hide" : "Show"} Debug
         </button>
       </div>
 
@@ -143,7 +197,12 @@ export default function GameClient({ gameId }: GameClientProps) {
           playerColor={gameState.playerColor}
         />
         <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
-        <GameSidebar gameState={gameState} />
+        <GameSidebar
+          gameState={gameState}
+          gameEvents={gameEvents}
+          onGiveTime={giveTime}
+          playerColor={gameState.playerColor}
+        />
       </div>
     </>
   );
