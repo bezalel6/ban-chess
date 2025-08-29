@@ -21,13 +21,16 @@ export function useGameWebSocket() {
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   
-  // Build WebSocket URL - authentication is handled via cookies/headers
   const socketUrl = useMemo(() => {
-    if (!user) return null;
-    
-    // Just use the base URL - auth is handled by NextAuth cookies
-    console.log('[WebSocketProvider] socketUrl:', config.websocket.url);
-    return config.websocket.url;
+    if (!user || !user.userId || !user.username || !user.provider) return null;
+
+    const url = new URL(config.websocket.url);
+    url.searchParams.set('username', user.username);
+    url.searchParams.set('providerId', user.userId);
+    url.searchParams.set('provider', user.provider);
+
+    console.log('[WebSocketProvider] socketUrl:', url.toString());
+    return url.toString();
   }, [user]);
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {

@@ -2,11 +2,13 @@
 
 import { createContext, useContext, ReactNode } from 'react';
 import { SessionProvider, useSession } from 'next-auth/react';
+import type { AuthProvider as AuthProviderType } from '../types/auth';
 
 interface AuthContextType {
   user: {
     userId: string;
     username: string;
+    provider: AuthProviderType;
   } | null;
   loading: boolean;
 }
@@ -21,14 +23,16 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   const extendedUser = session?.user as { 
     providerId?: string; 
     username?: string;
+    provider?: AuthProviderType;
     name?: string | null;
     email?: string | null;
     image?: string | null;
   } | undefined;
   
-  const user = extendedUser?.providerId && extendedUser?.username ? {
+  const user = extendedUser?.providerId && extendedUser?.username && extendedUser?.provider ? {
     userId: extendedUser.providerId,
-    username: extendedUser.username
+    username: extendedUser.username,
+    provider: extendedUser.provider
   } : null;
 
   return (
