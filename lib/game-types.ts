@@ -48,6 +48,23 @@ export interface PlayerClock {
   lastUpdate: number;   // Server timestamp of last update
 }
 
+// Game event types for activity log
+export interface GameEvent {
+  timestamp: number;
+  type: 'time-given' | 'move-made' | 'ban-made' | 'game-started' | 'player-joined' | 'timeout' | 'checkmate' | 'stalemate' | 'draw' | 'resignation';
+  message: string;
+  player?: 'white' | 'black';
+  metadata?: {
+    amount?: number;
+    recipient?: 'white' | 'black';
+    move?: Move;
+    ban?: Ban;
+    from?: string;
+    to?: string;
+    result?: string;
+  };
+}
+
 // Minimal game state - FEN contains everything we need
 export interface SimpleGameState {
   fen: string;  // Extended FEN with ban state from ban-chess.ts
@@ -74,7 +91,7 @@ export interface SimpleGameState {
 
 // Server messages - simplified
 export type SimpleServerMsg = 
-  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; history?: HistoryEntry[] | string[]; lastMove?: HistoryEntry; actionHistory?: SerializedAction[]; syncState?: SyncState; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number }
+  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; history?: HistoryEntry[] | string[]; lastMove?: HistoryEntry; actionHistory?: SerializedAction[]; syncState?: SyncState; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number; events?: GameEvent[] }
   | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean; timeControl?: TimeControl }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
@@ -82,7 +99,8 @@ export type SimpleServerMsg =
   | { type: 'error'; message: string }
   | { type: 'solo-game-created'; gameId: string; timeControl?: TimeControl }
   | { type: 'clock-update'; gameId: string; clocks: { white: PlayerClock; black: PlayerClock } }
-  | { type: 'timeout'; gameId: string; winner: 'white' | 'black' };
+  | { type: 'timeout'; gameId: string; winner: 'white' | 'black' }
+  | { type: 'game-event'; gameId: string; event: GameEvent };
 
 // Client messages - simplified
 export type SimpleClientMsg =
@@ -91,7 +109,8 @@ export type SimpleClientMsg =
   | { type: 'join-queue'; timeControl?: TimeControl }
   | { type: 'leave-queue' }
   | { type: 'create-solo-game'; timeControl?: TimeControl }
-  | { type: 'action'; gameId: string; action: Action };  // Combined move and ban
+  | { type: 'action'; gameId: string; action: Action }  // Combined move and ban
+  | { type: 'give-time'; gameId: string; amount: number };  // Give time to opponent
 
 // Helper functions to parse FEN
 export function parseFEN(fen: string) {

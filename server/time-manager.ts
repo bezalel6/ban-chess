@@ -135,6 +135,22 @@ export class TimeManager {
     return this.activePlayer;
   }
 
+  /**
+   * Give time to a specific player. Only the opponent can give time.
+   * @param recipient - The player to give time to ('white' or 'black')
+   * @param amount - Amount of time to give in seconds
+   */
+  giveTime(recipient: 'white' | 'black', amount: number): void {
+    // Add time to the recipient's clock (convert seconds to milliseconds)
+    this.clocks[recipient].remaining += amount * 1000;
+    
+    // Update last update timestamp
+    this.clocks[recipient].lastUpdate = Date.now();
+    
+    // Notify about clock update
+    this.onClockUpdate(this.getClocks());
+  }
+
   pause() {
     if (this.timer) {
       clearInterval(this.timer);

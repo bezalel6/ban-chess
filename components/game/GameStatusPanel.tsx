@@ -25,10 +25,10 @@ export default function GameStatusPanel({ gameState, onNewGame }: GameStatusPane
   const isPlayerTurn = gameState.turn === gameState.playerColor;
   
   return (
-    <div className="bg-background-secondary rounded-lg p-4 h-full flex flex-col">
-      {/* STATUS Section - ~60% of height */}
-      <div className="flex-[3] flex flex-col min-h-0">
-        <h3 className="text-sm font-semibold text-foreground-muted mb-3">STATUS</h3>
+    <div className="bg-background-secondary rounded-lg p-3 flex flex-col">
+      {/* STATUS Section */}
+      <div className="flex flex-col">
+        <h3 className="text-sm font-semibold text-foreground-muted mb-2">STATUS</h3>
         
         {/* Game Info Grid - Compact 2-column layout */}
         <div className="grid grid-cols-2 gap-2 mb-3">
@@ -101,10 +101,10 @@ export default function GameStatusPanel({ gameState, onNewGame }: GameStatusPane
         )}
       </div>
       
-      {/* GAME CHAT Section - ~40% of height */}
-      <div className="flex-[2] flex flex-col min-h-0 mt-4">
+      {/* GAME CHAT Section - Compact height */}
+      <div className="flex flex-col mt-3">
         <h3 className="text-sm font-semibold text-foreground-muted mb-2">GAME CHAT</h3>
-        <div className="flex-1 bg-background-tertiary rounded-md p-3 overflow-y-auto min-h-0">
+        <div className="h-24 bg-background-tertiary rounded-md p-2 overflow-y-auto">
           <p className="text-xs text-foreground-muted italic">Chat coming soon...</p>
         </div>
       </div>

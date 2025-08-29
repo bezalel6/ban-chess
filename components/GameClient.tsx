@@ -87,13 +87,13 @@ export default function GameClient({ gameId }: GameClientProps) {
   return (
     <>
       {/* Desktop Layout - Three column layout with centered board */}
-      <div className={`hidden md:flex h-screen justify-center items-start p-4 ${debugMode ? 'border-4 border-red-500 relative' : ''}`}>
+      <div className={`hidden md:flex min-h-screen justify-center items-center p-2 ${debugMode ? 'border-4 border-red-500 relative' : ''}`}>
         {debugMode && <div className="absolute top-0 left-0 bg-red-500 text-white p-2 z-50">OUTER CONTAINER</div>}
-        <div className={`grid grid-cols-[18rem_auto_18rem] gap-4 ${debugMode ? 'border-4 border-blue-500 relative' : ''}`}>
+        <div className={`grid grid-cols-[14rem_auto_18rem] gap-3 items-center max-h-[calc(100vh-1rem)] ${debugMode ? 'border-4 border-blue-500 relative' : ''}`}>
           {debugMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-500 text-white p-2 z-50">GRID CONTAINER</div>}
           
-          {/* Left Panel - Fixed width */}
-          <div className={`max-h-[calc(100vh-2rem)] overflow-y-auto ${debugMode ? 'border-4 border-green-500 relative' : ''}`}>
+          {/* Left Panel - Fixed width, aligned with board */}
+          <div className={`h-fit ${debugMode ? 'border-4 border-green-500 relative' : ''}`}>
             {debugMode && <div className="absolute top-0 left-0 bg-green-500 text-white p-1 z-50">LEFT</div>}
             <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
           </div>

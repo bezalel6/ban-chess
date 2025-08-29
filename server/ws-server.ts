@@ -18,7 +18,9 @@ import {
   removePlayerSession,
   shutdown as redisShutdown,
   addActionToHistory,
-  getActionHistory
+  getActionHistory,
+  addGameEvent,
+  getRecentGameEvents
 } from './redis';
 
 interface Player {
@@ -328,6 +330,9 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     }));
   }
   
+  // Get recent game events
+  const recentEvents = await getRecentGameEvents(gameId, 10);
+  
   // Full state WITH history for new joiners
   const fullStateMsg: SimpleServerMsg = {
     type: 'state',
@@ -339,6 +344,7 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     nextAction: isNextActionBan ? 'ban' : 'move',
     inCheck: isInCheck,
     history, // Include full history from Redis for new joiners
+    events: recentEvents, // Include recent events
     ...(gameState.isSoloGame && { playerColor: actingPlayer }),
     ...(gameState.gameOver && { 
       gameOver: true,
@@ -892,6 +898,90 @@ wss.on('connection', (ws: WebSocket, request) => {
             });
             
             await updateQueuePositions();
+          }
+          break;
+        }
+        
+        case 'give-time': {
+          if (!currentPlayer) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Not authenticated' } as SimpleServerMsg));
+            return;
+          }
+          
+          const { gameId, amount } = msg;
+          const gameState = await getGameState(gameId);
+          
+          if (!gameState) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Game not found' } as SimpleServerMsg));
+            return;
+          }
+          
+          // Security validation: Check if the player is actually in this game
+          const isWhitePlayer = currentPlayer.userId === gameState.whitePlayerId;
+          const isBlackPlayer = currentPlayer.userId === gameState.blackPlayerId;
+          
+          if (!isWhitePlayer && !isBlackPlayer) {
+            ws.send(JSON.stringify({ type: 'error', message: 'You are not a player in this game' } as SimpleServerMsg));
+            return;
+          }
+          
+          // Check if game is still active
+          if (gameState.gameOver) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Game has already ended' } as SimpleServerMsg));
+            return;
+          }
+          
+          // Check if time control is enabled
+          if (!gameState.timeControl) {
+            ws.send(JSON.stringify({ type: 'error', message: 'This game has no time control' } as SimpleServerMsg));
+            return;
+          }
+          
+          // Determine the recipient (always the opponent)
+          const giverColor = isWhitePlayer ? 'white' : 'black';
+          const recipientColor = giverColor === 'white' ? 'black' : 'white';
+          
+          // Get time manager and add time
+          const timeManager = timeManagers.get(gameId);
+          if (timeManager) {
+            // Give 15 seconds by default
+            const timeToGive = amount || 15;
+            timeManager.giveTime(recipientColor, timeToGive);
+            
+            // Create game event
+            const event = {
+              timestamp: Date.now(),
+              type: 'time-given' as const,
+              message: `${giverColor} gave ${timeToGive} seconds to ${recipientColor}`,
+              player: giverColor,
+              metadata: { 
+                amount: timeToGive, 
+                recipient: recipientColor 
+              }
+            };
+            
+            // Store event in Redis
+            await addGameEvent(gameId, event);
+            
+            // Broadcast the event to all clients watching this game
+            authenticatedPlayers.forEach((player) => {
+              // Check if this player is in the game
+              if ((player.userId === gameState.whitePlayerId || player.userId === gameState.blackPlayerId) 
+                  && player.ws.readyState === WebSocket.OPEN) {
+                player.ws.send(JSON.stringify({
+                  type: 'game-event',
+                  gameId,
+                  event
+                } as SimpleServerMsg));
+              }
+            });
+            
+            // Also send clock update
+            broadcastClockUpdate(gameId);
+            
+            console.log(`[give-time] ${giverColor} gave ${timeToGive} seconds to ${recipientColor} in game ${gameId}`);
+          } else {
+            ws.send(JSON.stringify({ type: 'error', message: 'Time manager not found for this game' } as SimpleServerMsg));
           }
           break;
         }

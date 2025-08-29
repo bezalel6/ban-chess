@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import type { TimeControl } from '../lib/game-types';
+import type { TimeControl, GameEvent } from '../lib/game-types';
 
 // Type definitions for Redis data structures
 interface GameStateData {
@@ -82,6 +82,7 @@ export const KEYS = {
     GAME_STATE: (id: string) => `channel:game:${id}:state`,
     QUEUE_UPDATE: 'channel:queue:update',
   },
+  GAME_EVENTS: (id: string) => `game:${id}:events`,
 } as const;
 
 // Connection event handlers
@@ -348,6 +349,34 @@ export async function cleanupExpiredData(): Promise<void> {
 
 // Run cleanup every 5 minutes
 setInterval(cleanupExpiredData, 5 * 60 * 1000);
+
+/**
+ * Store a game event in Redis
+ */
+export async function addGameEvent(gameId: string, event: GameEvent): Promise<void> {
+  const key = KEYS.GAME_EVENTS(gameId);
+  await redis.rpush(key, JSON.stringify(event));
+  // Expire after 24 hours to prevent memory bloat
+  await redis.expire(key, 24 * 60 * 60);
+}
+
+/**
+ * Get all events for a game
+ */
+export async function getGameEvents(gameId: string): Promise<GameEvent[]> {
+  const key = KEYS.GAME_EVENTS(gameId);
+  const events = await redis.lrange(key, 0, -1);
+  return events.map(e => JSON.parse(e) as GameEvent);
+}
+
+/**
+ * Get recent events for a game (last N events)
+ */
+export async function getRecentGameEvents(gameId: string, count: number = 20): Promise<GameEvent[]> {
+  const key = KEYS.GAME_EVENTS(gameId);
+  const events = await redis.lrange(key, -count, -1);
+  return events.map(e => JSON.parse(e) as GameEvent);
+}
 
 // Graceful shutdown
 export async function shutdown(): Promise<void> {
