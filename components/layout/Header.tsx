@@ -23,7 +23,7 @@ function NavigationDropdown({ label, items }: NavigationDropdownProps) {
       onMouseLeave={() => setIsOpen(false)}
     >
       <button
-        className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 transition-colors"
+        className="flex items-center space-x-1 px-4 py-3 text-sm font-medium text-foreground hover:text-lichess-orange-500 transition-colors"
       >
         <span>{label}</span>
         <ChevronDown className="h-3 w-3" />
@@ -31,13 +31,13 @@ function NavigationDropdown({ label, items }: NavigationDropdownProps) {
       
       {isOpen && (
         <div
-          className="absolute top-full left-0 w-64 bg-background-secondary border border-border rounded-lg shadow-lg py-2 z-50 mt-1"
+          className="absolute top-full left-0 w-72 bg-background-secondary border border-border rounded-lg shadow-lg py-3 z-50 mt-2"
         >
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="block px-4 py-2 text-sm text-foreground hover:bg-background-tertiary hover:text-lichess-orange-500 transition-colors"
+              className="block px-5 py-3 text-sm text-foreground hover:bg-background-tertiary hover:text-lichess-orange-500 transition-colors"
             >
               <div className="font-medium">{item.label}</div>
               {item.description && (
@@ -65,9 +65,9 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3 py-1 bg-background-secondary rounded-md hover:bg-background-tertiary transition-colors"
+        className="flex items-center space-x-2 px-4 py-2.5 bg-background-secondary rounded-lg hover:bg-background-tertiary transition-colors"
       >
-        <div className="w-6 h-6 bg-lichess-orange-500 rounded-full flex items-center justify-center">
+        <div className="w-8 h-8 bg-lichess-orange-500 rounded-full flex items-center justify-center">
           <span className="text-xs font-bold text-white">
             {user.username?.slice(0, 2).toUpperCase() || 'U'}
           </span>
@@ -77,13 +77,13 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
       </button>
       
       {isOpen && (
-        <div className="absolute top-full right-0 w-48 bg-background-secondary border border-border rounded-lg shadow-lg py-2 z-50 mt-1">
+        <div className="absolute top-full right-0 w-56 bg-background-secondary border border-border rounded-lg shadow-lg py-3 z-50 mt-2">
           {/* Only show Profile link for registered users (not guests) */}
           {user.userId && (
             <>
               <Link
                 href={`/user/${user.username || 'profile'}`}
-                className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
                 <User className="h-4 w-4 mr-2" />
@@ -91,7 +91,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
               </Link>
               <Link
                 href="/settings"
-                className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -103,7 +103,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
           <button
             onClick={handleSignOut}
             disabled={isPending}
-            className="flex items-center w-full px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
+            className="flex items-center w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
           >
             <LogOut className="h-4 w-4 mr-2" />
             {isPending ? 'Signing out...' : 'Sign out'}
@@ -116,7 +116,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
 
 function SearchButton() {
   return (
-    <button className="p-2 text-foreground-muted hover:text-foreground hover:bg-background-secondary rounded-md transition-colors">
+    <button className="p-3 text-foreground-muted hover:text-foreground hover:bg-background-secondary rounded-lg transition-colors">
       <Search className="h-4 w-4" />
     </button>
   );
@@ -148,17 +148,18 @@ export default function Header() {
   return (
     <header className="border-b border-border bg-background sticky top-0 z-50">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-20 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-4">
             <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <Image
                 src="/logo.png"
                 alt="BanChess Logo"
-                width={40} // Adjust as needed
-                height={40} // Adjust as needed
+                width={48}
+                height={48}
+                className="object-contain"
               />
-              <span className="text-xl font-bold">
+              <span className="text-2xl font-bold">
                 <span className="text-lichess-orange-500">Ban</span>
                 <span className="text-foreground">Chess</span>
               </span>
@@ -180,7 +181,7 @@ export default function Header() {
             ) : (
               <Link 
                 href="/auth/signin"
-                className="px-4 py-2 bg-lichess-orange-500 hover:bg-lichess-orange-600 text-white rounded-md transition-colors text-sm font-medium"
+                className="px-5 py-2.5 bg-lichess-orange-500 hover:bg-lichess-orange-600 text-white rounded-lg transition-colors text-sm font-medium"
               >
                 Sign in
               </Link>
