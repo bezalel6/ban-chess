@@ -1,164 +1,213 @@
-# PowerShell deployment script for Windows
+# PowerShell deployment script for Coolify
+# Simple git-based deployment without API complexity
 # 
 # Usage:
 #   .\deploy-to-coolify.ps1              # Build and deploy everything
-#   .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building (use existing build)
-#   .\deploy-to-coolify.ps1 -NextOnly    # Build and deploy only Next.js
-#   .\deploy-to-coolify.ps1 -WsOnly      # Build and deploy only WebSocket server
+#   .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building
+#   .\deploy-to-coolify.ps1 -Trigger     # Also trigger deployment after sync
 
 param(
-    [switch]$SkipBuild,  # Skip the build step and just deploy existing files
-    [switch]$NextOnly,    # Only build/deploy Next.js app
-    [switch]$WsOnly,      # Only build/deploy WebSocket server
-    [switch]$Help        # Show help message
+    [switch]$SkipBuild,   # Skip the build step and just deploy existing files
+    [switch]$Trigger,     # Trigger Coolify deployment after sync
+    [switch]$ForceFullCopy,  # Force complete file sync (clears cache)
+    [switch]$CleanCache,  # Remove deployment cache completely  
+    [switch]$Help         # Show help message
 )
 
 if ($Help) {
-    Write-Host "Chess App Deployment Script" -ForegroundColor Cyan
-    Write-Host "============================" -ForegroundColor Cyan
+    Write-Host "Chess App Deployment Script for Coolify" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Usage:" -ForegroundColor Yellow
     Write-Host "  .\deploy-to-coolify.ps1              # Build and deploy everything"
-    Write-Host "  .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building (use existing build)"
-    Write-Host "  .\deploy-to-coolify.ps1 -NextOnly    # Build and deploy only Next.js"
-    Write-Host "  .\deploy-to-coolify.ps1 -WsOnly      # Build and deploy only WebSocket server"
-    Write-Host "  .\deploy-to-coolify.ps1 -Help        # Show this help message"
+    Write-Host "  .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building"
+    Write-Host "  .\deploy-to-coolify.ps1 -Trigger     # Also trigger deployment after sync"
+    Write-Host "  .\deploy-to-coolify.ps1 -ForceFullCopy  # Force complete file sync"
+    Write-Host "  .\deploy-to-coolify.ps1 -CleanCache  # Remove cache and exit"
     Write-Host ""
-    Write-Host "Examples:" -ForegroundColor Yellow
-    Write-Host "  Quick redeploy after config change:"
-    Write-Host "    .\deploy-to-coolify.ps1 -SkipBuild"
+    Write-Host "First time setup:" -ForegroundColor Yellow
+    Write-Host "  1. Push coolify-deployment folder to GitHub"
+    Write-Host "  2. Create Docker Compose app in Coolify using that repo"
+    Write-Host "  3. Configure webhook in GitHub to trigger on push to master"
+    Write-Host "  4. Run this script to build and sync files"
     Write-Host ""
-    Write-Host "  Update only frontend after UI changes:"
-    Write-Host "    .\deploy-to-coolify.ps1 -NextOnly"
+    Write-Host "Triggering Deployment:" -ForegroundColor Yellow
+    Write-Host "  Option 1: Use -Trigger flag with this script"
+    Write-Host "  Option 2: Run .\trigger-deploy.ps1 separately"
+    Write-Host "  Option 3: Manually click 'Redeploy' in Coolify UI"
     Write-Host ""
     exit 0
 }
 
-# Configuration - Update these with your server details
-$SERVER_USER = "rndev"  # or your Coolify server user
-$SERVER_HOST = "rndev.local"  # Server hostname
-$COOLIFY_APP_PATH = "/home/rndev/chess-app"  # Your deployment directory
-
-# Resolve hostname to IP before using in WSL
-Write-Host "🔍 Resolving server hostname..." -ForegroundColor Yellow
-try {
-    $resolvedIP = (Resolve-DnsName -Name $SERVER_HOST -Type A -ErrorAction Stop | Where-Object {$_.Type -eq "A"} | Select-Object -First 1).IPAddress
-    $SERVER_IP = $resolvedIP
-    Write-Host "✅ Resolved $SERVER_HOST to $SERVER_IP" -ForegroundColor Green
-} catch {
-    Write-Host "❌ Failed to resolve $SERVER_HOST. Trying alternative methods..." -ForegroundColor Red
-    # Try ping to resolve
-    $pingResult = ping -n 1 $SERVER_HOST 2>$null | Select-String "Reply from ([\d.]+):"
-    if ($pingResult) {
-        $SERVER_IP = $pingResult.Matches[0].Groups[1].Value
-        Write-Host "✅ Resolved via ping: $SERVER_IP" -ForegroundColor Green
-    } else {
-        Write-Host "❌ Could not resolve hostname. Please check:" -ForegroundColor Red
-        Write-Host "   - Is the server online?" -ForegroundColor Yellow
-        Write-Host "   - Is mDNS/Bonjour working?" -ForegroundColor Yellow
-        Write-Host "   - Try adding to hosts file: C:\Windows\System32\drivers\etc\hosts" -ForegroundColor Yellow
-        exit 1
-    }
-}
-
-Write-Host "🚀 Starting deployment to Coolify..." -ForegroundColor Yellow
-
-if ($SkipBuild) {
-    Write-Host "⏭️  Skipping build step (using existing build files)" -ForegroundColor Cyan
-} else {
-    # Step 1: Build Next.js in standalone mode
-    if (-not $WsOnly) {
-        Write-Host "📦 Building Next.js application..." -ForegroundColor Yellow
-        npm run build
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "❌ Build failed" -ForegroundColor Red
-            exit 1
+# Load environment variables from .env.deploy.local if it exists
+$envFile = ".env.deploy.local"
+if (Test-Path $envFile) {
+    Write-Host "📋 Loading configuration from $envFile" -ForegroundColor Cyan
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match '^([^#][^=]+)=(.*)$') {
+            $key = $matches[1].Trim()
+            $value = $matches[2].Trim()
+            # Remove quotes if present
+            $value = $value -replace '^["'']|["'']$', ''
+            [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
         }
     }
+}
 
-    # Step 2: WebSocket server (no build needed - TypeScript runs directly)
-    if (-not $NextOnly) {
-        Write-Host "📦 WebSocket server uses TypeScript directly (no build needed)" -ForegroundColor Cyan
+# Configuration
+$SERVER_USER = if($env:SERVER_USER) {$env:SERVER_USER} else {"rndev"}
+$SERVER_HOST = if($env:SERVER_HOST) {$env:SERVER_HOST} else {"rndev.local"}
+$REMOTE_BUILD_BASE = "/home/$SERVER_USER/chess-app-builds"
+
+# Handle CleanCache flag
+if ($CleanCache) {
+    Write-Host "🧹 Cleaning deployment cache..." -ForegroundColor Yellow
+    if (Test-Path .deploy-temp) {
+        Remove-Item -Recurse -Force .deploy-temp
+        Write-Host "✅ Cache cleaned successfully" -ForegroundColor Green
+    } else {
+        Write-Host "   No cache to clean" -ForegroundColor Gray
     }
-}
-
-# Step 3: Prepare deployment directories
-Write-Host "📁 Preparing deployment files..." -ForegroundColor Yellow
-if (Test-Path .deploy-temp) {
-    Remove-Item -Recurse -Force .deploy-temp
-}
-New-Item -ItemType Directory -Force -Path .deploy-temp | Out-Null
-
-# Copy Next.js standalone build
-if (-not $WsOnly) {
-    New-Item -ItemType Directory -Force -Path .deploy-temp\app-dist | Out-Null
-    Copy-Item -Recurse .next\standalone\* .deploy-temp\app-dist\
-    Copy-Item -Recurse .next\static .deploy-temp\app-dist\.next\
-    if (Test-Path public) {
-        Copy-Item -Recurse public .deploy-temp\app-dist\
+    if (Test-Path .deploy-manifest.json) {
+        Remove-Item -Force .deploy-manifest.json
+        Write-Host "   Manifest removed" -ForegroundColor Gray
     }
+    exit 0
 }
 
-# Copy WebSocket server files (TypeScript source - will be compiled on server)
-if (-not $NextOnly) {
-    New-Item -ItemType Directory -Force -Path .deploy-temp\ws-dist | Out-Null
-    # Copy TypeScript source files
-    Copy-Item server\*.ts .deploy-temp\ws-dist\
-    # Copy package.json from root (WebSocket deps are there)
-    Copy-Item package*.json .deploy-temp\ws-dist\
-    Write-Host "📦 Copied WebSocket server source files" -ForegroundColor Green
+# Force full copy if requested
+if ($ForceFullCopy -and (Test-Path .deploy-manifest.json)) {
+    Write-Host "🔄 Force full copy requested - clearing cache..." -ForegroundColor Yellow
+    Remove-Item -Force .deploy-manifest.json
 }
 
-# Copy docker-compose.production.yml
-Copy-Item docker-compose.production.yml .deploy-temp\
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host "    Chess App Deployment to Coolify" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host ""
 
-# Step 4: rsync to server (using WSL or Git Bash)
-Write-Host "📤 Transferring files to server..." -ForegroundColor Yellow
+# Phase 1: Build locally
+if (-not $SkipBuild) {
+    Write-Host "📦 Phase 1: Building applications locally..." -ForegroundColor Cyan
+    
+    # Build Next.js app
+    Write-Host "   Building Next.js app..." -ForegroundColor White
+    npm run build
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Next.js build failed!" -ForegroundColor Red
+        exit 1
+    }
+    
+    # Build WebSocket server
+    Write-Host "   Building WebSocket server..." -ForegroundColor White
+    npm run build:ws
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ WebSocket server build failed!" -ForegroundColor Red
+        exit 1
+    }
+    
+    Write-Host "✅ Build phase completed!" -ForegroundColor Green
+    Write-Host ""
+} else {
+    Write-Host "⏭️  Skipping build phase (using existing builds)" -ForegroundColor Yellow
+    Write-Host ""
+}
 
-# Option 1: Using WSL (with mirrored networking, can use hostname directly)
-wsl rsync -avz --delete `
-    --exclude 'node_modules' `
-    --exclude '.git' `
-    --exclude '*.log' `
-    .deploy-temp/ `
-    ${SERVER_USER}@${SERVER_HOST}:${COOLIFY_APP_PATH}/
+# Phase 2: Prepare deployment files
+Write-Host "📋 Phase 2: Preparing deployment files..." -ForegroundColor Cyan
 
-# Option 2: Using Git Bash (comment above and uncomment below)
-# & "C:\Program Files\Git\usr\bin\rsync.exe" -avz --delete `
-#     --exclude 'node_modules' `
-#     --exclude '.git' `
-#     --exclude '*.log' `
-#     .deploy-temp/ `
-#     ${SERVER_USER}@${SERVER_IP}:${COOLIFY_APP_PATH}/
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ File transfer failed" -ForegroundColor Red
+# Check if builds exist
+if (-not (Test-Path .next\standalone)) {
+    Write-Host "❌ No Next.js standalone build found. Run without -SkipBuild first." -ForegroundColor Red
     exit 1
 }
 
-# Step 5: Install production dependencies and restart services
-Write-Host "📥 Installing dependencies and restarting services..." -ForegroundColor Yellow
-# Use the same resolved IP for consistency
-ssh ${SERVER_USER}@${SERVER_IP} @"
-    cd ${COOLIFY_APP_PATH}/ws-dist && npm ci --production
-    cd ${COOLIFY_APP_PATH}
-    docker-compose -f docker-compose.production.yml down
-    docker-compose -f docker-compose.production.yml up -d
-"@
-
-# Step 6: Clean up local temp files
-Write-Host "🧹 Cleaning up..." -ForegroundColor Yellow
-Remove-Item -Recurse -Force .deploy-temp
-
-# Step 7: Check deployment status
-Write-Host "🔍 Checking deployment status..." -ForegroundColor Yellow
-Start-Sleep -Seconds 5
-$response = Invoke-WebRequest -Uri "http://${SERVER_IP}:3000/api/health" -UseBasicParsing -ErrorAction SilentlyContinue
-if ($response.StatusCode -eq 200) {
-    Write-Host "✅ Deployment successful!" -ForegroundColor Green
-    Write-Host "🌐 Application is running at http://${SERVER_IP}:3000" -ForegroundColor Green
-} else {
-    Write-Host "⚠️  Application may still be starting up. Check manually." -ForegroundColor Yellow
+if (-not (Test-Path server\ws-server.js)) {
+    Write-Host "❌ No WebSocket server build found. Run without -SkipBuild first." -ForegroundColor Red
+    exit 1
 }
 
-Write-Host "🎉 Deployment complete!" -ForegroundColor Green
+# Create temporary deployment directory
+$tempDir = ".deploy-temp"
+if (Test-Path $tempDir) {
+    Remove-Item -Recurse -Force $tempDir
+}
+New-Item -ItemType Directory -Path $tempDir | Out-Null
+
+# Copy Next.js standalone build
+Write-Host "   Preparing Next.js standalone files..." -ForegroundColor White
+$appDistDir = "$tempDir\app-dist"
+Copy-Item -Recurse -Force .next\standalone $appDistDir
+
+# Copy static files and public assets
+Copy-Item -Recurse -Force .next\static "$appDistDir\.next\static"
+if (Test-Path public) {
+    Copy-Item -Recurse -Force public $appDistDir\
+}
+
+# Copy WebSocket server
+Write-Host "   Preparing WebSocket server files..." -ForegroundColor White
+$wsDistDir = "$tempDir\ws-dist"
+New-Item -ItemType Directory -Path $wsDistDir | Out-Null
+Copy-Item -Force server\ws-server.js $wsDistDir\
+Copy-Item -Force package.json $wsDistDir\
+Copy-Item -Force package-lock.json $wsDistDir\
+
+Write-Host "✅ Deployment files prepared!" -ForegroundColor Green
+Write-Host ""
+
+# Phase 3: Sync files to server using pscp/plink
+Write-Host "🚀 Phase 3: Syncing files to server..." -ForegroundColor Cyan
+Write-Host "   Target: ${SERVER_USER}@${SERVER_HOST}:$REMOTE_BUILD_BASE" -ForegroundColor Gray
+
+# Check if plink/pscp are available
+$plinkPath = Get-Command plink -ErrorAction SilentlyContinue
+$pscpPath = Get-Command pscp -ErrorAction SilentlyContinue
+
+if (-not $plinkPath -or -not $pscpPath) {
+    Write-Host "❌ plink/pscp not found. Please install PuTTY." -ForegroundColor Red
+    Write-Host "   Download from: https://www.putty.org/" -ForegroundColor Yellow
+    exit 1
+}
+
+# Ensure remote directories exist
+Write-Host "   Creating remote directories..." -ForegroundColor White
+$createDirs = "mkdir -p $REMOTE_BUILD_BASE/app-dist $REMOTE_BUILD_BASE/ws-dist"
+echo $createDirs | plink -batch ${SERVER_USER}@${SERVER_HOST} 2>$null
+
+# Use pscp to copy files
+Write-Host "   Transferring app files..." -ForegroundColor White
+pscp -r -batch $tempDir\app-dist ${SERVER_USER}@${SERVER_HOST}:$REMOTE_BUILD_BASE/ 2>$null
+
+Write-Host "   Transferring WebSocket files..." -ForegroundColor White
+pscp -r -batch $tempDir\ws-dist ${SERVER_USER}@${SERVER_HOST}:$REMOTE_BUILD_BASE/ 2>$null
+
+Write-Host "✅ File sync completed!" -ForegroundColor Green
+Write-Host ""
+
+# Phase 4: Trigger deployment (optional)
+if ($Trigger) {
+    Write-Host "🔄 Phase 4: Triggering Coolify deployment..." -ForegroundColor Cyan
+    
+    # Use the trigger script
+    & .\trigger-deploy.ps1 -Message "Deployment after sync"
+    
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor Green
+    Write-Host "    ✅ Deployment Complete!" -ForegroundColor Green
+    Write-Host "============================================" -ForegroundColor Green
+} else {
+    Write-Host "============================================" -ForegroundColor Green
+    Write-Host "    ✅ Files Synced Successfully!" -ForegroundColor Green
+    Write-Host "============================================" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "📍 To trigger deployment:" -ForegroundColor Yellow
+    Write-Host "   Option 1: Run .\trigger-deploy.ps1" -ForegroundColor White
+    Write-Host "   Option 2: Go to Coolify and click 'Redeploy'" -ForegroundColor White
+    Write-Host "   Option 3: Run this script again with -Trigger flag" -ForegroundColor White
+}
+
+Write-Host ""
+Write-Host "Monitor deployment at: http://${SERVER_HOST}:8000/" -ForegroundColor Yellow

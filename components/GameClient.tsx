@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
@@ -60,6 +60,7 @@ export default function GameClient({ gameId }: GameClientProps) {
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const router = useRouter();
+  const joinedGameId = useRef<string | null>(null);
 
   // Check for debug mode in URL or localStorage
   useEffect(() => {
@@ -71,10 +72,18 @@ export default function GameClient({ gameId }: GameClientProps) {
 
   // Join game when component mounts and we're connected
   useEffect(() => {
-    if (connected && gameId && !hasJoined) {
+    // Only join if we're connected, have a gameId, and haven't joined this specific game
+    if (connected && gameId && joinedGameId.current !== gameId) {
       console.log("[GameClient] Joining game:", gameId);
       joinGame(gameId);
+      joinedGameId.current = gameId;
       setHasJoined(true);
+    }
+    
+    // Reset join state if disconnected
+    if (!connected && hasJoined) {
+      setHasJoined(false);
+      // Don't reset joinedGameId here - we want to avoid rejoining the same game
     }
   }, [connected, gameId, hasJoined, joinGame]);
 

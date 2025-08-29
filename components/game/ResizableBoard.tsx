@@ -60,7 +60,6 @@ export default function ResizableBoard({
     <div className="flex flex-col items-center gap-4">
       {/* Board Container with dynamic size */}
       <div 
-        className="relative"
         style={{ 
           width: `${boardSize}px`,
           height: `${boardSize}px`,

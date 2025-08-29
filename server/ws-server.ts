@@ -581,30 +581,53 @@ async function updateQueuePositions() {
 }
 
 const lastPong = new Map<WebSocket, number>();
+const lastPing = new Map<WebSocket, number>();
 
-const PING_INTERVAL = 30 * 1000; // 30 seconds
-const PING_TIMEOUT = 10 * 1000; // 10 seconds
+const PING_INTERVAL = 30 * 1000; // Send ping every 30 seconds
+const INACTIVE_THRESHOLD = 10 * 1000; // Mark as inactive after 10 seconds
+const DISCONNECT_TIMEOUT = 60 * 1000; // Disconnect only after 60 seconds of no response
 
 setInterval(() => {
   wss.clients.forEach((ws) => {
     if (ws.readyState === WebSocket.OPEN) {
-      if (lastPong.has(ws) && (Date.now() - lastPong.get(ws)!) > PING_TIMEOUT) {
-        console.log('Client did not respond to ping, terminating connection.');
+      const now = Date.now();
+      const lastPongTime = lastPong.get(ws) || now;
+      const timeSinceLastPong = now - lastPongTime;
+      
+      // Only disconnect if they haven't responded for a full minute
+      if (timeSinceLastPong > DISCONNECT_TIMEOUT) {
+        console.log('Client timeout: No response for 60 seconds, disconnecting.');
         ws.terminate();
+        lastPing.delete(ws);
+        lastPong.delete(ws);
         return;
       }
-
+      
+      // Send a ping to check if they're still there
       ws.ping();
-      lastPong.set(ws, Date.now());
+      lastPing.set(ws, now);
+      
+      // Update player status based on activity (but don't disconnect)
+      const player = authenticatedPlayers.get(ws);
+      if (player) {
+        if (timeSinceLastPong > INACTIVE_THRESHOLD) {
+          // Mark as inactive/away after 10 seconds (you could emit this status)
+          // But DON'T disconnect them
+        }
+      }
     }
   });
 }, PING_INTERVAL);
 
 wss.on('connection', (ws: WebSocket, request) => {
-  console.log('New client connected');
+  // Only log if debug mode is enabled
+  // console.log('New client connected');
+  // Initialize with current time so they don't get disconnected immediately
   lastPong.set(ws, Date.now());
+  lastPing.set(ws, Date.now());
 
   ws.on('pong', () => {
+    // Update last pong time when we receive a pong
     lastPong.set(ws, Date.now());
   });
   
@@ -661,7 +684,15 @@ wss.on('connection', (ws: WebSocket, request) => {
   
   ws.on('message', async (data: Buffer) => {
     try {
-      const msg: SimpleClientMsg = JSON.parse(data.toString());
+      const messageStr = data.toString();
+      
+      // Handle plain text ping/pong messages from react-use-websocket
+      if (messageStr === 'ping') {
+        ws.send('pong');
+        return;
+      }
+      
+      const msg: SimpleClientMsg = JSON.parse(messageStr);
       console.log('Received message:', msg.type);
       
       switch (msg.type) {
@@ -673,6 +704,28 @@ wss.on('connection', (ws: WebSocket, request) => {
         
         case 'authenticate': {
           const { userId, username } = msg;
+          
+          // Check if already authenticated (might happen with token auth)
+          if (currentPlayer && currentPlayer.userId === userId) {
+            console.log(`Player ${username} already authenticated, skipping duplicate`);
+            ws.send(JSON.stringify({
+              type: 'authenticated',
+              userId,
+              username
+            } as SimpleServerMsg));
+            
+            // Check if they're already in a game and send current state without re-joining
+            const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
+            if (gameId) {
+              const gameState = await getGameState(gameId);
+              if (gameState) {
+                await sendFullGameState(gameId, ws);
+                console.log(`[sendFullGameState] Sent full state with history for game ${gameId}`);
+                console.log(`Player ${username} reconnected to game ${gameId}`);
+              }
+            }
+            break;
+          }
           
           // Handle duplicate connections gracefully
           const existingPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
@@ -798,6 +851,15 @@ wss.on('connection', (ws: WebSocket, request) => {
           }
           
           const { gameId } = msg;
+          
+          // Check if already in this game
+          const currentGameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
+          if (currentGameId === gameId) {
+            console.log(`Player ${currentPlayer.username} already in game ${gameId}, sending current state`);
+            await sendFullGameState(gameId, ws);
+            break;
+          }
+          
           const gameState = await getGameState(gameId);
           
           if (!gameState) {
@@ -813,6 +875,7 @@ wss.on('connection', (ws: WebSocket, request) => {
           
           // Send full state with history when joining a game
           await sendFullGameState(gameId, ws);
+          console.log(`Player ${currentPlayer.username} joined game ${gameId}`);
           break;
         }
         
@@ -1034,7 +1097,8 @@ wss.on('connection', (ws: WebSocket, request) => {
   });
   
   ws.on('close', async () => {
-    console.log('Client disconnected');
+    // Only log if debug mode is enabled
+    // console.log('Client disconnected');
     if (currentPlayer) {
       authenticatedPlayers.delete(ws);
       await removeFromQueue(currentPlayer.userId);
@@ -1046,6 +1110,9 @@ wss.on('connection', (ws: WebSocket, request) => {
         // Note: We don't remove the game or player from game, allowing reconnection
       }
     }
+    // Clean up ping/pong tracking
+    lastPong.delete(ws);
+    lastPing.delete(ws);
   });
 });
 

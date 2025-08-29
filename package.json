@@ -33,6 +33,7 @@
     "test:codegen": "playwright codegen http://localhost:3000"
   },
   "dependencies": {
+    "@bezalel6/react-chessground": "^2.0.3",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/ioredis": "^4.28.10",
     "ban-chess.ts": "^1.2.2",
@@ -45,7 +46,6 @@
     "next-auth": "^4.24.11",
     "puppeteer": "^24.17.0",
     "react": "19.0.0",
-    "@bezalel6/react-chessground": "latest",
     "react-dom": "19.0.0",
     "react-use-websocket": "^4.13.0",
     "server-only": "^0.0.1",

@@ -47,22 +47,25 @@ export function useGameState() {
   
   // Authenticate when connection opens
   useEffect(() => {
-    if (readyState === ReadyState.OPEN && user && !authSent.current) {
-      authSent.current = true;
-      console.log('[GameState] Authenticating:', user.username);
-      send({
-        type: 'authenticate',
-        userId: user.userId || '',
-        username: user.username || ''
-      });
+    if (readyState === ReadyState.OPEN && user) {
+      // Only authenticate if we haven't authenticated in this connection
+      if (!isAuthenticated && !authSent.current) {
+        authSent.current = true;
+        console.log('[GameState] Authenticating:', user.username);
+        send({
+          type: 'authenticate',
+          userId: user.userId || '',
+          username: user.username || ''
+        });
+      }
     }
     
     // Reset auth flag when connection closes
-    if (readyState !== ReadyState.OPEN) {
+    if (readyState === ReadyState.CLOSED || readyState === ReadyState.CLOSING) {
       authSent.current = false;
       setIsAuthenticated(false);
     }
-  }, [readyState, user, send]);
+  }, [readyState, user, send, isAuthenticated]);
   
   // Handle incoming messages
   useEffect(() => {

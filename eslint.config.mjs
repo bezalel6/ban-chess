@@ -69,7 +69,7 @@ const config = [
     },
   },
   {
-    ignores: ['.next/**', 'node_modules/**', '.git/**', 'playwright-report/**', 'test-results/**', '.claude/**'],
+    ignores: ['.next/**', 'node_modules/**', '.git/**', 'playwright-report/**', 'test-results/**', '.claude/**', 'server/dist/**', '.deploy-temp/**'],
   },
 ];
 

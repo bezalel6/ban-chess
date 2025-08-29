@@ -1,4 +1,5 @@
 import "./globals.css";
+import "@bezalel6/react-chessground/dist/react-chessground.css";
 import type { Metadata } from "next";
 import React from "react";
 import { AuthProvider } from "@/components/AuthProvider";
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png", sizes: "any" },
-      { url: "/favicon.ico", type: "image/x-icon" }
+      { url: "/favicon.ico", type: "image/x-icon" },
     ],
     shortcut: "/favicon.png",
     apple: "/logo.png",
@@ -45,7 +46,7 @@ export default function RootLayout({
             <ConnectionStatusOverlay />
             <WebSocketStatusWidget />
             <Header />
-            
+
             {/* Main content */}
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               {children}

@@ -1,7 +1,7 @@
 "use client";
 
+import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import "@bezalel6/react-chessground/dist/style.css";
 import { useState } from "react";
 import type {
   ReactChessGroundProps,
@@ -10,6 +10,16 @@ import type {
 } from "@bezalel6/react-chessground";
 import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
 import { parseFEN, getCurrentBan } from "@/lib/game-types";
+
+// Dynamic import of ReactChessground with SSR disabled
+// const Chessground = dynamic(() => import("@bezalel6/react-chessground"), {
+//   ssr: false,
+//   loading: () => (
+//     <div className="flex items-center justify-center w-full h-full">
+//       <div className="loading-spinner" />
+//     </div>
+//   ),
+// });
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
@@ -53,8 +63,8 @@ export default function ChessBoard({
   // Safety check: If gameState is invalid, return a placeholder
   if (!gameState || !gameState.fen) {
     return (
-      <div className="chess-board-wrapper">
-        <div className="chess-board-container flex items-center justify-center">
+      <div className="chess-board-outer">
+        <div className="chess-board-inner flex items-center justify-center">
           <div className="loading-spinner" />
         </div>
       </div>
@@ -199,9 +209,10 @@ export default function ChessBoard({
   console.log("[ChessBoard] Check state:", isInCheck);
 
   return (
-    <div className="chess-board-wrapper">
-      <div className="chess-board-container">
+    <div className="chess-board-outer">
+      <div className="chess-board-inner">
         <Chessground key={boardKey} {...config} />
+      </div>
 
         {/* Promotion Dialog */}
         {promotionMove && (
