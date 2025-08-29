@@ -56,14 +56,10 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-StrongRedisPass123}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
-    environment:
-      # Ensure no password is set via environment
-      - REDIS_PASSWORD=
-      - ALLOW_EMPTY_PASSWORD=yes
 
 networks:
   coolify:
