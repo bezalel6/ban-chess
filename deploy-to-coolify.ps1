@@ -139,7 +139,9 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 # Copy Next.js standalone build
 Write-Host "   Preparing Next.js standalone files..." -ForegroundColor White
 $appDistDir = "$tempDir\app-dist"
-Copy-Item -Recurse -Force .next\standalone $appDistDir
+# Copy the CONTENTS of standalone, not the directory itself
+New-Item -ItemType Directory -Path $appDistDir -Force | Out-Null
+Copy-Item -Recurse -Force .next\standalone\* $appDistDir
 
 # Copy static files and public assets
 Copy-Item -Recurse -Force .next\static "$appDistDir\.next\static"

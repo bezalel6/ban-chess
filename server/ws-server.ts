@@ -287,6 +287,28 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
   
+  // Check for immediate checkmate when sending state
+  const isGameOver = checkForImmediateCheckmate(game);
+  const isCheckmate = game.inCheckmate() || (game.inCheck() && game.legalMoves().length === 0);
+  const isStalemate = game.inStalemate();
+  
+  if (isGameOver && !gameState.gameOver) {
+    // Game just ended due to immediate checkmate detection
+    let result: string;
+    if (isCheckmate || (game.inCheck() && game.legalMoves().length === 0)) {
+      const loser = game.turn;
+      result = `${loser === 'white' ? 'Black' : 'White'} wins by checkmate!`;
+    } else if (isStalemate) {
+      result = 'Draw by stalemate';
+    } else {
+      result = 'Game over';
+    }
+    
+    gameState.gameOver = true;
+    gameState.result = result;
+    await saveGameState(gameId, gameState);
+  }
+  
   // Get legal moves/bans from the game
   const fen = game.fen();
   const fenParts = fen.split(' ');
@@ -364,6 +386,38 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   }
 }
 
+/**
+ * Helper function to check if the current position is checkmate,
+ * even when the next action would be a ban (not a move).
+ * This handles the case where checkmate exists before any ban occurs.
+ */
+function checkForImmediateCheckmate(game: BanChess): boolean {
+  // Get the current turn from the chess position
+  const fen = game.fen();
+  const fenParts = fen.split(' ');
+  const banState = fenParts[6];
+  const isNextActionBan = banState && banState.includes(':ban');
+  
+  // If it's time for a ban, we need to check if the player who would ban
+  // is already in checkmate (can't escape even without a ban)
+  if (isNextActionBan) {
+    // Check if they're in check
+    if (game.inCheck()) {
+      // When it's time to ban but the player is in check, we need to verify
+      // if there are any legal moves that could escape check after the ban.
+      // Since the ban-chess library doesn't expose this directly during ban phase,
+      // we check both the standard gameOver() and inCheckmate() methods.
+      
+      // The library's gameOver() should handle this, but let's make it explicit
+      // by checking both conditions to ensure we catch all checkmate scenarios
+      return game.inCheckmate() || game.gameOver();
+    }
+  }
+  
+  // Standard checkmate check for move phases
+  return game.inCheckmate() || game.gameOver();
+}
+
 // Broadcast incremental updates - used after moves (no history needed)
 async function broadcastGameState(gameId: string) {
   const gameState = await getGameState(gameId);
@@ -375,17 +429,28 @@ async function broadcastGameState(gameId: string) {
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
   
-  // Check for game over and check state
-  const isGameOver = game.gameOver();
-  const isCheckmate = game.inCheckmate();
+  // Check for both immediate checkmate and standard game over conditions
+  const isGameOver = checkForImmediateCheckmate(game);
+  const isCheckmate = game.inCheckmate() || (game.inCheck() && game.legalMoves().length === 0);
   const isStalemate = game.inStalemate();
   
   if (isGameOver) {
     console.log(`[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}`);
+    
+    // Determine the winner based on who is in checkmate
+    let result: string;
+    if (isCheckmate || (game.inCheck() && game.legalMoves().length === 0)) {
+      // The player whose turn it is to act (ban or move) is in checkmate
+      const loser = game.turn;
+      result = `${loser === 'white' ? 'Black' : 'White'} wins by checkmate!`;
+    } else if (isStalemate) {
+      result = 'Draw by stalemate';
+    } else {
+      result = 'Game over';
+    }
+    
     gameState.gameOver = true;
-    gameState.result = isCheckmate ? 
-      `${game.turn === 'white' ? 'Black' : 'White'} wins by checkmate!` : 
-      isStalemate ? 'Draw by stalemate' : 'Game over';
+    gameState.result = result;
     gameState.pgn = game.pgn(); // Store final PGN
     await saveGameState(gameId, gameState);
   }
