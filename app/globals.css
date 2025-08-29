@@ -156,6 +156,10 @@ a {
     height: 100%;
     padding: 16px;
     box-sizing: border-box;
+    /* Hardware acceleration for smooth resizing */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: auto;
   }
   
   /* Inner container - this is what chessground sees */
@@ -163,6 +167,9 @@ a {
     width: 100%;
     height: 100%;
     position: relative;
+    /* Hardware acceleration for chessground */
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
   
   /* Ensure chessground fills the inner container */
@@ -171,6 +178,68 @@ a {
     height: 100% !important;
     display: block !important;
     position: relative !important;
+    /* Optimize for smooth piece animations */
+    transform: translateZ(0);
+  }
+
+  /* Smooth resize container for performance - Lichess-inspired */
+  .resizable-board-container {
+    @apply relative;
+    /* Smooth transition like Lichess - only when not actively resizing */
+    transition: width 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Hardware acceleration for the resize container */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: width, height;
+    /* Optimize rendering performance */
+    contain: layout style paint;
+    /* Enable smooth transitions when not actively resizing */
+    transition-property: width, height;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Disable transitions during active resize for immediate feedback */
+  .resizable-board-container.resizing {
+    transition: none;
+    will-change: width, height;
+  }
+
+  /* Optimize resize handle for smooth interaction - Lichess style */
+  .resize-handle {
+    /* Hardware acceleration */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    /* Smooth opacity transitions */
+    transition: opacity 0.15s ease-out;
+    /* Better touch handling */
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    /* Increase touch target for mobile */
+    z-index: 10;
+  }
+  
+  /* Visual feedback during hover and resize */
+  .resize-handle:hover {
+    opacity: 0.8 !important;
+  }
+  
+  .resizable-board-container.resizing .resize-handle {
+    opacity: 1 !important;
+  }
+  
+  /* Prevent board interaction during resize */
+  .resizable-board-container.resizing .chess-board-outer {
+    pointer-events: none;
+  }
+
+  /* Piece animation optimizations */
+  .chess-board-inner .cg-wrap piece {
+    /* Hardware acceleration for smooth piece movement */
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 }
 
