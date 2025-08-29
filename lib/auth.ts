@@ -9,6 +9,9 @@ interface LichessProfile {
 
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
+  session: {
+    strategy: "jwt" as const,
+  },
   providers: [
     // Guest login provider
     CredentialsProvider({
@@ -16,7 +19,7 @@ export const authOptions = {
       name: "Guest",
       credentials: {},
       async authorize() {
-        // Generate unique guest ID
+        // Always succeed for guest login - generate unique guest ID
         const guestId = `guest_${Math.random().toString(36).substring(2, 10)}`;
         const guestName = `Guest_${guestId.substring(6)}`;
         

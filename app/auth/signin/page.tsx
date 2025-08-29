@@ -11,6 +11,23 @@ export default function SignInPage() {
     signIn('google', { callbackUrl: '/' });
   };
 
+  const handleGuestSignIn = async () => {
+    try {
+      const result = await signIn('guest', { 
+        redirect: false,
+        guest: 'true'
+      });
+      
+      if (result?.ok) {
+        window.location.href = '/';
+      } else {
+        console.error('Guest sign-in failed:', result?.error);
+      }
+    } catch (error) {
+      console.error('Guest sign-in error:', error);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="w-full max-w-md space-y-6">
@@ -70,6 +87,25 @@ export default function SignInPage() {
               />
             </svg>
             Sign in with Google
+          </button>
+
+          <button
+            onClick={handleGuestSignIn}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-background-secondary text-foreground rounded-lg hover:bg-background-tertiary transition-colors font-medium border border-border"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 3.5C14.1 3.1 13.1 3.1 12.2 3.5L6 7V9H7V20C7 21.1 7.9 22 9 22V24H15V22C16.1 22 17 21.1 17 20V9H21Z"
+                fill="currentColor"
+              />
+            </svg>
+            Continue as Guest
           </button>
 
         </div>

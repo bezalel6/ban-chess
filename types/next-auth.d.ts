@@ -9,7 +9,7 @@ declare module "next-auth" {
       image?: string | null;
       username: string;
       providerId: string;
-      provider: 'lichess' | 'google';
+      provider: 'lichess' | 'google' | 'guest';
     } & DefaultSession["user"]
   }
 
