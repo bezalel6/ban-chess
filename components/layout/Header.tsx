@@ -78,23 +78,28 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
       
       {isOpen && (
         <div className="absolute top-full right-0 w-48 bg-background-secondary border border-border rounded-lg shadow-lg py-2 z-50 mt-1">
-          <Link
-            href={`/user/${user.username || 'profile'}`}
-            className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
-            onClick={() => setIsOpen(false)}
-          >
-            <User className="h-4 w-4 mr-2" />
-            Profile
-          </Link>
-          <Link
-            href="/settings"
-            className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
-            onClick={() => setIsOpen(false)}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Link>
-          <div className="border-t border-border my-1"></div>
+          {/* Only show Profile link for registered users (not guests) */}
+          {user.userId && (
+            <>
+              <Link
+                href={`/user/${user.username || 'profile'}`}
+                className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </Link>
+              <Link
+                href="/settings"
+                className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Link>
+              <div className="border-t border-border my-1"></div>
+            </>
+          )}
           <button
             onClick={handleSignOut}
             disabled={isPending}
