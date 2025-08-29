@@ -21,16 +21,12 @@ export function useGameWebSocket() {
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   
-  // Build WebSocket URL with authentication parameters
+  // Build WebSocket URL - authentication is handled via cookies/headers
   const socketUrl = useMemo(() => {
     if (!user) return null;
     
-    const url = new URL(config.websocket.url);
-    url.searchParams.set('username', user.username);
-    url.searchParams.set('providerId', user.userId);
-    url.searchParams.set('provider', 'lichess');
-    
-    return url.toString();
+    // Just use the base URL - auth is handled by NextAuth cookies
+    return config.websocket.url;
   }, [user]);
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
