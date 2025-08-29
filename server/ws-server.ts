@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { BanChess } from 'ban-chess.ts';
-import type { SimpleServerMsg, SimpleClientMsg, HistoryEntry, TimeControl } from '../lib/game-types';
+import type { SimpleServerMsg, SimpleClientMsg, HistoryEntry, TimeControl, GameEvent } from '../lib/game-types';
 import { v4 as uuidv4 } from 'uuid';
 import { TimeManager } from './time-manager';
 import { validateNextAuthToken } from './auth-validation';
@@ -944,8 +944,8 @@ wss.on('connection', (ws: WebSocket, request) => {
           }
           
           // Determine the recipient (always the opponent)
-          const giverColor = isWhitePlayer ? 'white' : 'black';
-          const recipientColor = giverColor === 'white' ? 'black' : 'white';
+          const giverColor: 'white' | 'black' = isWhitePlayer ? 'white' : 'black';
+          const recipientColor: 'white' | 'black' = giverColor === 'white' ? 'black' : 'white';
           
           // Get time manager and add time
           const timeManager = timeManagers.get(gameId);
@@ -955,9 +955,9 @@ wss.on('connection', (ws: WebSocket, request) => {
             timeManager.giveTime(recipientColor, timeToGive);
             
             // Create game event
-            const event = {
+            const event: GameEvent = {
               timestamp: Date.now(),
-              type: 'time-given' as const,
+              type: 'time-given',
               message: `${giverColor} gave ${timeToGive} seconds to ${recipientColor}`,
               player: giverColor,
               metadata: { 
