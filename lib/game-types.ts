@@ -11,6 +11,17 @@ export interface Ban {
   to: string;
 }
 
+// History entry from ban-chess.ts library
+export interface HistoryEntry {
+  turnNumber: number;
+  player: 'white' | 'black';
+  actionType: 'ban' | 'move';
+  action: Ban | Move;
+  san?: string;
+  fen: string;
+  bannedMove?: Ban;
+}
+
 export type Action = { move: Move } | { ban: Ban };
 
 // Minimal game state - FEN contains everything we need
@@ -28,7 +39,7 @@ export interface SimpleGameState {
   gameOver?: boolean;
   result?: string;
   inCheck?: boolean;  // Whether the current position has a check
-  history?: string[]; // Move history in SAN format
+  history?: HistoryEntry[] | string[]; // Move history - can be strings or HistoryEntry objects from ban-chess.ts
 }
 
 // Server messages - simplified
