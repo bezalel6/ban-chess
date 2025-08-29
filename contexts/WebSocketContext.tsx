@@ -34,12 +34,15 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
-    share: true, // Share connection across components
+    share: true,
     shouldReconnect: () => true,
     reconnectAttempts: config.websocket.maxReconnectAttempts,
     reconnectInterval: config.websocket.reconnectInterval,
-    // Prevent connection dropping during hot reload
     retryOnError: true,
+    heartbeat: { // Add heartbeat configuration
+      interval: 30000, // Send ping every 30 seconds
+      timeout: 10000,  // Consider connection dead if no pong within 10 seconds
+    },
   });
 
   // Remove authentication from here - it's handled in useGameState hook

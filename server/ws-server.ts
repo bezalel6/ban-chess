@@ -580,8 +580,33 @@ async function updateQueuePositions() {
   }
 }
 
+const lastPong = new Map<WebSocket, number>();
+
+const PING_INTERVAL = 30 * 1000; // 30 seconds
+const PING_TIMEOUT = 10 * 1000; // 10 seconds
+
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      if (lastPong.has(ws) && (Date.now() - lastPong.get(ws)!) > PING_TIMEOUT) {
+        console.log('Client did not respond to ping, terminating connection.');
+        ws.terminate();
+        return;
+      }
+
+      ws.ping();
+      lastPong.set(ws, Date.now());
+    }
+  });
+}, PING_INTERVAL);
+
 wss.on('connection', (ws: WebSocket, request) => {
   console.log('New client connected');
+  lastPong.set(ws, Date.now());
+
+  ws.on('pong', () => {
+    lastPong.set(ws, Date.now());
+  });
   
   // Get auth info from the request that was validated during handshake
   const reqWithAuth = request as typeof request & { authToken?: { providerId: string; username: string; provider: string } };
