@@ -1,0 +1,21 @@
+# WebSocket Server Dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy WebSocket server code
+COPY server/ ./server/
+COPY lib/game-types.ts ./lib/
+COPY tsconfig.json ./
+
+# Install TypeScript for compilation
+RUN npm install -g tsx
+
+EXPOSE 8081
+
+# Run WebSocket server
+CMD ["tsx", "server/ws-server.ts"]

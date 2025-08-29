@@ -1,0 +1,56 @@
+# Coolify-optimized Docker Compose
+version: '3.8'
+
+services:
+  # Next.js Application
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY:-bezalel6/2ban-2chess}:${GITHUB_SHA:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - WEBSOCKET_URL=ws://websocket:8081
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - websocket
+    networks:
+      - coolify
+    labels:
+      # Coolify will auto-detect and configure these
+      - coolify.managed=true
+      - coolify.port=3000
+
+  # WebSocket Server
+  websocket:
+    image: ghcr.io/${GITHUB_REPOSITORY:-bezalel6/2ban-2chess}-websocket:${GITHUB_SHA:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - coolify
+    labels:
+      - coolify.managed=true
+      - coolify.port=8081
+      # Optional: expose WebSocket on subdomain
+      # - coolify.domain=ws.yourdomain.com
+
+  # Redis for WebSocket state
+  redis:
+    image: redis:7-alpine
+    networks:
+      - coolify
+    volumes:
+      - redis-data:/data
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  redis-data:
