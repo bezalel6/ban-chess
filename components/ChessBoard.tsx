@@ -2,12 +2,7 @@
 
 import Chessground from "react-chessground";
 import type { ReactChessGroundProps, Key, Dests } from "react-chessground";
-import type {
-  SimpleGameState,
-  Move,
-  Ban,
-  HistoryEntry,
-} from "@/lib/game-types";
+import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
 import { parseFEN, getCurrentBan } from "@/lib/game-types";
 import "react-chessground/dist/styles/chessground.css";
 
@@ -24,26 +19,23 @@ export default function ChessBoard({
   onBan,
   playerColor = "white",
 }: ChessBoardProps) {
+  // Safety check: If gameState is invalid, return a placeholder
+  if (!gameState || !gameState.fen) {
+    return (
+      <div className="chess-board-wrapper">
+        <div className="chess-board-container flex items-center justify-center">
+          <div className="loading-spinner" />
+        </div>
+      </div>
+    );
+  }
+
   const fenData = parseFEN(gameState.fen);
   const currentBan = getCurrentBan(gameState.fen);
   const nextAction = gameState.nextAction || "move";
 
-  // Check if we're in check - look at the LAST MOVE in history for "+" notation
-  let isInCheck = false;
-  if (
-    gameState.history &&
-    gameState.history.length > 0 &&
-    typeof gameState.history[0] === "object"
-  ) {
-    const entries = gameState.history as HistoryEntry[];
-    // Find the last move (not ban) in the history
-    for (let i = entries.length - 1; i >= 0; i--) {
-      if (entries[i].actionType === "move") {
-        isInCheck = entries[i].san?.includes("+") || false;
-        break;
-      }
-    }
-  }
+  // Use the inCheck field from game state (sent by server)
+  const isInCheck = gameState.inCheck || false;
 
   // Solo games: Show the perspective of the acting player (playerColor from server)
   // Multiplayer: Show the player's fixed color
@@ -94,6 +86,7 @@ export default function ChessBoard({
     playerColor,
     currentBan,
     banState: fenData.banState,
+    isInCheck, // Add check state to debug output
   });
 
   // Extra debug for ban display
@@ -103,8 +96,9 @@ export default function ChessBoard({
     console.log("[ChessBoard] No ban to display");
   }
 
-  const boardKey = `${fenData.turn}-${nextAction}-${
-    gameState.legalActions?.length || 0
+  // More stable board key - only remount when position actually changes
+  const boardKey = `${fenData.position}-${fenData.turn}-${
+    gameState.gameOver ? "over" : "active"
   }`;
 
   const config: ReactChessGroundProps = {
@@ -114,8 +108,8 @@ export default function ChessBoard({
     autoCastle: true,
     highlight: {
       lastMove: true,
-      check: isInCheck === true,
     },
+    check: isInCheck ? fenData.turn : undefined,
     lastMove: undefined,
     animation: {
       enabled: true,

@@ -10,7 +10,13 @@ import GameStatusPanel from './game/GameStatusPanel';
 
 const ResizableBoard = dynamic(() => import('@/components/game/ResizableBoard'), {
   ssr: false,
-  loading: () => <div className="aspect-square bg-background-secondary rounded animate-pulse" />,
+  loading: () => (
+    <div className="chess-board-wrapper">
+      <div className="chess-board-container flex items-center justify-center">
+        <div className="loading-spinner" />
+      </div>
+    </div>
+  ),
 });
 
 interface GameClientProps {
@@ -54,7 +60,28 @@ export default function GameClient({ gameId }: GameClientProps) {
   }
 
   if (!gameState || gameState.gameId !== gameId) {
-    return <LoadingMessage message="Joining game..." />;
+    // Show loading with proper chess board structure to prevent layout shift
+    return (
+      <div className="hidden md:flex h-screen justify-center items-start p-4">
+        <div className="grid grid-cols-[18rem_auto_18rem] gap-4">
+          <div className="max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <div className="game-info">
+              <div className="status">Joining game...</div>
+            </div>
+          </div>
+          <div className="flex justify-center">
+            <div className="chess-board-wrapper" style={{ width: '600px', height: '600px' }}>
+              <div className="chess-board-container flex items-center justify-center">
+                <div className="loading-spinner" />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center">
+            <div className="text-foreground-muted">Loading...</div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

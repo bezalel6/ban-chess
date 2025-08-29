@@ -24,8 +24,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     : null;
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
-    share: true, // This is the most important part
+    share: true, // Share connection across components
     shouldReconnect: () => true,
+    reconnectAttempts: 10,
+    reconnectInterval: 1000,
+    // Prevent connection dropping during hot reload
+    retryOnError: true,
   });
 
   // Remove authentication from here - it's handled in useGameState hook

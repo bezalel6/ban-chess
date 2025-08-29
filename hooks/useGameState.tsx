@@ -98,13 +98,11 @@ export function useGameState() {
           setCurrentGameId(msg.gameId);
           // Play sound effects for moves
           if (previousFen.current && msg.fen !== previousFen.current) {
-            const wasCheck = previousFen.current.includes('+');
-            const isCheck = msg.fen.includes('+');
             const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || []).length;
             const currentPieces = (msg.fen.match(/[prnbqk]/gi) || []).length;
             
             soundManager.playMoveSound({
-              check: !wasCheck && isCheck,
+              check: msg.inCheck === true,
               capture: currentPieces < prevPieces,
             });
           }

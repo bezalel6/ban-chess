@@ -194,6 +194,9 @@ function broadcastGameState(gameId: string) {
   
   console.log(`[broadcastGameState] Acting player: ${actingPlayer} (solo: ${room.isSoloGame})`);
   
+  // Check if the current player is in check
+  const isInCheck = room.game.inCheck();
+  
   const stateMsg: SimpleServerMsg = {
     type: 'state',
     fen: fen,
@@ -202,6 +205,7 @@ function broadcastGameState(gameId: string) {
     isSoloGame: room.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? 'ban' : 'move',
+    inCheck: isInCheck,
     // For solo games, playerColor is the acting player
     ...(room.isSoloGame && { playerColor: actingPlayer }),
     // Add game over state
