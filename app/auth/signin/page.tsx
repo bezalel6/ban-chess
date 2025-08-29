@@ -1,23 +1,24 @@
-'use client';
+"use client";
 
-import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+import Image from "next/image";
 
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLichessSignIn = () => {
-    signIn('lichess', { callbackUrl: '/' });
+    signIn("lichess", { callbackUrl: "/" });
   };
 
   const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/' });
+    signIn("google", { callbackUrl: "/" });
   };
 
   const handleGuestSignIn = () => {
     setIsLoading(true);
     // Use NextAuth's built-in redirect - cleaner and more direct
-    signIn('guest', { callbackUrl: '/' });
+    signIn("guest", { callbackUrl: "/" });
   };
 
   // Show loading state during guest authentication
@@ -25,7 +26,7 @@ export default function SignInPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <h2 className="text-3xl font-bold mb-6">Welcome to 2 Ban 2 Chess</h2>
+          <h2 className="text-3xl font-bold mb-6">Welcome to <span className="text-lichess-orange-500">Ban</span><span className="text-foreground">Chess</span></h2>
           <div className="loading-spinner mb-6"></div>
           <p className="text-muted-foreground">Signing you in as guest...</p>
         </div>
@@ -34,45 +35,50 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold">Welcome to 2 Ban 2 Chess</h2>
-          <p className="mt-2 text-muted-foreground">
-            Sign in to start playing
-          </p>
+    <div className="flex items-center justify-center min-h-[70vh] py-8">
+      <div className="w-full max-w-md space-y-8 px-4">
+        <div className="text-center space-y-2">
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/logo.png"
+              alt="BanChess"
+              width={64}
+              height={64}
+              className="object-contain"
+            />
+          </div>
+          <h2 className="text-4xl font-bold">
+            Welcome to <span className="text-lichess-orange-500">Ban</span><span className="text-foreground">Chess</span>
+          </h2>
+          <p className="mt-2 text-muted-foreground text-lg">Choose how you want to play</p>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <button
             onClick={handleLichessSignIn}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors font-medium"
+            className="aspect-square flex flex-col items-center justify-center gap-3 p-6 bg-gradient-to-br from-gray-50 to-gray-100 text-black rounded-2xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 shadow-sm hover:shadow-lg group"
           >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 50 50"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M25 0C11.193 0 0 11.193 0 25s11.193 25 25 25 25-11.193 25-25S38.807 0 25 0zm11.083 13.333l-3.125 14.583-4.166-4.166-4.167 8.333-4.167-4.166-8.333 8.333-4.167-4.167 8.334-8.333-4.167-4.167 8.333-4.166-4.166-4.167 14.583-3.125 3.125 3.125z"
-                fill="currentColor"
-              />
-            </svg>
-            Sign in with Lichess
+            <Image
+              src="/icons/lichess-logo.png"
+              alt="Lichess"
+              width={48}
+              height={48}
+              className="object-contain group-hover:scale-110 transition-transform"
+            />
+            <span className="font-medium text-sm">Lichess</span>
           </button>
 
           <button
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white text-black rounded-lg hover:bg-gray-100 transition-colors font-medium border border-gray-300"
+            className="aspect-square flex flex-col items-center justify-center gap-3 p-6 bg-gradient-to-br from-gray-50 to-gray-100 text-black rounded-2xl hover:from-gray-100 hover:to-gray-200 transition-all duration-200 shadow-sm hover:shadow-lg group"
           >
             <svg
-              width="24"
-              height="24"
+              width="48"
+              height="48"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
+              className="group-hover:scale-110 transition-transform"
             >
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -91,29 +97,32 @@ export default function SignInPage() {
                 fill="#EA4335"
               />
             </svg>
-            Sign in with Google
+            <span className="font-medium text-sm">Google</span>
           </button>
-
-          <button
-            onClick={handleGuestSignIn}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-background-secondary text-foreground rounded-lg hover:bg-background-tertiary transition-colors font-medium border border-border"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 3.5C14.1 3.1 13.1 3.1 12.2 3.5L6 7V9H7V20C7 21.1 7.9 22 9 22V24H15V22C16.1 22 17 21.1 17 20V9H21Z"
-                fill="currentColor"
-              />
-            </svg>
-            Continue as Guest
-          </button>
-
         </div>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-3 text-muted-foreground">Or continue without account</span>
+          </div>
+        </div>
+
+        <button
+          onClick={handleGuestSignIn}
+          className="w-full flex items-center justify-center gap-4 py-6 px-6 bg-background-secondary text-foreground rounded-2xl hover:bg-background-tertiary transition-all duration-200 font-medium text-lg border-2 border-border hover:border-lichess-orange-500/30 shadow-sm hover:shadow-lg group"
+        >
+          <Image
+            src="/icons/pawn.webp"
+            alt="Pawn"
+            width={40}
+            height={40}
+            className="object-contain opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all"
+          />
+          <span>Play as Guest</span>
+        </button>
 
         <div className="pt-6 border-t border-border">
           <div className="text-xs text-center text-muted-foreground">

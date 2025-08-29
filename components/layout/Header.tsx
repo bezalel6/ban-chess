@@ -149,11 +149,14 @@ export default function Header() {
             <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <Image
                 src="/logo.png"
-                alt="Ban Chess Logo"
+                alt="BanChess Logo"
                 width={40} // Adjust as needed
                 height={40} // Adjust as needed
               />
-              <span className="text-xl font-bold text-foreground">Ban Chess</span>
+              <span className="text-xl font-bold">
+                <span className="text-lichess-orange-500">Ban</span>
+                <span className="text-foreground">Chess</span>
+              </span>
             </Link>
           </div>
 

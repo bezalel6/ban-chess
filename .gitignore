@@ -26,6 +26,7 @@ test-results.xml
 
 # deployment
 .deploy-temp/
+.deploy-manifest.json
 *.tar.gz
 deployment-backup/
 
@@ -48,6 +49,7 @@ lerna-debug.log*
 .env*.local
 .env.production
 .env.development
+.env.deploy.local
 
 # vercel
 .vercel

@@ -100,7 +100,8 @@ export type SimpleServerMsg =
   | { type: 'solo-game-created'; gameId: string; timeControl?: TimeControl }
   | { type: 'clock-update'; gameId: string; clocks: { white: PlayerClock; black: PlayerClock } }
   | { type: 'timeout'; gameId: string; winner: 'white' | 'black' }
-  | { type: 'game-event'; gameId: string; event: GameEvent };
+  | { type: 'game-event'; gameId: string; event: GameEvent }
+  | { type: 'pong' };  // Heartbeat pong response from server
 
 // Client messages - simplified
 export type SimpleClientMsg =
@@ -110,7 +111,8 @@ export type SimpleClientMsg =
   | { type: 'leave-queue' }
   | { type: 'create-solo-game'; timeControl?: TimeControl }
   | { type: 'action'; gameId: string; action: Action }  // Combined move and ban
-  | { type: 'give-time'; gameId: string; amount: number };  // Give time to opponent
+  | { type: 'give-time'; gameId: string; amount: number }  // Give time to opponent
+  | { type: 'ping' };  // Heartbeat ping from client
 
 // Helper functions to parse FEN
 export function parseFEN(fen: string) {

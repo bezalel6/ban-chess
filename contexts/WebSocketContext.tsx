@@ -36,12 +36,27 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
     share: true,
     shouldReconnect: () => true,
-    reconnectAttempts: config.websocket.maxReconnectAttempts,
-    reconnectInterval: config.websocket.reconnectInterval,
+    reconnectAttempts: 10,
+    reconnectInterval: (attemptNumber) => 
+      Math.min(Math.pow(2, attemptNumber) * 1000, 10000), // Exponential backoff: 1s, 2s, 4s, 8s, max 10s
     retryOnError: true,
-    heartbeat: { // Add heartbeat configuration
-      interval: 30000, // Send ping every 30 seconds
-      timeout: 10000,  // Consider connection dead if no pong within 10 seconds
+    heartbeat: {
+      message: 'ping',
+      returnMessage: 'pong', 
+      interval: 25000, // Send ping every 25 seconds (before server's 30s timeout)
+      timeout: 60000,  // Allow 60 seconds for response
+    },
+    filter: (message) => {
+      // Filter out ping/pong messages to prevent unnecessary re-renders
+      try {
+        const data = JSON.parse(message.data);
+        if (data.type === 'pong') {
+          return false; // Don't pass pong messages to components
+        }
+      } catch {
+        // Not JSON, pass it through
+      }
+      return true;
     },
   });
 

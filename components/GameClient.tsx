@@ -40,8 +40,6 @@ export default function GameClient({ gameId }: GameClientProps) {
   const [debugMode, setDebugMode] = useState(false);
   const router = useRouter();
 
-  console.log("[GameClient] WebSocket URL being used:", useGameState.toString());
-
   // Check for debug mode in URL or localStorage
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

@@ -665,6 +665,12 @@ wss.on('connection', (ws: WebSocket, request) => {
       console.log('Received message:', msg.type);
       
       switch (msg.type) {
+        case 'ping': {
+          // Respond to client heartbeat ping
+          ws.send(JSON.stringify({ type: 'pong' }));
+          return; // Don't log ping/pong messages
+        }
+        
         case 'authenticate': {
           const { userId, username } = msg;
           

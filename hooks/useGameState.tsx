@@ -213,6 +213,11 @@ export function useGameState() {
           setTimeout(() => setError(null), 5000);
           break;
           
+        case 'pong':
+          // Heartbeat pong response - handled by WebSocketContext for latency tracking
+          // No action needed here
+          break;
+          
         default: {
           const _exhaustiveCheck: never = msg;
           console.log('[GameState] Unhandled message type:', (_exhaustiveCheck as SimpleServerMsg).type);

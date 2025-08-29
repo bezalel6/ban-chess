@@ -5,10 +5,31 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import Header from "@/components/layout/Header";
 import ConnectionStatusOverlay from "@/components/ConnectionStatusOverlay";
+import WebSocketStatusWidget from "@/components/WebSocketStatusWidget";
 
 export const metadata: Metadata = {
-  title: "2 Ban 2 Chess",
-  description: "Chess with bans",
+  title: "BanChess",
+  description: "Chess with bans - A strategic chess variant",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png", sizes: "any" },
+      { url: "/favicon.ico", type: "image/x-icon" }
+    ],
+    shortcut: "/favicon.png",
+    apple: "/logo.png",
+  },
+  manifest: "/manifest.json",
+  openGraph: {
+    title: "BanChess",
+    description: "Chess with bans - A strategic chess variant",
+    images: ["/logo.png"],
+  },
+  twitter: {
+    card: "summary",
+    title: "BanChess",
+    description: "Chess with bans - A strategic chess variant",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({
@@ -22,6 +43,7 @@ export default function RootLayout({
         <AuthProvider>
           <WebSocketProvider>
             <ConnectionStatusOverlay />
+            <WebSocketStatusWidget />
             <Header />
             
             {/* Main content */}
