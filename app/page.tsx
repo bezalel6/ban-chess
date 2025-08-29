@@ -76,7 +76,7 @@ export default function HomePage() {
           <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-4">How to Play</h2>
             <ol className="list-decimal list-inside space-y-2">
-              <li>Each player gets to ban one of their opponent's moves at the start of the game.</li>
+              <li>Each player gets to ban one of their opponent&apos;s moves at the start of the game.</li>
               <li>After the bans, the game proceeds like regular chess.</li>
               <li>The banned moves cannot be played for the entire game.</li>
               <li>Win by checkmate, resignation, or timeout.</li>

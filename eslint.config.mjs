@@ -43,6 +43,7 @@ const config = [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       'no-console': 'off', // Allow console logs for debugging
+      'react/no-unescaped-entities': 'warn',
     },
   },
   // Specific configuration for E2E test files
