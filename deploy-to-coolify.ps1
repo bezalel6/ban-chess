@@ -152,7 +152,7 @@ if (Test-Path $packageJsonPath) {
     # Replace scripts with just a start command that runs server.js
     $packageContent.scripts = @{ "start" = "node server.js" }
     $packageContent | ConvertTo-Json -Depth 10 | Set-Content $packageJsonPath
-    Write-Host "   ✓ Package.json fixed for standalone" -ForegroundColor Green
+    Write-Host "   [OK] Package.json fixed for standalone" -ForegroundColor Green
 }
 
 # Copy static files and public assets
@@ -228,4 +228,4 @@ if (-not $NoTrigger) {
 }
 
 Write-Host ""
-Write-Host "Monitor deployment at: http://${SERVER_HOST}:8000/" -ForegroundColor Yellow
+Write-Host "Monitor deployment at: http://$($SERVER_HOST):8000/" -ForegroundColor Yellow
