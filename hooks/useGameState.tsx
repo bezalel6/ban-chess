@@ -66,12 +66,21 @@ export function useGameState() {
   useEffect(() => {
     if (!lastMessage) return;
     
-    console.log('[GameState] Raw WebSocket message:', lastMessage.data);
+    // Parse message first to check type
+    let msg: SimpleServerMsg;
+    try {
+      msg = JSON.parse(lastMessage.data) as SimpleServerMsg;
+    } catch (e) {
+      console.error('[GameState] Failed to parse WebSocket message:', e);
+      return;
+    }
+    
+    // Only log non-clock-update messages to reduce console spam
+    if (msg.type !== 'clock-update') {
+      console.log('[GameState] WebSocket message:', msg.type, msg);
+    }
     
     try {
-      const msg = JSON.parse(lastMessage.data) as SimpleServerMsg;
-      console.log('[GameState] Parsed message type:', msg.type, 'Full message:', msg);
-      
       switch (msg.type) {
         case 'authenticated': {
           setIsAuthenticated(true);
@@ -173,7 +182,7 @@ export function useGameState() {
         }
       }
     } catch (err) {
-      console.error('[GameState] Failed to parse message:', err);
+      console.error('[GameState] Failed to handle message:', err);
     }
   }, [lastMessage, send, router, currentGameId]);
   

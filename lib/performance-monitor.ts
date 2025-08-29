@@ -16,7 +16,7 @@ export function markEnd(label: string) {
       if (measure && measure.duration > 16) {
         console.warn(`⚠️ Slow operation: ${label} took ${measure.duration.toFixed(2)}ms`);
       }
-    } catch (e) {
+    } catch {
       // Ignore if start mark doesn't exist
     }
   }

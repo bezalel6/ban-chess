@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import React from "react";
 import Link from "next/link";
 import { AuthProvider } from "@/components/AuthProvider";
-import { getCurrentUser } from "@/lib/auth-unified";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import UserDisplay from "@/components/UserDisplay";
 import ConnectionStatusOverlay from "@/components/ConnectionStatusOverlay";
@@ -13,17 +12,15 @@ export const metadata: Metadata = {
   description: "Chess with bans",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
-
   return (
     <html lang="en" className="dark">
       <body className="bg-background text-foreground min-h-screen">
-        <AuthProvider userPromise={Promise.resolve(user)}>
+        <AuthProvider>
           <WebSocketProvider>
             <ConnectionStatusOverlay />
             <UserDisplay />

@@ -1,8 +1,37 @@
 # CLAUDE.md – Next.js 15 + React 19 Project Guide
 
 ⚠️ **Critical Instructions:**
+
+## 🔴 DELETE AND REPLACE RULE - NEVER CREATE PARALLEL COMPONENTS 🔴
+**THIS IS THE MOST IMPORTANT RULE IN THIS DOCUMENT**
+
+When changing ANY existing functionality:
+- **NEVER** create new files with similar names (e.g., `AuthProvider2.tsx`, `AuthProviderNext.tsx`, `NewAuthProvider.tsx`)
+- **NEVER** keep old implementations alongside new ones
+- **ALWAYS** modify existing files in-place when changing functionality
+- **ALWAYS** delete old code immediately when replacing it
+
+### Examples of violations to avoid:
+- ❌ Creating `GameClientV2` instead of updating `GameClient`
+- ❌ Creating `AuthProviderNext` instead of updating `AuthProvider`
+- ❌ Creating `SimplifiedServer` instead of updating the existing server
+- ❌ Creating `NewWebSocketHandler` instead of updating `WebSocketHandler`
+
+### Why this matters:
+- Prevents confusion about which version is current
+- Eliminates technical debt immediately
+- Avoids old problematic logic lingering in the codebase
+- Maintains a single source of truth
+
+### Before making changes:
+1. **STOP** - Are you about to create a new file with a similar name to an existing one?
+2. **THINK** - Should you be modifying the existing file instead?
+3. **ACT** - Update the existing file in-place, don't create duplicates
+
+---
+
+## Other Critical Instructions:
 1. If you discover any **misalignment or contradiction** between this document and the actual codebase (e.g., outdated patterns, different dependencies, conflicting conventions), **immediately halt the task you are working on** and **alert the team**. Do not proceed until the discrepancy is resolved.
-2. When implementing new features or refactoring existing ones, **do not create parallel components with new names** (e.g., `GameClientV2`, `SimplifiedServer`). This causes long-term confusion and leaves old problematic logic behind. Instead, the rule is: **delete and replace**. Always clean up the old implementation as part of the change.
 
 ---
 

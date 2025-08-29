@@ -22,9 +22,10 @@ const onRenderCallback: ProfilerOnRenderCallback = (
     }
     
     // Log to window for Chrome DevTools Performance tab integration
-    if (typeof window !== 'undefined' && (window as any).performance) {
-      (window as any).performance.mark(`${id}-${phase}-end`);
-      (window as any).performance.measure(
+    if (typeof window !== 'undefined' && (window as unknown as { performance?: Performance }).performance) {
+      const perf = (window as unknown as { performance: Performance }).performance;
+      perf.mark(`${id}-${phase}-end`);
+      perf.measure(
         `${id}-${phase}`,
         undefined,
         `${id}-${phase}-end`

@@ -37,12 +37,12 @@ export class TimeManager {
     this.activePlayer = player;
     this.clocks[player].lastUpdate = Date.now();
     
-    // Start the timer - update every 100ms for smooth display
+    // Start the timer only for timeout detection, not for updates
     this.timer = setInterval(() => {
-      this.updateClock();
-    }, 100);
+      this.checkTimeout();
+    }, 1000);
     
-    // Send initial update
+    // Send initial clock state
     this.onClockUpdate(this.getClocks());
   }
 
@@ -92,6 +92,25 @@ export class TimeManager {
     this.start(newPlayer);
   }
 
+  private checkTimeout() {
+    if (!this.activePlayer) return;
+    
+    const now = Date.now();
+    const elapsed = now - this.clocks[this.activePlayer].lastUpdate;
+    const timeRemaining = this.clocks[this.activePlayer].remaining - elapsed;
+    
+    // Check for timeout without updating the stored time or sending updates
+    if (timeRemaining <= 0) {
+      // Now update the clock before timeout
+      this.clocks[this.activePlayer].remaining = 0;
+      this.clocks[this.activePlayer].lastUpdate = now;
+      this.stop();
+      const winner = this.activePlayer === 'white' ? 'black' : 'white';
+      this.onTimeout(winner);
+    }
+    // No clock update sent - clients calculate time locally
+  }
+  
   private updateClock() {
     if (!this.activePlayer) return;
     
@@ -100,16 +119,8 @@ export class TimeManager {
     this.clocks[this.activePlayer].remaining -= elapsed;
     this.clocks[this.activePlayer].lastUpdate = now;
     
-    // Check for timeout
-    if (this.clocks[this.activePlayer].remaining <= 0) {
-      this.clocks[this.activePlayer].remaining = 0;
-      this.stop();
-      const winner = this.activePlayer === 'white' ? 'black' : 'white';
-      this.onTimeout(winner);
-      return;
-    }
-    
-    // Send clock update to clients
+    // Only send clock update when explicitly called (on moves/bans)
+    // Not called periodically anymore
     this.onClockUpdate(this.getClocks());
   }
 
@@ -143,8 +154,8 @@ export class TimeManager {
     if (this.activePlayer && !this.timer) {
       this.clocks[this.activePlayer].lastUpdate = Date.now();
       this.timer = setInterval(() => {
-        this.updateClock();
-      }, 100);
+        this.checkTimeout();
+      }, 1000);
     }
   }
 

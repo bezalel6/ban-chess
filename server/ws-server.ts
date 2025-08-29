@@ -3,6 +3,7 @@ import { BanChess } from 'ban-chess.ts';
 import type { SimpleServerMsg, SimpleClientMsg, TimeControl } from '../lib/game-types';
 import { v4 as uuidv4 } from 'uuid';
 import { TimeManager } from './time-manager';
+import { validateNextAuthToken } from './auth-validation';
 
 interface Player {
   userId: string;
@@ -20,7 +21,21 @@ interface GameRoom {
   startTime?: number;
 }
 
-const wss = new WebSocketServer({ port: 8081 });
+const wss = new WebSocketServer({ 
+  port: 8081,
+  verifyClient: async (info, cb) => {
+    // Validate NextAuth token during WebSocket handshake
+    const token = await validateNextAuthToken(info.req);
+    if (token) {
+      // Store the validated token on the request for later use
+      const reqWithAuth = info.req as typeof info.req & { authToken: typeof token };
+      reqWithAuth.authToken = token;
+      cb(true);
+    } else {
+      cb(false, 401, 'Unauthorized');
+    }
+  }
+});
 const games = new Map<string, GameRoom>();
 const queue: Player[] = [];
 const authenticatedPlayers = new Map<WebSocket, Player>();
@@ -158,7 +173,7 @@ function broadcastGameState(gameId: string) {
       return action.from + action.to; // Convert {from: "e2", to: "e4"} to "e2e4"
     }
     return null;
-  }).filter(Boolean);
+  }).filter((action): action is string => action !== null);
   
   // For solo games, determine the acting player (who makes the decision)
   let actingPlayer: 'white' | 'black' = chessTurn;
@@ -187,7 +202,6 @@ function broadcastGameState(gameId: string) {
     isSoloGame: room.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? 'ban' : 'move',
-    history: room.game.history(),
     // For solo games, playerColor is the acting player
     ...(room.isSoloGame && { playerColor: actingPlayer }),
     // Add game over state
@@ -297,9 +311,42 @@ function removeFromQueue(player: Player) {
   }
 }
 
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, request) => {
   console.log('New client connected');
+  
+  // Get auth info from the request that was validated during handshake
+  const reqWithAuth = request as typeof request & { authToken?: { providerId: string; username: string; provider: string } };
+  const authToken = reqWithAuth.authToken;
   let currentPlayer: Player | null = null;
+  
+  if (authToken) {
+    // Auto-authenticate the player using the token from handshake
+    currentPlayer = { 
+      userId: authToken.providerId, 
+      username: authToken.username, 
+      ws 
+    };
+    authenticatedPlayers.set(ws, currentPlayer);
+    console.log(`Player authenticated via token: ${authToken.username}`);
+    
+    // Send authentication confirmation
+    ws.send(JSON.stringify({
+      type: 'authenticated',
+      userId: authToken.providerId,
+      username: authToken.username
+    } as SimpleServerMsg));
+    
+    // Check if player was in a game (reconnection)
+    const gameId = playerToGame.get(authToken.providerId);
+    if (gameId) {
+      const room = games.get(gameId);
+      if (room) {
+        const color: 'white' | 'black' = room.whitePlayerId === authToken.providerId ? 'white' : 'black';
+        console.log(`${authToken.username} reconnected to game ${gameId} as ${color}`);
+        broadcastGameState(gameId);
+      }
+    }
+  }
   
   ws.on('message', (data: Buffer) => {
     try {
@@ -393,8 +440,9 @@ wss.on('connection', (ws: WebSocket) => {
               (winner) => handleTimeout(gameId, winner),
               () => broadcastClockUpdate(gameId)
             );
-            // Start white's clock (white always moves first)
-            room.timeManager.start('white');
+            // In ban phase at start, BLACK bans white's first moves
+            // So start black's clock for the initial ban phase
+            room.timeManager.start('black');
           }
           
           games.set(gameId, room);
@@ -441,7 +489,8 @@ wss.on('connection', (ws: WebSocket) => {
           }
           
           // BanChess handles ALL validation
-          const result = room.game.play(action);
+          // Cast the action to ban-chess's expected type
+          const result = room.game.play(action as Parameters<typeof room.game.play>[0]);
           
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);

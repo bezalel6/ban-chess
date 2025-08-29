@@ -19,7 +19,9 @@ export function useGameWebSocket() {
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const socketUrl = user ? "ws://localhost:8081" : null;
+  const socketUrl = user 
+    ? `ws://localhost:8081?username=${encodeURIComponent(user.username)}&providerId=${encodeURIComponent(user.userId)}&provider=lichess`
+    : null;
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
     share: true, // This is the most important part

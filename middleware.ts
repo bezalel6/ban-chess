@@ -1,98 +1,52 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { getIronSession } from 'iron-session';
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
-// Session configuration matching auth-unified.ts
-export interface SessionData {
-  userId?: string;
-  username?: string;
-  isLoggedIn?: boolean;
-  createdAt?: number;
-}
-
-const sessionOptions = {
-  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long_change_this_in_production',
-  cookieName: 'chess_session',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'lax' as const,
-    maxAge: 60 * 60 * 24 * 7, // 1 week
-  },
-};
-
-// Define protected routes
+// Protected routes that require authentication
 const protectedRoutes = ['/game', '/play'];
-const authRoutes = ['/auth/signin', '/auth/signup'];
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // Get session from cookies - Next.js middleware cookies need conversion
-  const cookieStore = {
-    get: (name: string) => {
-      const cookie = request.cookies.get(name);
-      return cookie ? { name: cookie.name, value: cookie.value } : undefined;
+export default withAuth(
+  function middleware(_req) {
+    // This function is called after the authentication check
+    // _req.nextauth.token will contain the JWT token if authenticated
+    return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ req, token }) => {
+        const { pathname } = req.nextUrl;
+        
+        // Check if path is protected
+        const isProtectedRoute = protectedRoutes.some(route => 
+          pathname.startsWith(route)
+        );
+        
+        // Allow access to non-protected routes
+        if (!isProtectedRoute) {
+          return true;
+        }
+        
+        // Require authentication for protected routes
+        return !!token;
+      },
     },
-    getAll: () => {
-      return Array.from(request.cookies.getAll());
+    pages: {
+      signIn: '/auth/signin',
     },
-    has: (name: string) => request.cookies.has(name),
-    set: () => {
-      // Middleware cannot set cookies directly in Next.js
-      // This is handled by the response headers
-      return Promise.resolve();
-    },
-    delete: () => {
-      // Middleware cannot delete cookies directly in Next.js
-      // This is handled by the response headers
-      return Promise.resolve();
-    },
-  };
-  
-  const session = await getIronSession<SessionData>(
-    cookieStore,
-    sessionOptions
-  );
-  
-  const isAuthenticated = !!(session.userId && session.username);
-  
-  // Check if path is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-  
-  // Check if path is auth route
-  const isAuthRoute = authRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-  
-  // Redirect unauthenticated users trying to access protected routes
-  if (isProtectedRoute && !isAuthenticated) {
-    const signInUrl = new URL('/auth/signin', request.url);
-    signInUrl.searchParams.set('from', pathname);
-    return NextResponse.redirect(signInUrl);
   }
-  
-  // Redirect authenticated users away from auth pages
-  if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-  
-  return NextResponse.next();
-}
+);
 
 // Configure which routes to run middleware on
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
+     * - api/auth (NextAuth routes)
+     * - auth (auth pages)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!api/auth|auth|_next/static|_next/image|favicon.ico|public).*)',
   ],
 };

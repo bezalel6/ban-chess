@@ -1,27 +1,51 @@
 'use client';
 
-import { createContext, useContext, ReactNode, use } from 'react';
-import type { SessionData } from '@/lib/auth-unified';
+import { createContext, useContext, ReactNode } from 'react';
+import { SessionProvider, useSession } from 'next-auth/react';
 
 interface AuthContextType {
-  user: SessionData | null;
+  user: {
+    userId: string;
+    username: string;
+  } | null;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-  userPromise: Promise<SessionData | null>;
-}
-
-export function AuthProvider({ children, userPromise }: AuthProviderProps) {
-  // Use React 19's use() hook to consume the promise
-  const user = use(userPromise);
+// Inner component that uses useSession
+function AuthContextProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
+  
+  // Cast to our extended user type
+  const extendedUser = session?.user as { 
+    providerId?: string; 
+    username?: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  } | undefined;
+  
+  const user = extendedUser?.providerId && extendedUser?.username ? {
+    userId: extendedUser.providerId,
+    username: extendedUser.username
+  } : null;
 
   return (
-    <AuthContext.Provider value={{ user }}>
+    <AuthContext.Provider value={{ user, loading: status === 'loading' }}>
       {children}
     </AuthContext.Provider>
+  );
+}
+
+// Main provider that wraps with SessionProvider
+export function AuthProvider({ children }: { children: ReactNode }) {
+  return (
+    <SessionProvider>
+      <AuthContextProvider>
+        {children}
+      </AuthContextProvider>
+    </SessionProvider>
   );
 }
 
