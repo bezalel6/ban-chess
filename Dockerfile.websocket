@@ -7,9 +7,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --legacy-peer-deps --only=production
 
-# Copy WebSocket server code
+# Copy WebSocket server code and dependencies
 COPY server/ ./server/
 COPY lib/game-types.ts ./lib/
+COPY types/ ./types/
 COPY tsconfig.json ./
 
 # Install TypeScript for compilation

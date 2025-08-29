@@ -2,7 +2,7 @@
 
 ## System Overview
 
-2ban-2chess is a real-time multiplayer chess variant platform built with a modern web stack. The architecture follows a client-server model with WebSocket-based real-time communication.
+2ban-2chess is a real-time multiplayer chess variant platform built with a modern web stack. The architecture follows a distributed client-server model with WebSocket-based real-time communication, Redis for persistence and horizontal scaling, and efficient Ban Chess Notation (BCN) for network optimization.
 
 ## Architecture Diagram
 
@@ -22,14 +22,22 @@ graph TB
     end
     
     subgraph "Real-time Layer"
-        WS[WebSocket Server]
+        WS1[WebSocket Server 1]
+        WS2[WebSocket Server N]
         Queue[Matchmaking Queue]
         Rooms[Game Rooms]
     end
     
+    subgraph "Persistence Layer"
+        Redis[(Redis)]
+        PubSub[Redis Pub/Sub]
+        History[Action History - BCN]
+        GameState[Game State - PGN]
+    end
+    
     subgraph "Game Logic Layer"
-        Engine[ban-chess.ts Engine]
-        State[Game State Manager]
+        Engine[ban-chess.ts v1.2.2]
+        BCN[BCN Serialization]
         Validator[Move Validator]
     end
     
@@ -37,15 +45,23 @@ graph TB
     RC --> Chess
     RC --> Sound
     RC --> Next
-    RC -.->|WebSocket| WS
+    RC -.->|WebSocket| WS1
+    RC -.->|WebSocket| WS2
     
     Next --> Auth
     Auth --> Session
     
-    WS --> Queue
-    WS --> Rooms
+    WS1 --> Redis
+    WS2 --> Redis
+    WS1 --> PubSub
+    WS2 --> PubSub
+    Redis --> History
+    Redis --> GameState
+    
+    WS1 --> Queue
+    WS1 --> Rooms
     Rooms --> Engine
-    Engine --> State
+    Engine --> BCN
     Engine --> Validator
 ```
 
@@ -162,14 +178,35 @@ sequenceDiagram
     end
 ```
 
+## Ban Chess Notation (BCN)
+
+BCN is a compact, network-friendly format for representing Ban Chess actions, providing ~90% bandwidth reduction compared to JSON:
+
+### Format Specification
+- **Ban**: `b:e2e4` (6 characters) - Bans the move from e2 to e4
+- **Move**: `m:d2d4` (6 characters) - Moves from d2 to d4
+- **Promotion**: `m:e7e8q` (7-8 characters) - Promotes to queen
+
+### Serialization Example
+```typescript
+// Serialize for network/storage
+BanChess.serializeAction({ ban: { from: 'e2', to: 'e4' } }); // "b:e2e4"
+
+// Deserialize received actions
+BanChess.deserializeAction('b:e2e4'); // { ban: { from: 'e2', to: 'e4' } }
+
+// Replay game from action history
+const game = BanChess.replayFromActions(["b:e2e4", "m:d2d4", ...]);
+```
+
 ## Technology Stack Details
 
 ### Frontend Stack
 
 | Component | Technology | Purpose | Version |
 |-----------|------------|---------|---------|
-| Framework | Next.js | React framework with SSR | 14.2.18 |
-| UI Library | React | Component-based UI | 18.x |
+| Framework | Next.js | React framework with SSR | 15.x |
+| UI Library | React | Component-based UI | 19.x |
 | Chess UI | react-chessground | Interactive chess board | 1.5.0 |
 | Styling | Tailwind CSS | Utility-first CSS | 4.1.12 |
 | Audio | Howler.js | Web audio API wrapper | 2.2.4 |
@@ -181,7 +218,8 @@ sequenceDiagram
 |-----------|------------|---------|---------|
 | Runtime | Node.js | JavaScript runtime | 20.x |
 | WebSocket | ws | WebSocket server | 8.18.0 |
-| Game Logic | ban-chess.ts | Chess variant engine | 1.1.3 |
+| Game Logic | ban-chess.ts | Chess variant engine | 1.2.2 |
+| Persistence | Redis/ioredis | Game state & pub/sub | 5.x |
 | Session | iron-session | Encrypted sessions | 8.0.4 |
 | IDs | nanoid/uuid | Unique identifiers | 5.1.5/9.0.1 |
 
@@ -235,20 +273,26 @@ sequenceDiagram
 ### Server State
 
 ```typescript
-// In-Memory State
-interface ServerState {
-  games: Map<string, GameRoom>;
-  queue: Player[];
-  authenticatedPlayers: Map<WebSocket, Player>;
-  playerToGame: Map<string, string>;
+// Redis-Backed State (Persistent)
+interface RedisState {
+  'game:{id}': {           // Hash
+    fen: string;
+    pgn: string;           // Full game in PGN format
+    whitePlayerId: string;
+    blackPlayerId: string;
+    timeControl: TimeControl;
+    startTime: number;
+  };
+  'game:{id}:history': string[];  // List of BCN actions
+  'matchmaking:queue': Player[];   // Queue for matchmaking
+  'players:online': Set<string>;   // Online player IDs
 }
 
-// Game Room State
-interface GameRoom {
-  game: BanChess;
-  players: Map<string, PlayerInfo>;
-  whitePlayerId?: string;
-  blackPlayerId?: string;
+// In-Memory State (Transient)
+interface ServerState {
+  games: Map<string, BanChess>;  // Active game instances
+  authenticatedPlayers: Map<WebSocket, Player>;
+  timeManagers: Map<string, TimeManager>;
 }
 ```
 
@@ -321,9 +365,9 @@ graph TD
 | Move Processing | < 50ms | ~20ms |
 | Memory Usage | < 100MB | ~60MB |
 
-## Scalability Architecture
+## Scalability Architecture (Current Implementation)
 
-### Horizontal Scaling Plan
+### Horizontal Scaling with Redis
 
 ```mermaid
 graph TB
@@ -341,42 +385,48 @@ graph TB
         WSN[WS Server N]
     end
     
-    Redis[(Redis)]
-    DB[(PostgreSQL)]
+    subgraph "Redis Cluster"
+        Redis[(Redis Primary)]
+        RedisSub[Redis Pub/Sub]
+        RedisReplica[(Redis Replica)]
+    end
     
     LB --> Next1
     LB --> Next2
     LB --> NextN
     
-    Next1 --> Redis
-    Next2 --> Redis
-    NextN --> Redis
-    
     WS1 --> Redis
     WS2 --> Redis
     WSN --> Redis
     
-    Redis --> DB
+    WS1 -.->|Subscribe| RedisSub
+    WS2 -.->|Subscribe| RedisSub
+    WSN -.->|Subscribe| RedisSub
+    
+    Redis --> RedisReplica
 ```
 
-### Scaling Considerations
+### Current Scaling Features
 
-1. **Session Management**
-   - Move from in-memory to Redis
-   - Sticky sessions for WebSocket
+1. **Redis-Based State Management** ✅
+   - All game state persisted in Redis
+   - Action history in BCN format
+   - PGN storage for complete game reconstruction
 
-2. **Game State**
-   - Distributed game state with Redis
-   - Database persistence for history
+2. **Pub/Sub for Cross-Server Communication** ✅
+   - Game state broadcasts via Redis channels
+   - Real-time synchronization across servers
+   - No sticky sessions required
 
-3. **Load Balancing**
-   - HTTP load balancer for Next.js
-   - WebSocket-aware load balancer
+3. **Efficient Serialization** ✅
+   - BCN format reduces bandwidth by ~90%
+   - Compact Redis storage
+   - Fast game reconstruction
 
-4. **Caching**
-   - CDN for static assets
-   - Redis for session cache
-   - Browser caching strategies
+4. **Time Control Persistence** ✅
+   - Server-authoritative clocks
+   - Persistent timer states in Redis
+   - Fischer increment support
 
 ## Directory Structure
 
@@ -408,7 +458,8 @@ graph TB
 │   └── performance-monitor.ts # Metrics
 │
 ├── server/                # Backend services
-│   └── ws-server.ts      # WebSocket server
+│   ├── ws-server.ts      # WebSocket server
+│   └── redis.ts          # Redis client & operations
 │
 ├── public/                # Static assets
 │   └── sounds/           # Audio files
@@ -419,6 +470,7 @@ graph TB
 └── docs/                  # Documentation
     ├── ARCHITECTURE.md   # This file
     ├── API_REFERENCE.md  # API documentation
+    ├── ban-chess-api.md  # BCN format documentation
     └── PROJECT_INDEX.md  # Project overview
 ```
 
@@ -499,5 +551,6 @@ graph LR
 
 ---
 
-*Last Updated: 2025-08-26*  
-*Architecture Version: 1.0.0*
+*Last Updated: 2025-08-29*  
+*Architecture Version: 2.0.0*  
+*Now with Redis persistence, BCN serialization, and horizontal scaling support*

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ReadyState } from 'react-use-websocket';
 import { useGameWebSocket } from '@/contexts/WebSocketContext';
 import { useAuth } from '@/components/AuthProvider';
-import type { SimpleGameState, SimpleServerMsg, SimpleClientMsg, Action } from '@/lib/game-types';
+import type { SimpleGameState, SimpleServerMsg, SimpleClientMsg, Action, HistoryEntry } from '@/lib/game-types';
 import soundManager from '@/lib/sound-manager';
 
 export function useGameState() {
@@ -29,6 +29,7 @@ export function useGameState() {
   // Refs for tracking
   const previousFen = useRef<string | null>(null);
   const authSent = useRef(false);
+  const moveHistory = useRef<HistoryEntry[]>([]);
   
   // Connection status
   const connected = readyState === ReadyState.OPEN && isAuthenticated;
@@ -89,13 +90,36 @@ export function useGameState() {
         }
           
         case 'state':
+          // Handle history updates
+          if (msg.history) {
+            // Full history received (new connection/spectator)
+            // Check if it's the new format (HistoryEntry[]) or old format (string[])
+            if (msg.history.length > 0 && typeof msg.history[0] === 'object') {
+              moveHistory.current = msg.history as HistoryEntry[];
+            } else {
+              // Old format - we'll just clear for now
+              // TODO: Could convert BCN strings to HistoryEntry if needed
+              moveHistory.current = [];
+            }
+          } else if (msg.lastMove) {
+            // Incremental update - append last move to history
+            // Check if this is a new move (not a duplicate)
+            const lastHistoryMove = moveHistory.current[moveHistory.current.length - 1];
+            if (!lastHistoryMove || lastHistoryMove.fen !== msg.lastMove.fen) {
+              moveHistory.current = [...moveHistory.current, msg.lastMove];
+            }
+          }
+          
+          // Update game state with current history
           setGameState({
             ...msg,
+            history: moveHistory.current,
             timeControl: msg.timeControl,
             clocks: msg.clocks,
             startTime: msg.startTime
           });
           setCurrentGameId(msg.gameId);
+          
           // Play sound effects for moves
           if (previousFen.current && msg.fen !== previousFen.current) {
             const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || []).length;
@@ -117,6 +141,8 @@ export function useGameState() {
         case 'joined':
           console.log('[GameState] Joined game:', msg.gameId);
           setCurrentGameId(msg.gameId);
+          // Clear history for new game
+          moveHistory.current = [];
           // Server will send a full state message next
           soundManager.play('game-start');
           break;

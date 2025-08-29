@@ -1,9 +1,25 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { BanChess } from 'ban-chess.ts';
-import type { SimpleServerMsg, SimpleClientMsg, TimeControl, HistoryEntry } from '../lib/game-types';
+import type { SimpleServerMsg, SimpleClientMsg, HistoryEntry, TimeControl } from '../lib/game-types';
 import { v4 as uuidv4 } from 'uuid';
 import { TimeManager } from './time-manager';
 import { validateNextAuthToken } from './auth-validation';
+import { 
+  redis, 
+  redisPub, 
+  redisSub, 
+  KEYS,
+  saveGameState,
+  getGameState,
+  addToQueue,
+  removeFromQueue,
+  getPlayersForMatch,
+  savePlayerSession,
+  removePlayerSession,
+  shutdown as redisShutdown,
+  addActionToHistory,
+  getActionHistory
+} from './redis';
 
 interface Player {
   userId: string;
@@ -11,15 +27,10 @@ interface Player {
   ws: WebSocket;
 }
 
-interface GameRoom {
-  game: BanChess;
-  whitePlayerId?: string;
-  blackPlayerId?: string;
-  isSoloGame?: boolean;
-  timeControl?: TimeControl;
-  timeManager?: TimeManager;
-  startTime?: number;
-}
+// In-memory cache for active connections and time managers
+// These don't need Redis as they're connection-specific
+const authenticatedPlayers = new Map<WebSocket, Player>();
+const timeManagers = new Map<string, TimeManager>();
 
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
@@ -29,7 +40,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     : ['http://localhost:3000', 'http://localhost:3001'];
 
 const wss = new WebSocketServer({ 
-  port: 8081,
+  port: 3001,
   verifyClient: async (info, cb) => {
     // Check CORS origin
     const origin = info.origin || info.req.headers.origin;
@@ -60,34 +71,87 @@ const wss = new WebSocketServer({
     }
   }
 });
-const games = new Map<string, GameRoom>();
-const queue: Player[] = [];
-const authenticatedPlayers = new Map<WebSocket, Player>();
-const playerToGame = new Map<string, string>(); // userId -> gameId
 
-console.log(`[WebSocket] Server started on port 8081`);
+console.log(`[WebSocket] Server started on port 3001`);
 console.log(`[WebSocket] Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`[WebSocket] Allowed origins: ${allowedOrigins.join(', ')}`);
+console.log(`[WebSocket] Redis URL: ${process.env.REDIS_URL || 'redis://localhost:6379'}`);
 
-function getPlayerUsernames(room: GameRoom): { white?: string; black?: string } {
+// Subscribe to Redis pub/sub channels for cross-server communication
+async function setupRedisPubSub() {
+  // Subscribe to queue updates
+  await redisSub.subscribe(KEYS.CHANNELS.QUEUE_UPDATE);
+  
+  redisSub.on('message', async (channel, message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      if (channel === KEYS.CHANNELS.QUEUE_UPDATE) {
+        // Notify players in queue about position updates
+        const { userId, position } = data;
+        const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
+        if (player && player.ws.readyState === WebSocket.OPEN) {
+          player.ws.send(JSON.stringify({
+            type: 'queued',
+            position
+          } as SimpleServerMsg));
+        }
+      } else if (channel.startsWith('channel:game:')) {
+        // Handle game-specific messages
+        const gameId = channel.split(':')[2];
+        await handleGameChannelMessage(gameId, data);
+      }
+    } catch (err) {
+      console.error(`[Redis] Error handling message on channel ${channel}:`, err);
+    }
+  });
+}
+
+setupRedisPubSub().catch(console.error);
+
+async function handleGameChannelMessage(gameId: string, data: SimpleServerMsg) {
+  // Get game state from Redis
+  const gameState = await getGameState(gameId);
+  if (!gameState) return;
+  
+  // Find connected players for this game
+  const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(p => {
+    return p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId;
+  });
+  
+  // Broadcast to connected players
+  connectedPlayers.forEach(player => {
+    if (player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(JSON.stringify(data));
+    }
+  });
+}
+
+interface GameStateWithPlayers {
+  whitePlayerId?: string;
+  blackPlayerId?: string;
+  isSoloGame?: boolean;
+}
+
+async function getPlayerUsernames(gameState: GameStateWithPlayers): Promise<{ white?: string; black?: string }> {
   const usernames: { white?: string; black?: string } = {};
   
-  if (room.whitePlayerId) {
-    const whitePlayer = Array.from(authenticatedPlayers.values()).find(
-      p => p.userId === room.whitePlayerId
-    );
-    if (whitePlayer) usernames.white = whitePlayer.username;
+  if (gameState.whitePlayerId) {
+    const whiteSession = await redis.get(KEYS.PLAYER_SESSION(gameState.whitePlayerId));
+    if (whiteSession) {
+      const session = JSON.parse(whiteSession);
+      usernames.white = session.username;
+    }
   }
   
-  if (room.blackPlayerId) {
-    const blackPlayer = Array.from(authenticatedPlayers.values()).find(
-      p => p.userId === room.blackPlayerId
-    );
-    if (blackPlayer) {
-      usernames.black = blackPlayer.username;
+  if (gameState.blackPlayerId) {
+    const blackSession = await redis.get(KEYS.PLAYER_SESSION(gameState.blackPlayerId));
+    if (blackSession) {
+      const session = JSON.parse(blackSession);
+      usernames.black = session.username;
       // For solo games, both names are the same
-      if (room.isSoloGame && room.whitePlayerId === room.blackPlayerId) {
-        usernames.white = blackPlayer.username;
+      if (gameState.isSoloGame && gameState.whitePlayerId === gameState.blackPlayerId) {
+        usernames.white = session.username;
       }
     }
   }
@@ -95,251 +159,417 @@ function getPlayerUsernames(room: GameRoom): { white?: string; black?: string } 
   return usernames;
 }
 
-function handleTimeout(gameId: string, winner: 'white' | 'black') {
-  const room = games.get(gameId);
-  if (!room) return;
+async function handleTimeout(gameId: string, winner: 'white' | 'black') {
+  const gameState = await getGameState(gameId);
+  if (!gameState) return;
   
   console.log(`[handleTimeout] Player ${winner === 'white' ? 'black' : 'white'} ran out of time in game ${gameId}`);
   
   // Stop the time manager
-  if (room.timeManager) {
-    room.timeManager.destroy();
+  const timeManager = timeManagers.get(gameId);
+  if (timeManager) {
+    timeManager.destroy();
+    timeManagers.delete(gameId);
   }
   
-  // Send timeout message
+  // Reconstruct game from action history to get full PGN
+  const actionHistory = await getActionHistory(gameId);
+  let game: BanChess;
+  if (actionHistory.length > 0) {
+    game = BanChess.replayFromActions(actionHistory);
+  } else {
+    game = new BanChess(gameState.fen);
+  }
+  
+  // Update game state in Redis with final PGN
+  gameState.gameOver = true;
+  gameState.result = `${winner === 'white' ? 'White' : 'Black'} wins on time!`;
+  gameState.pgn = game.pgn(); // Store final PGN
+  await saveGameState(gameId, gameState);
+  
+  // Send timeout message via pub/sub for all servers
   const timeoutMsg: SimpleServerMsg = {
     type: 'timeout',
     gameId,
     winner
   };
   
-  const playersToNotify = new Set<string>();
-  if (room.whitePlayerId) playersToNotify.add(room.whitePlayerId);
-  if (room.blackPlayerId) playersToNotify.add(room.blackPlayerId);
+  await redisPub.publish(KEYS.CHANNELS.GAME_STATE(gameId), JSON.stringify(timeoutMsg));
   
-  playersToNotify.forEach(playerId => {
-    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
-    if (player && player.ws.readyState === WebSocket.OPEN) {
-      player.ws.send(JSON.stringify(timeoutMsg));
-    }
-  });
-  
-  // Update game state to show timeout
+  // Also send state update
   const stateMsg: SimpleServerMsg = {
     type: 'state',
-    fen: room.game.fen(),
+    fen: gameState.fen,
     gameId,
-    players: getPlayerUsernames(room),
-    isSoloGame: room.isSoloGame,
+    players: await getPlayerUsernames(gameState),
+    isSoloGame: gameState.isSoloGame,
     gameOver: true,
-    result: `${winner === 'white' ? 'White' : 'Black'} wins on time!`,
-    history: room.game.history() as HistoryEntry[], // Add move history
-    timeControl: room.timeControl,
-    clocks: room.timeManager ? room.timeManager.getClocks() : undefined
+    result: gameState.result,
+    history: game.history() as HistoryEntry[],
+    timeControl: gameState.timeControl,
+    clocks: timeManager ? timeManager.getClocks() : undefined
   };
   
-  playersToNotify.forEach(playerId => {
-    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
-    if (player && player.ws.readyState === WebSocket.OPEN) {
-      player.ws.send(JSON.stringify(stateMsg));
-    }
-  });
+  await redisPub.publish(KEYS.CHANNELS.GAME_STATE(gameId), JSON.stringify(stateMsg));
 }
 
-function broadcastClockUpdate(gameId: string) {
-  const room = games.get(gameId);
-  if (!room || !room.timeManager) return;
+async function broadcastClockUpdate(gameId: string) {
+  const gameState = await getGameState(gameId);
+  if (!gameState) return;
+  
+  const timeManager = timeManagers.get(gameId);
+  if (!timeManager) return;
   
   const clockMsg: SimpleServerMsg = {
     type: 'clock-update',
     gameId,
-    clocks: room.timeManager.getClocks()
+    clocks: timeManager.getClocks()
   };
   
-  const playersToNotify = new Set<string>();
-  if (room.whitePlayerId) playersToNotify.add(room.whitePlayerId);
-  if (room.blackPlayerId) playersToNotify.add(room.blackPlayerId);
-  
-  playersToNotify.forEach(playerId => {
-    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
-    if (player && player.ws.readyState === WebSocket.OPEN) {
-      player.ws.send(JSON.stringify(clockMsg));
-    }
-  });
+  // Publish to Redis for all servers
+  await redisPub.publish(KEYS.CHANNELS.GAME_STATE(gameId), JSON.stringify(clockMsg));
 }
 
-function broadcastGameState(gameId: string) {
-  const room = games.get(gameId);
-  if (!room) return;
+// Restore time manager for an active game (used after reconnection)
+async function restoreTimeManager(gameId: string, gameState: GameStateWithPlayers & { timeControl?: TimeControl; gameOver?: boolean; startTime: number; fen: string; isSoloGame?: boolean }) {
+  // Only restore if game has time control and is not over
+  if (!gameState.timeControl || gameState.gameOver || timeManagers.has(gameId)) {
+    return;
+  }
+  
+  // Create new time manager
+  const timeManager = new TimeManager(
+    gameState.timeControl,
+    (winner) => handleTimeout(gameId, winner),
+    () => broadcastClockUpdate(gameId)
+  );
+  
+  // TODO: In production you'd need to track actual time spent per player
+  // For now, we just restart the timer for the current player
+  
+  // Determine current player based on FEN
+  const game = new BanChess(gameState.fen);
+  const fen = game.fen();
+  const fenParts = fen.split(' ');
+  const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
+  const banState = fenParts[6];
+  const isNextActionBan = banState && banState.includes(':ban');
+  
+  let currentPlayer: 'white' | 'black';
+  if (gameState.isSoloGame) {
+    if (isNextActionBan) {
+      currentPlayer = chessTurn === 'white' ? 'black' : 'white';
+    } else {
+      currentPlayer = chessTurn;
+    }
+  } else {
+    currentPlayer = chessTurn;
+  }
+  
+  // Start the timer for the current player
+  timeManager.start(currentPlayer);
+  timeManagers.set(gameId, timeManager);
+  
+  console.log(`[restoreTimeManager] Restored timer for game ${gameId}, current player: ${currentPlayer}`);
+}
+
+// Send full game state with history - used for new joiners/reconnections
+async function sendFullGameState(gameId: string, ws: WebSocket) {
+  const gameState = await getGameState(gameId);
+  if (!gameState) {
+    console.log(`[sendFullGameState] Game ${gameId} not found in Redis`);
+    return;
+  }
+  
+  // Create game instance from FEN
+  const game = new BanChess(gameState.fen);
+  
+  // Get legal moves/bans from the game
+  const fen = game.fen();
+  const fenParts = fen.split(' ');
+  const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
+  const banState = fenParts[6];
+  const isNextActionBan = banState && banState.includes(':ban');
+  
+  const legalActions = isNextActionBan ? game.legalBans() : game.legalMoves();
+  const simpleLegalActions = legalActions.map((action: string | { from: string; to: string }) => {
+    if (typeof action === 'string') {
+      return action;
+    } else if (action && typeof action === 'object' && 'from' in action && 'to' in action) {
+      return action.from + action.to;
+    }
+    return null;
+  }).filter((action): action is string => action !== null);
+  
+  // For solo games, determine the acting player
+  let actingPlayer: 'white' | 'black' = chessTurn;
+  if (gameState.isSoloGame) {
+    if (isNextActionBan) {
+      actingPlayer = chessTurn === 'white' ? 'black' : 'white';
+    } else {
+      actingPlayer = chessTurn;
+    }
+  }
+  
+  const timeManager = timeManagers.get(gameId);
+  const isInCheck = game.inCheck();
+  
+  // Retrieve full action history from Redis and reconstruct game
+  const actionHistory = await getActionHistory(gameId);
+  
+  // Reconstruct the full game to get proper history
+  let history: HistoryEntry[] = [];
+  if (actionHistory.length > 0) {
+    const reconstructedGame = BanChess.replayFromActions(actionHistory);
+    // Convert ban-chess.ts HistoryEntry to our HistoryEntry type
+    history = reconstructedGame.history().map(entry => ({
+      ...entry,
+      bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove
+    }));
+  }
+  
+  // Full state WITH history for new joiners
+  const fullStateMsg: SimpleServerMsg = {
+    type: 'state',
+    fen: fen,
+    gameId,
+    players: await getPlayerUsernames(gameState),
+    isSoloGame: gameState.isSoloGame,
+    legalActions: simpleLegalActions,
+    nextAction: isNextActionBan ? 'ban' : 'move',
+    inCheck: isInCheck,
+    history, // Include full history from Redis for new joiners
+    ...(gameState.isSoloGame && { playerColor: actingPlayer }),
+    ...(gameState.gameOver && { 
+      gameOver: true,
+      result: gameState.result
+    }),
+    ...(gameState.timeControl && {
+      timeControl: gameState.timeControl,
+      clocks: timeManager ? timeManager.getClocks() : undefined,
+      startTime: gameState.startTime
+    })
+  };
+  
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(fullStateMsg));
+    console.log(`[sendFullGameState] Sent full state with history for game ${gameId}`);
+  }
+}
+
+// Broadcast incremental updates - used after moves (no history needed)
+async function broadcastGameState(gameId: string) {
+  const gameState = await getGameState(gameId);
+  if (!gameState) {
+    console.log(`[broadcastGameState] Game ${gameId} not found in Redis`);
+    return;
+  }
+  
+  // Create game instance from FEN
+  const game = new BanChess(gameState.fen);
   
   // Check for game over and check state
-  const isGameOver = room.game.gameOver();
-  const isCheckmate = room.game.inCheckmate();
-  const isStalemate = room.game.inStalemate();
+  const isGameOver = game.gameOver();
+  const isCheckmate = game.inCheckmate();
+  const isStalemate = game.inStalemate();
   
   if (isGameOver) {
     console.log(`[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}`);
+    gameState.gameOver = true;
+    gameState.result = isCheckmate ? 
+      `${game.turn === 'white' ? 'Black' : 'White'} wins by checkmate!` : 
+      isStalemate ? 'Draw by stalemate' : 'Game over';
+    gameState.pgn = game.pgn(); // Store final PGN
+    await saveGameState(gameId, gameState);
   }
   
   // Get legal moves/bans from the game
-  const fen = room.game.fen();
+  const fen = game.fen();
   const fenParts = fen.split(' ');
   const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
   const banState = fenParts[6]; // 7th field contains ban state
   const isNextActionBan = banState && banState.includes(':ban');
   
   // Get legal actions and convert to simple format
-  const legalActions = isNextActionBan ? room.game.legalBans() : room.game.legalMoves();
+  const legalActions = isNextActionBan ? game.legalBans() : game.legalMoves();
   console.log(`[broadcastGameState] FEN: ${fen}`);
   console.log(`[broadcastGameState] Chess turn: ${chessTurn}, Next action: ${isNextActionBan ? 'ban' : 'move'}, Legal actions count: ${legalActions.length}`);
   
   const simpleLegalActions = legalActions.map((action: string | { from: string; to: string }) => {
     if (typeof action === 'string') {
-      return action; // Already in "e2e4" format
+      return action;
     } else if (action && typeof action === 'object' && 'from' in action && 'to' in action) {
-      return action.from + action.to; // Convert {from: "e2", to: "e4"} to "e2e4"
+      return action.from + action.to;
     }
     return null;
   }).filter((action): action is string => action !== null);
   
-  // For solo games, determine the acting player (who makes the decision)
+  // For solo games, determine the acting player
   let actingPlayer: 'white' | 'black' = chessTurn;
-  if (room.isSoloGame) {
-    // Ban phase: The player who just moved (or black at start) bans opponent's next moves
-    // Move phase: The current turn player moves
+  if (gameState.isSoloGame) {
     if (isNextActionBan) {
-      // At game start (white's turn, ban phase): BLACK bans white's moves
-      // After white moves (black's turn, ban phase): WHITE bans black's moves
-      // After black moves (white's turn, ban phase): BLACK bans white's moves
-      // Pattern: In ban phase, the OTHER player (not current turn) is acting
       actingPlayer = chessTurn === 'white' ? 'black' : 'white';
     } else {
-      // In move phase, the current turn player acts
       actingPlayer = chessTurn;
     }
   }
   
-  console.log(`[broadcastGameState] Acting player: ${actingPlayer} (solo: ${room.isSoloGame})`);
+  console.log(`[broadcastGameState] Acting player: ${actingPlayer} (solo: ${gameState.isSoloGame})`);
   
   // Check if the current player is in check
-  const isInCheck = room.game.inCheck();
+  const isInCheck = game.inCheck();
+  
+  const timeManager = timeManagers.get(gameId);
+  
+  // Get the last action from Redis for incremental updates
+  const storedActions = await getActionHistory(gameId);
+  
+  // Reconstruct the last move from action history
+  let lastMove: HistoryEntry | undefined = undefined;
+  if (storedActions.length > 0) {
+    // We could reconstruct the full game to get the last move with proper notation
+    // But for efficiency, we'll just send the last action for now
+    const lastActionSerialized = storedActions[storedActions.length - 1];
+    // Deserialize the action to get the proper type
+    const deserializedAction = BanChess.deserializeAction(lastActionSerialized);
+    const actionObj = 'ban' in deserializedAction ? deserializedAction.ban : deserializedAction.move;
+    
+    lastMove = {
+      fen: game.fen(),
+      turnNumber: Math.floor(storedActions.length / 2) + 1,
+      player: storedActions.length % 2 === 0 ? 'black' : 'white',
+      actionType: lastActionSerialized.startsWith('b:') ? 'ban' : 'move',
+      action: actionObj,
+      // Optional fields from ban-chess.ts HistoryEntry
+      san: undefined,
+      bannedMove: undefined
+    };
+  }
   
   const stateMsg: SimpleServerMsg = {
     type: 'state',
     fen: fen,
     gameId,
-    players: getPlayerUsernames(room),
-    isSoloGame: room.isSoloGame,
+    players: await getPlayerUsernames(gameState),
+    isSoloGame: gameState.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? 'ban' : 'move',
     inCheck: isInCheck,
-    history: room.game.history() as HistoryEntry[], // Add move history from ban-chess.ts
-    // For solo games, playerColor is the acting player
-    ...(room.isSoloGame && { playerColor: actingPlayer }),
-    // Add game over state
+    // Send only the last move for incremental updates (frontend will append to history)
+    lastMove,
+    // Include action history for game reconstruction (in BCN format)
+    actionHistory: storedActions,
+    // Include sync state for quick game state loading
+    syncState: {
+      fen: game.fen(),
+      lastAction: storedActions.length > 0 ? storedActions[storedActions.length - 1] : undefined,
+      moveNumber: Math.floor(storedActions.length / 2) + 1
+    },
+    ...(gameState.isSoloGame && { playerColor: actingPlayer }),
     ...(isGameOver && { 
       gameOver: true,
-      result: isCheckmate ? 
-        `${chessTurn === 'white' ? 'Black' : 'White'} wins by checkmate!` : 
-        isStalemate ? 'Draw by stalemate' : 'Game over'
+      result: gameState.result
     }),
-    // Add time control data if present
-    ...(room.timeControl && {
-      timeControl: room.timeControl,
-      clocks: room.timeManager ? room.timeManager.getClocks() : undefined,
-      startTime: room.startTime
+    ...(gameState.timeControl && {
+      timeControl: gameState.timeControl,
+      clocks: timeManager ? timeManager.getClocks() : undefined,
+      startTime: gameState.startTime
     })
   };
   
-  // CRITICAL FIX: Actually send the message to connected players!
-  const playersToNotify = new Set<string>();
-  if (room.whitePlayerId) playersToNotify.add(room.whitePlayerId);
-  if (room.blackPlayerId) playersToNotify.add(room.blackPlayerId);
+  // Publish to Redis for all servers
+  await redisPub.publish(KEYS.CHANNELS.GAME_STATE(gameId), JSON.stringify(stateMsg));
   
-  playersToNotify.forEach(playerId => {
-    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
-    if (player && player.ws.readyState === WebSocket.OPEN) {
+  // Also directly send to connected players on this server
+  const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(p => {
+    return p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId;
+  });
+  
+  connectedPlayers.forEach(player => {
+    if (player.ws.readyState === WebSocket.OPEN) {
       player.ws.send(JSON.stringify(stateMsg));
       console.log(`[broadcastGameState] SENT state to ${player.username} for game ${gameId}`);
-    } else {
-      console.log(`[broadcastGameState] WARNING: Player ${playerId} not connected for game ${gameId}`);
     }
   });
   
-  console.log(`[broadcastGameState] Broadcast complete for game ${gameId} to ${playersToNotify.size} players`);
+  console.log(`[broadcastGameState] Broadcast complete for game ${gameId}`);
 }
 
-function matchPlayers() {
-  if (queue.length >= 2) {
-    const player1 = queue.shift()!;
-    const player2 = queue.shift()!;
-    const gameId = uuidv4();
-    const timeControl = { initial: 300, increment: 0 }; // Default 5+0 for matchmaking
-    
-    const room: GameRoom = {
-      game: new BanChess(),
-      whitePlayerId: player1.userId,
-      blackPlayerId: player2.userId,
-      isSoloGame: false,
-      timeControl,
-      startTime: Date.now()
-    };
-    
-    // Create time manager for multiplayer games
-    room.timeManager = new TimeManager(
-      timeControl,
-      (winner) => handleTimeout(gameId, winner),
-      () => broadcastClockUpdate(gameId)
-    );
-    // Start white's clock
-    room.timeManager.start('white');
-    
-    games.set(gameId, room);
-    playerToGame.set(player1.userId, gameId);
-    playerToGame.set(player2.userId, gameId);
-    
-    // Send match notifications
-    if (player1.ws.readyState === WebSocket.OPEN) {
-      player1.ws.send(JSON.stringify({
-        type: 'matched',
-        gameId,
-        color: 'white',
-        opponent: player2.username,
-        timeControl
-      } as SimpleServerMsg));
-    }
-    
-    if (player2.ws.readyState === WebSocket.OPEN) {
-      player2.ws.send(JSON.stringify({
-        type: 'matched',
-        gameId,
-        color: 'black',
-        opponent: player1.username,
-        timeControl
-      } as SimpleServerMsg));
-    }
-    
-    console.log(`Matched ${player1.username} vs ${player2.username} in game ${gameId} with time control ${timeControl.initial}+${timeControl.increment}`);
-    updateQueuePositions();
-  }
-}
-
-function updateQueuePositions() {
-  queue.forEach((player, index) => {
-    if (player.ws.readyState === WebSocket.OPEN) {
-      player.ws.send(JSON.stringify({
-        type: 'queued',
-        position: index + 1
-      } as SimpleServerMsg));
-    }
+async function matchPlayers() {
+  const players = await getPlayersForMatch();
+  if (!players) return;
+  
+  const [player1, player2] = players;
+  const gameId = uuidv4();
+  const timeControl = { initial: 300, increment: 0 }; // Default 5+0 for matchmaking
+  
+  // Create new game
+  const game = new BanChess();
+  
+  // Save game state to Redis
+  await saveGameState(gameId, {
+    fen: game.fen(),
+    pgn: game.pgn(), // Initialize with empty PGN
+    whitePlayerId: player1.userId,
+    blackPlayerId: player2.userId,
+    isSoloGame: false,
+    timeControl,
+    startTime: Date.now()
   });
+  
+  // Create time manager (local to this server for now)
+  const timeManager = new TimeManager(
+    timeControl,
+    (winner) => handleTimeout(gameId, winner),
+    () => broadcastClockUpdate(gameId)
+  );
+  timeManager.start('white');
+  timeManagers.set(gameId, timeManager);
+  
+  // Update player sessions
+  await redis.set(KEYS.PLAYER_GAME(player1.userId), gameId);
+  await redis.set(KEYS.PLAYER_GAME(player2.userId), gameId);
+  
+  // Send match notifications
+  const player1Connected = Array.from(authenticatedPlayers.values()).find(p => p.userId === player1.userId);
+  const player2Connected = Array.from(authenticatedPlayers.values()).find(p => p.userId === player2.userId);
+  
+  if (player1Connected && player1Connected.ws.readyState === WebSocket.OPEN) {
+    player1Connected.ws.send(JSON.stringify({
+      type: 'matched',
+      gameId,
+      color: 'white',
+      opponent: player2.username,
+      timeControl
+    } as SimpleServerMsg));
+  }
+  
+  if (player2Connected && player2Connected.ws.readyState === WebSocket.OPEN) {
+    player2Connected.ws.send(JSON.stringify({
+      type: 'matched',
+      gameId,
+      color: 'black',
+      opponent: player1.username,
+      timeControl
+    } as SimpleServerMsg));
+  }
+  
+  console.log(`Matched ${player1.username} vs ${player2.username} in game ${gameId} with time control ${timeControl.initial}+${timeControl.increment}`);
+  
+  // Update queue positions for remaining players
+  await updateQueuePositions();
 }
 
-function removeFromQueue(player: Player) {
-  const index = queue.findIndex(p => p.userId === player.userId);
-  if (index > -1) {
-    queue.splice(index, 1);
-    updateQueuePositions();
+async function updateQueuePositions() {
+  const queue = await redis.lrange(KEYS.QUEUE, 0, -1);
+  
+  for (let i = 0; i < queue.length; i++) {
+    const data = JSON.parse(queue[i]);
+    // Publish position update via Redis
+    await redisPub.publish(KEYS.CHANNELS.QUEUE_UPDATE, JSON.stringify({
+      userId: data.userId,
+      position: i + 1
+    }));
   }
 }
 
@@ -351,36 +581,53 @@ wss.on('connection', (ws: WebSocket, request) => {
   const authToken = reqWithAuth.authToken;
   let currentPlayer: Player | null = null;
   
-  if (authToken) {
-    // Auto-authenticate the player using the token from handshake
-    currentPlayer = { 
-      userId: authToken.providerId, 
-      username: authToken.username, 
-      ws 
-    };
-    authenticatedPlayers.set(ws, currentPlayer);
-    console.log(`Player authenticated via token: ${authToken.username}`);
-    
-    // Send authentication confirmation
-    ws.send(JSON.stringify({
-      type: 'authenticated',
-      userId: authToken.providerId,
-      username: authToken.username
-    } as SimpleServerMsg));
-    
-    // Check if player was in a game (reconnection)
-    const gameId = playerToGame.get(authToken.providerId);
-    if (gameId) {
-      const room = games.get(gameId);
-      if (room) {
-        const color: 'white' | 'black' = room.whitePlayerId === authToken.providerId ? 'white' : 'black';
-        console.log(`${authToken.username} reconnected to game ${gameId} as ${color}`);
-        broadcastGameState(gameId);
+  // Auto-authenticate if token present
+  (async () => {
+    if (authToken) {
+      currentPlayer = { 
+        userId: authToken.providerId, 
+        username: authToken.username, 
+        ws 
+      };
+      authenticatedPlayers.set(ws, currentPlayer);
+      
+      // Save player session to Redis
+      await savePlayerSession(currentPlayer.userId, {
+        userId: currentPlayer.userId,
+        username: currentPlayer.username,
+        status: 'online',
+        lastSeen: Date.now()
+      });
+      
+      console.log(`Player authenticated via token: ${authToken.username}`);
+      
+      // Send authentication confirmation
+      ws.send(JSON.stringify({
+        type: 'authenticated',
+        userId: authToken.providerId,
+        username: authToken.username
+      } as SimpleServerMsg));
+      
+      // Check if player was in a game (reconnection)
+      const gameId = await redis.get(KEYS.PLAYER_GAME(authToken.providerId));
+      if (gameId) {
+        const gameState = await getGameState(gameId);
+        if (gameState) {
+          // Subscribe to game channel
+          await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+          
+          const color: 'white' | 'black' = gameState.whitePlayerId === authToken.providerId ? 'white' : 'black';
+          console.log(`${authToken.username} reconnected to game ${gameId} as ${color}`);
+          // Restore time manager if needed
+          await restoreTimeManager(gameId, gameState);
+          // Send full state with history for reconnection
+          await sendFullGameState(gameId, ws);
+        }
       }
     }
-  }
+  })();
   
-  ws.on('message', (data: Buffer) => {
+  ws.on('message', async (data: Buffer) => {
     try {
       const msg: SimpleClientMsg = JSON.parse(data.toString());
       console.log('Received message:', msg.type);
@@ -389,17 +636,26 @@ wss.on('connection', (ws: WebSocket, request) => {
         case 'authenticate': {
           const { userId, username } = msg;
           
-          // Handle duplicate connections gracefully by closing the old one silently
+          // Handle duplicate connections gracefully
           const existingPlayer = Array.from(authenticatedPlayers.values()).find(p => p.userId === userId);
           if (existingPlayer && existingPlayer.ws !== ws) {
             console.log(`User ${username} establishing new connection, closing old one.`);
             existingPlayer.ws.close(1000, 'New connection established');
             authenticatedPlayers.delete(existingPlayer.ws);
-            removeFromQueue(existingPlayer);
+            await removeFromQueue(userId);
           }
           
           currentPlayer = { userId, username, ws };
           authenticatedPlayers.set(ws, currentPlayer);
+          
+          // Save player session to Redis
+          await savePlayerSession(userId, {
+            userId,
+            username,
+            status: 'online',
+            lastSeen: Date.now()
+          });
+          
           console.log(`Player authenticated: ${username}`);
           
           ws.send(JSON.stringify({
@@ -409,21 +665,24 @@ wss.on('connection', (ws: WebSocket, request) => {
           } as SimpleServerMsg));
           
           // Check if player was in a game (reconnection)
-          const gameId = playerToGame.get(userId);
+          const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
           if (gameId) {
-            const room = games.get(gameId);
-            if (room) {
-              let color: 'white' | 'black' = room.whitePlayerId === userId ? 'white' : 'black';
+            const gameState = await getGameState(gameId);
+            if (gameState) {
+              // Subscribe to game channel
+              await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+              
+              let color: 'white' | 'black' = gameState.whitePlayerId === userId ? 'white' : 'black';
               
               // For solo games, determine the acting player
-              if (room.isSoloGame) {
-                const fen = room.game.fen();
+              if (gameState.isSoloGame) {
+                const game = new BanChess(gameState.fen);
+                const fen = game.fen();
                 const fenParts = fen.split(' ');
                 const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
                 const banState = fenParts[6];
                 const isNextActionBan = banState && banState.includes(':ban');
                 
-                // Same logic as broadcastGameState
                 if (isNextActionBan) {
                   color = chessTurn === 'white' ? 'black' : 'white';
                 } else {
@@ -435,12 +694,14 @@ wss.on('connection', (ws: WebSocket, request) => {
                 type: 'joined',
                 gameId,
                 color,
-                players: getPlayerUsernames(room),
-                isSoloGame: room.isSoloGame
+                players: await getPlayerUsernames(gameState),
+                isSoloGame: gameState.isSoloGame
               } as SimpleServerMsg));
               
-              // Send game state immediately
-              broadcastGameState(gameId);
+              // Restore time manager if needed
+              await restoreTimeManager(gameId, gameState);
+              // Send full state with history for reconnection
+              await sendFullGameState(gameId, ws);
               console.log(`Player ${username} reconnected to game ${gameId}`);
             }
           }
@@ -454,31 +715,38 @@ wss.on('connection', (ws: WebSocket, request) => {
           }
           
           const gameId = uuidv4();
-          const timeControl = msg.timeControl || { initial: 300, increment: 0 }; // Default 5+0
+          const timeControl = msg.timeControl || { initial: 300, increment: 0 };
           
-          const room: GameRoom = {
-            game: new BanChess(),
+          // Create new game
+          const game = new BanChess();
+          
+          // Save game state to Redis
+          await saveGameState(gameId, {
+            fen: game.fen(),
+            pgn: game.pgn(), // Initialize with empty PGN
             whitePlayerId: currentPlayer.userId,
             blackPlayerId: currentPlayer.userId,
             isSoloGame: true,
             timeControl,
             startTime: Date.now()
-          };
+          });
           
-          // Create time manager if time control is specified
+          // Create time manager
           if (timeControl) {
-            room.timeManager = new TimeManager(
+            const timeManager = new TimeManager(
               timeControl,
               (winner) => handleTimeout(gameId, winner),
               () => broadcastClockUpdate(gameId)
             );
-            // In ban phase at start, BLACK bans white's first moves
-            // So start black's clock for the initial ban phase
-            room.timeManager.start('black');
+            timeManager.start('black'); // Black bans first in solo games
+            timeManagers.set(gameId, timeManager);
           }
           
-          games.set(gameId, room);
-          playerToGame.set(currentPlayer.userId, gameId);
+          // Update player's current game
+          await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
+          
+          // Subscribe to game channel
+          await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
           
           ws.send(JSON.stringify({ type: 'solo-game-created', gameId, timeControl } as SimpleServerMsg));
           console.log(`Solo game ${gameId} created for ${currentPlayer.username} with time control ${timeControl.initial}+${timeControl.increment}`);
@@ -492,17 +760,21 @@ wss.on('connection', (ws: WebSocket, request) => {
           }
           
           const { gameId } = msg;
-          const room = games.get(gameId);
+          const gameState = await getGameState(gameId);
           
-          if (!room) {
+          if (!gameState) {
             ws.send(JSON.stringify({ type: 'error', message: 'Game not found' } as SimpleServerMsg));
             return;
           }
           
-          playerToGame.set(currentPlayer.userId, gameId);
+          // Update player's current game
+          await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
           
-          // Send game state immediately, not with a timeout
-          broadcastGameState(gameId);
+          // Subscribe to game channel
+          await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+          
+          // Send full state with history when joining a game
+          await sendFullGameState(gameId, ws);
           break;
         }
         
@@ -513,23 +785,37 @@ wss.on('connection', (ws: WebSocket, request) => {
           }
           
           const { gameId, action } = msg;
-          const room = games.get(gameId);
+          const gameState = await getGameState(gameId);
           
-          if (!room) {
+          if (!gameState) {
             ws.send(JSON.stringify({ type: 'error', message: 'Game not found' } as SimpleServerMsg));
             return;
           }
           
+          // Create game instance from saved state
+          const game = new BanChess(gameState.fen);
+          
           // BanChess handles ALL validation
-          // Cast the action to ban-chess's expected type
-          const result = room.game.play(action as Parameters<typeof room.game.play>[0]);
+          const result = game.play(action as Parameters<typeof game.play>[0]);
           
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);
             
+            // Use BanChess serialization to store the action
+            const serializedAction = BanChess.serializeAction(action as Parameters<typeof BanChess.serializeAction>[0]);
+            await addActionToHistory(gameId, serializedAction);
+            
+            // Update game state in Redis with PGN for complete game reconstruction
+            gameState.fen = game.fen();
+            gameState.pgn = game.pgn(); // Store PGN for full history
+            gameState.lastMoveTime = Date.now();
+            gameState.moveCount = (gameState.moveCount || 0) + 1;
+            await saveGameState(gameId, gameState);
+            
             // Handle clock switching after successful move/ban
-            if (room.timeManager && !room.game.gameOver()) {
-              const fen = room.game.fen();
+            const timeManager = timeManagers.get(gameId);
+            if (timeManager && !game.gameOver()) {
+              const fen = game.fen();
               const fenParts = fen.split(' ');
               const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
               const banState = fenParts[6];
@@ -537,31 +823,25 @@ wss.on('connection', (ws: WebSocket, request) => {
               
               // Determine who acts next
               let nextPlayer: 'white' | 'black';
-              if (room.isSoloGame) {
-                // In solo games, determine the acting player
+              if (gameState.isSoloGame) {
                 if (isNextActionBan) {
-                  // In ban phase, the other player acts
                   nextPlayer = chessTurn === 'white' ? 'black' : 'white';
                 } else {
-                  // In move phase, the current turn player acts
                   nextPlayer = chessTurn;
                 }
               } else {
-                // In multiplayer, simply follow the turn
                 nextPlayer = chessTurn;
               }
               
-              // Switch to the next player's clock (only if time manager exists)
-              if (room.timeManager) {
-                room.timeManager.switchPlayer(nextPlayer);
-              }
+              timeManager.switchPlayer(nextPlayer);
             }
             
-            broadcastGameState(gameId);
+            await broadcastGameState(gameId);
             
             // Stop clocks if game is over
-            if (room.game.gameOver() && room.timeManager) {
-              room.timeManager.destroy();
+            if (game.gameOver() && timeManager) {
+              timeManager.destroy();
+              timeManagers.delete(gameId);
             }
           } else {
             console.log(`Invalid action in game ${gameId}:`, action, 'Error:', result.error);
@@ -579,20 +859,39 @@ wss.on('connection', (ws: WebSocket, request) => {
             return;
           }
           
-          const inQueue = queue.some(p => p.userId === currentPlayer!.userId);
-          if (!inQueue) {
-            queue.push(currentPlayer);
-            console.log(`${currentPlayer.username} joined queue (position ${queue.length})`);
-            updateQueuePositions();
-            matchPlayers();
-          }
+          const position = await addToQueue(currentPlayer.userId, currentPlayer.username);
+          console.log(`${currentPlayer.username} joined queue (position ${position})`);
+          
+          // Update player session status
+          await savePlayerSession(currentPlayer.userId, {
+            userId: currentPlayer.userId,
+            username: currentPlayer.username,
+            status: 'queued',
+            lastSeen: Date.now()
+          });
+          
+          // Try to match players
+          await matchPlayers();
+          
+          // Update queue positions
+          await updateQueuePositions();
           break;
         }
         
         case 'leave-queue': {
           if (currentPlayer) {
-            removeFromQueue(currentPlayer);
+            await removeFromQueue(currentPlayer.userId);
             console.log(`${currentPlayer.username} left queue`);
+            
+            // Update player session status
+            await savePlayerSession(currentPlayer.userId, {
+              userId: currentPlayer.userId,
+              username: currentPlayer.username,
+              status: 'online',
+              lastSeen: Date.now()
+            });
+            
+            await updateQueuePositions();
           }
           break;
         }
@@ -606,32 +905,44 @@ wss.on('connection', (ws: WebSocket, request) => {
     }
   });
   
-  ws.on('close', () => {
+  ws.on('close', async () => {
     console.log('Client disconnected');
     if (currentPlayer) {
       authenticatedPlayers.delete(ws);
-      removeFromQueue(currentPlayer);
+      await removeFromQueue(currentPlayer.userId);
+      await removePlayerSession(currentPlayer.userId);
       
-      const gameId = playerToGame.get(currentPlayer.userId);
+      const gameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
       if (gameId) {
         console.log(`Player ${currentPlayer.username} disconnected from game ${gameId}`);
+        // Note: We don't remove the game or player from game, allowing reconnection
       }
     }
   });
 });
 
 // Graceful shutdown
-const shutdown = (signal: string) => {
+const shutdown = async (signal: string) => {
   console.log(`\n[WebSocket] Received ${signal}, shutting down gracefully...`);
   
+  // Close all WebSocket connections
   wss.clients.forEach((ws) => {
     ws.close(1000, 'Server shutting down');
   });
   
+  // Destroy all time managers
+  timeManagers.forEach((tm) => tm.destroy());
+  timeManagers.clear();
+  
+  // Close WebSocket server
   wss.close(() => {
     console.log('[WebSocket] Server closed');
-    process.exit(0);
   });
+  
+  // Shutdown Redis connections
+  await redisShutdown();
+  
+  process.exit(0);
 };
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));

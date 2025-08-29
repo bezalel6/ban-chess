@@ -5,7 +5,7 @@ export const config = {
     url: process.env.NEXT_PUBLIC_WEBSOCKET_URL || (
       process.env.NODE_ENV === 'production'
         ? 'wss://chess-api.rndev.site'
-        : 'ws://localhost:8081'
+        : 'ws://localhost:3001'
     ),
     reconnectInterval: 3000,
     maxReconnectAttempts: 5,

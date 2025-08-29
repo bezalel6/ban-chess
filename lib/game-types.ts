@@ -1,4 +1,5 @@
 // Simplified types that rely on FEN as the source of truth
+// Now with Ban Chess Notation (BCN) support for serialization
 
 export interface Move {
   from: string;
@@ -23,6 +24,17 @@ export interface HistoryEntry {
 }
 
 export type Action = { move: Move } | { ban: Ban };
+
+// Ban Chess Notation (BCN) - Compact serialization format
+// Examples: "b:e2e4" (ban), "m:d2d4" (move), "m:e7e8q" (promotion)
+export type SerializedAction = string;
+
+// Sync state for network transmission and game reconstruction
+export interface SyncState {
+  fen: string;                     // Current FEN position with ban state
+  lastAction?: SerializedAction;   // Last action in BCN format
+  moveNumber: number;               // Current move number
+}
 
 // Time control configuration
 export interface TimeControl {
@@ -62,7 +74,7 @@ export interface SimpleGameState {
 
 // Server messages - simplified
 export type SimpleServerMsg = 
-  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; history?: HistoryEntry[] | string[]; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number }
+  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; history?: HistoryEntry[] | string[]; lastMove?: HistoryEntry; actionHistory?: SerializedAction[]; syncState?: SyncState; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number }
   | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean; timeControl?: TimeControl }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
