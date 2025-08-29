@@ -1,5 +1,6 @@
 import { Trophy, Clock, TrendingUp, Shield, User, ChevronRight } from 'lucide-react';
-import { createAuthenticatedComponent } from '@/components/auth/withAuth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import type { AuthSession } from '@/types/auth';
 
 interface GameRecord {
@@ -13,13 +14,33 @@ interface GameRecord {
 
 interface UserProfilePageProps {
   params: Promise<{ username: string }>;
-  session?: AuthSession;
 }
 
-async function AuthenticatedUserProfile({ params, session }: UserProfilePageProps) {
+export default async function UserProfilePage({ params }: UserProfilePageProps) {
   const resolvedParams = await params;
   const username = resolvedParams.username;
+  const session = await getServerSession(authOptions) as AuthSession | null;
   const user = session?.user;
+  
+  // Don't show profiles for guest usernames
+  if (username.toLowerCase().startsWith('guest')) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-background-secondary rounded-lg p-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">Guest Profile</h1>
+          <p className="text-foreground-muted mb-6">
+            Guest accounts don&apos;t have profiles. Sign in with Lichess or Google to track your games and stats!
+          </p>
+          <a
+            href="/auth/signin"
+            className="inline-block px-6 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600 transition-colors"
+          >
+            Sign In
+          </a>
+        </div>
+      </div>
+    );
+  }
   
   // Guest users don't have profiles
   const isGuest = user?.provider === 'guest';
@@ -237,39 +258,3 @@ async function AuthenticatedUserProfile({ params, session }: UserProfilePageProp
     </div>
   );
 }
-
-// Unauthenticated version - still shows public profile
-function PublicUserProfile({ params }: UserProfilePageProps) {
-  const username = params.username;
-  
-  // Don't show profiles for guest usernames
-  if (username.toLowerCase().startsWith('guest')) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-background-secondary rounded-lg p-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Guest Profile</h1>
-          <p className="text-foreground-muted mb-6">
-            Guest accounts don&apos;t have profiles. Sign in with Lichess or Google to track your games and stats!
-          </p>
-          <a
-            href="/auth/signin"
-            className="inline-block px-6 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600 transition-colors"
-          >
-            Sign In
-          </a>
-        </div>
-      </div>
-    );
-  }
-  
-  // Show public profile data for non-authenticated viewers
-  // Same layout but without edit options
-  return <AuthenticatedUserProfile params={params} session={undefined} />;
-}
-
-// Export using the conditional component that shows different content based on auth state
-export default createAuthenticatedComponent(
-  AuthenticatedUserProfile,
-  PublicUserProfile,
-  { allowGuest: true } // Allow guests to view profiles
-);

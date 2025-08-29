@@ -1,16 +1,31 @@
-import { Howl } from 'howler';
+import { Howl } from "howler";
 
 export type SoundType =
-  | 'move'
-  | 'capture'
-  | 'castle'
-  | 'check'
-  | 'promote'
-  | 'opponent-move'
-  | 'game-start'
-  | 'game-end'
-  | 'ban';
+  | "move"
+  | "capture"
+  | "castle"
+  | "check"
+  | "promote"
+  | "opponent-move"
+  | "game-start"
+  | "game-end"
+  | "ban";
 
+const eventTypes = [
+  "invited",
+  "game-start",
+  "ban",
+  "move",
+  "opponent-move",
+  "capture",
+  "draw-offer",
+  "check",
+  "promote",
+  "time-warning",
+  "game-end",
+] as const;
+
+export type EventType = [{K:number as keyof} typeof eventTypes];
 class SoundManager {
   private sounds: Map<SoundType, Howl>;
   private enabled: boolean = true;
@@ -24,15 +39,15 @@ class SoundManager {
 
   private initializeSounds() {
     const soundFiles: Record<SoundType, string> = {
-      move: '/sounds/move.wav',
-      capture: '/sounds/capture.wav',
-      castle: '/sounds/castle.wav',
-      check: '/sounds/check.wav',
-      promote: '/sounds/promote.wav',
-      'opponent-move': '/sounds/opponent-move.wav',
-      'game-start': '/sounds/game-start.wav',
-      'game-end': '/sounds/game-end.wav',
-      ban: '/sounds/ban.wav',
+      move: "/sounds/move.wav",
+      capture: "/sounds/capture.wav",
+      castle: "/sounds/castle.wav",
+      check: "/sounds/check.wav",
+      promote: "/sounds/promote.wav",
+      "opponent-move": "/sounds/opponent-move.wav",
+      "game-start": "/sounds/game-start.wav",
+      "game-end": "/sounds/game-end.wav",
+      ban: "/sounds/ban.wav",
     };
 
     Object.entries(soundFiles).forEach(([type, src]) => {
@@ -42,18 +57,18 @@ class SoundManager {
           src: [src],
           volume: this.volume,
           preload: true,
-        })
+        }),
       );
     });
   }
 
   private loadPreferences() {
-    if (typeof window !== 'undefined') {
-      const savedEnabled = localStorage.getItem('soundEnabled');
-      const savedVolume = localStorage.getItem('soundVolume');
+    if (typeof window !== "undefined") {
+      const savedEnabled = localStorage.getItem("soundEnabled");
+      const savedVolume = localStorage.getItem("soundVolume");
 
       if (savedEnabled !== null) {
-        this.enabled = savedEnabled === 'true';
+        this.enabled = savedEnabled === "true";
       }
 
       if (savedVolume !== null) {
@@ -63,9 +78,9 @@ class SoundManager {
   }
 
   private savePreferences() {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('soundEnabled', String(this.enabled));
-      localStorage.setItem('soundVolume', String(this.volume));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("soundEnabled", String(this.enabled));
+      localStorage.setItem("soundVolume", String(this.volume));
     }
   }
 
@@ -90,17 +105,17 @@ class SoundManager {
 
     // Priority order for sounds
     if (moveDetails.check) {
-      this.play('check');
+      this.play("check");
     } else if (moveDetails.castle) {
-      this.play('castle');
+      this.play("castle");
     } else if (moveDetails.promotion) {
-      this.play('promote');
+      this.play("promote");
     } else if (moveDetails.capture) {
-      this.play('capture');
+      this.play("capture");
     } else if (moveDetails.isOpponent) {
-      this.play('opponent-move');
+      this.play("opponent-move");
     } else {
-      this.play('move');
+      this.play("move");
     }
   }
 
@@ -133,7 +148,7 @@ class SoundManager {
 
   preloadAll() {
     this.sounds.forEach((sound) => {
-      if (sound.state() === 'unloaded') {
+      if (sound.state() === "unloaded") {
         sound.load();
       }
     });
