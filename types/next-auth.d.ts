@@ -1,4 +1,5 @@
 import { DefaultSession } from "next-auth"
+import type { AuthProvider } from "./auth"
 
 declare module "next-auth" {
   interface Session {
@@ -9,14 +10,14 @@ declare module "next-auth" {
       image?: string | null;
       username: string;
       providerId: string;
-      provider: 'lichess' | 'google' | 'guest';
+      provider: AuthProvider;
     } & DefaultSession["user"]
   }
 
   interface User {
     username?: string;
     providerId?: string;
-    provider?: 'lichess' | 'google';
+    provider?: AuthProvider;
   }
 }
 
@@ -24,6 +25,6 @@ declare module "next-auth/jwt" {
   interface JWT {
     username?: string;
     providerId?: string;
-    provider?: 'lichess' | 'google';
+    provider?: AuthProvider;
   }
 }

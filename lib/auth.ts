@@ -94,7 +94,7 @@ export const authOptions = {
       if (session.user) {
         session.user.username = token.username as string;
         session.user.providerId = token.providerId as string;
-        session.user.provider = token.provider as 'lichess' | 'google';
+        session.user.provider = token.provider as 'lichess' | 'google' | 'guest';
       }
       return session;
     },
