@@ -1,24 +1,15 @@
-'use client';
+import { User } from 'lucide-react';
+import { withAuth } from '@/components/auth/withAuth';
+import type { AuthSession } from '@/types/auth';
+import SignOutButton from '@/components/auth/SignOutButton';
 
-import { useAuth } from '@/components/AuthProvider';
-import { useRouter } from 'next/navigation';
-import { User, LogOut } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+interface SettingsPageProps {
+  session: AuthSession;
+}
 
-export default function SettingsPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
-  };
-
-  if (!user) {
-    router.push('/');
-    return null;
-  }
-
-  const isGuest = user.username?.startsWith('Guest_');
+function SettingsPage({ session }: SettingsPageProps) {
+  const { user } = session;
+  const isGuest = user.provider === 'guest';
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -73,14 +64,13 @@ export default function SettingsPage() {
 
       {/* Sign Out Button */}
       <div className="flex justify-end">
-        <button
-          onClick={handleSignOut}
-          className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors flex items-center gap-2"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
+        <SignOutButton />
       </div>
     </div>
   );
 }
+
+// Export the page wrapped with authentication
+export default withAuth(SettingsPage, { 
+  allowGuest: true // Allow guests to view settings but with limited options
+});

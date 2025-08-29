@@ -2,13 +2,13 @@
 # Simple git-based deployment without API complexity
 # 
 # Usage:
-#   .\deploy-to-coolify.ps1              # Build and deploy everything
-#   .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building
-#   .\deploy-to-coolify.ps1 -Trigger     # Also trigger deployment after sync
+#   .\deploy-to-coolify.ps1              # Build, deploy, and trigger (default)
+#   .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building (still triggers)
+#   .\deploy-to-coolify.ps1 -NoTrigger   # Deploy without triggering Coolify
 
 param(
     [switch]$SkipBuild,   # Skip the build step and just deploy existing files
-    [switch]$Trigger,     # Trigger Coolify deployment after sync
+    [switch]$NoTrigger,   # Skip triggering Coolify deployment (default: false - triggers by default)
     [switch]$ForceFullCopy,  # Force complete file sync (clears cache)
     [switch]$CleanCache,  # Remove deployment cache completely  
     [switch]$Help         # Show help message
@@ -19,9 +19,9 @@ if ($Help) {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Usage:" -ForegroundColor Yellow
-    Write-Host "  .\deploy-to-coolify.ps1              # Build and deploy everything"
-    Write-Host "  .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building"
-    Write-Host "  .\deploy-to-coolify.ps1 -Trigger     # Also trigger deployment after sync"
+    Write-Host "  .\deploy-to-coolify.ps1              # Build, deploy, and trigger (default)"
+    Write-Host "  .\deploy-to-coolify.ps1 -SkipBuild   # Deploy without building (still triggers)"
+    Write-Host "  .\deploy-to-coolify.ps1 -NoTrigger   # Deploy without triggering Coolify"
     Write-Host "  .\deploy-to-coolify.ps1 -ForceFullCopy  # Force complete file sync"
     Write-Host "  .\deploy-to-coolify.ps1 -CleanCache  # Remove cache and exit"
     Write-Host ""
@@ -32,7 +32,8 @@ if ($Help) {
     Write-Host "  4. Run this script to build and sync files"
     Write-Host ""
     Write-Host "Triggering Deployment:" -ForegroundColor Yellow
-    Write-Host "  Option 1: Use -Trigger flag with this script"
+    Write-Host "  Default: Script triggers automatically (no flag needed)"
+    Write-Host "  Option 1: Use -NoTrigger to skip automatic trigger"
     Write-Host "  Option 2: Run .\trigger-deploy.ps1 separately"
     Write-Host "  Option 3: Manually click 'Redeploy' in Coolify UI"
     Write-Host ""
@@ -193,8 +194,8 @@ pscp -r -batch $tempDir\ws-dist ${SERVER_USER}@${SERVER_HOST}:$REMOTE_BUILD_BASE
 Write-Host "✅ File sync completed!" -ForegroundColor Green
 Write-Host ""
 
-# Phase 4: Trigger deployment (optional)
-if ($Trigger) {
+# Phase 4: Trigger deployment (default behavior unless -NoTrigger is specified)
+if (-not $NoTrigger) {
     Write-Host "🔄 Phase 4: Triggering Coolify deployment..." -ForegroundColor Cyan
     
     # Use the trigger script
@@ -209,10 +210,10 @@ if ($Trigger) {
     Write-Host "    ✅ Files Synced Successfully!" -ForegroundColor Green
     Write-Host "============================================" -ForegroundColor Green
     Write-Host ""
-    Write-Host "📍 To trigger deployment:" -ForegroundColor Yellow
+    Write-Host "📍 Skipped automatic deployment trigger (use without -NoTrigger to auto-deploy)" -ForegroundColor Yellow
+    Write-Host "   To manually trigger deployment:" -ForegroundColor Yellow
     Write-Host "   Option 1: Run .\trigger-deploy.ps1" -ForegroundColor White
     Write-Host "   Option 2: Go to Coolify and click 'Redeploy'" -ForegroundColor White
-    Write-Host "   Option 3: Run this script again with -Trigger flag" -ForegroundColor White
 }
 
 Write-Host ""
