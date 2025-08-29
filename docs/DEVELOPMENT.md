@@ -106,6 +106,30 @@ Look for:
 - Invalid move/ban attempts
 - Game state synchronization problems
 
+### Redis Connection Issues (Production)
+**Symptoms:** WebSocket server fails to start, authentication errors
+**Common errors and solutions:**
+
+1. **`NOAUTH Authentication required`**
+   - **Cause:** Redis requires password but none provided
+   - **Solution:** Set `REDIS_URL` with password in environment:
+     ```bash
+     REDIS_URL=redis://:your-password@redis:6379
+     ```
+
+2. **`ERR invalid password`**
+   - **Cause:** Wrong password provided
+   - **Solution:** Verify Redis password is correct
+
+3. **`Connection refused`**
+   - **Cause:** Redis not running or wrong host/port
+   - **Solution:** Check Redis is running and accessible
+
+4. **Setting Redis Password in Production**
+   - Never commit passwords to repository
+   - Set in deployment environment variables
+   - Format: `redis://:password@host:port` or `redis://username:password@host:port`
+
 ## 🧪 Testing Setup
 
 For running E2E tests, ensure both servers are running:

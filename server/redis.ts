@@ -97,7 +97,13 @@ redis.on('ready', () => {
 });
 
 redis.on('error', (err) => {
-  console.error('[Redis] ❌ Redis connection error:', err);
+  // Check for authentication error
+  if (err.message && err.message.includes('NOAUTH')) {
+    console.error('[Redis] ❌ Authentication failed - Redis requires a password');
+    console.error('[Redis] Set REDIS_URL with password in environment: redis://:password@host:port');
+  } else {
+    console.error('[Redis] ❌ Redis connection error:', err);
+  }
 });
 
 redis.on('close', () => {
