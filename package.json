@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
+    "dev": "concurrently --kill-others --kill-others-on-fail -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
+    "dev:win": "node scripts/dev-windows.js",
     "dev:next": "portio --mine 3000 && next dev",
     "dev:ws": "portio --mine 3001 && tsx watch server/ws-server.ts",
     "build": "next build && npm run build:ws",

@@ -214,41 +214,40 @@ export default function ChessBoard({
         <Chessground key={boardKey} {...config} />
       </div>
 
-        {/* Promotion Dialog */}
-        {promotionMove && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 shadow-xl">
-              <h3 className="text-lg font-semibold mb-4">
-                Choose promotion piece:
-              </h3>
-              <div className="flex gap-4">
-                {(["q", "r", "b", "n"] as const).map((piece) => (
-                  <button
-                    key={piece}
-                    onClick={() => {
-                      onMove({
-                        from: promotionMove.from,
-                        to: promotionMove.to,
-                        promotion: piece,
-                      });
-                      setPromotionMove(null);
-                    }}
-                    className="w-16 h-16 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center text-3xl font-bold"
-                  >
-                    {piece === "q"
-                      ? "♕"
-                      : piece === "r"
-                      ? "♖"
-                      : piece === "b"
-                      ? "♗"
-                      : "♘"}
-                  </button>
-                ))}
-              </div>
+      {/* Promotion Dialog */}
+      {promotionMove && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-xl">
+            <h3 className="text-lg font-semibold mb-4">
+              Choose promotion piece:
+            </h3>
+            <div className="flex gap-4">
+              {(["q", "r", "b", "n"] as const).map((piece) => (
+                <button
+                  key={piece}
+                  onClick={() => {
+                    onMove({
+                      from: promotionMove.from,
+                      to: promotionMove.to,
+                      promotion: piece,
+                    });
+                    setPromotionMove(null);
+                  }}
+                  className="w-16 h-16 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center text-3xl font-bold"
+                >
+                  {piece === "q"
+                    ? "♕"
+                    : piece === "r"
+                    ? "♖"
+                    : piece === "b"
+                    ? "♗"
+                    : "♘"}
+                </button>
+              ))}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
