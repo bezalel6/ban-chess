@@ -5,6 +5,16 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      deploy_to_coolify:
+        description: 'Deploy to Coolify after build'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 env:
   REGISTRY: ghcr.io
@@ -76,10 +86,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
-      # Trigger Coolify deployment via webhook
+      # Trigger Coolify deployment via webhook (optional)
       - name: Deploy to Coolify
-        if: secrets.COOLIFY_WEBHOOK_URL != ''
+        if: |
+          (github.event_name == 'push' || 
+           (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_to_coolify == 'true'))
+        env:
+          WEBHOOK_URL: ${{ secrets.COOLIFY_WEBHOOK_URL }}
         run: |
-          curl -X POST ${{ secrets.COOLIFY_WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d '{"sha": "${{ github.sha }}"}'
+          if [ -n "$WEBHOOK_URL" ]; then
+            echo "Triggering Coolify deployment..."
+            curl -X POST "$WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d '{"sha": "${{ github.sha }}"}' \
+              || echo "Warning: Webhook call failed, but continuing workflow"
+          else
+            echo "COOLIFY_WEBHOOK_URL not configured, skipping deployment trigger"
+          fi

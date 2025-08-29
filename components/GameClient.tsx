@@ -20,7 +20,16 @@ interface GameClientProps {
 export default function GameClient({ gameId }: GameClientProps) {
   const { gameState, error, connected, sendAction, joinGame } = useGameState();
   const [hasJoined, setHasJoined] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const router = useRouter();
+  
+  // Check for debug mode in URL or localStorage
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const debugParam = urlParams.get('debug') === 'true';
+    const debugStorage = localStorage.getItem('debugMode') === 'true';
+    setDebugMode(debugParam || debugStorage);
+  }, []);
   
   // Join game when component mounts and we're connected
   useEffect(() => {
@@ -51,15 +60,20 @@ export default function GameClient({ gameId }: GameClientProps) {
   return (
     <>
       {/* Desktop Layout - Three column layout with centered board */}
-      <div className="hidden md:flex min-h-screen justify-center items-start p-4">
-        <div className="grid grid-cols-[18rem_1fr_18rem] gap-4 max-w-[1600px] w-full">
+      <div className={`hidden md:flex h-screen justify-center items-start p-4 ${debugMode ? 'border-4 border-red-500 relative' : ''}`}>
+        {debugMode && <div className="absolute top-0 left-0 bg-red-500 text-white p-2 z-50">OUTER CONTAINER</div>}
+        <div className={`grid grid-cols-[18rem_auto_18rem] gap-4 ${debugMode ? 'border-4 border-blue-500 relative' : ''}`}>
+          {debugMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-blue-500 text-white p-2 z-50">GRID CONTAINER</div>}
+          
           {/* Left Panel - Fixed width */}
-          <div className="max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <div className={`max-h-[calc(100vh-2rem)] overflow-y-auto ${debugMode ? 'border-4 border-green-500 relative' : ''}`}>
+            {debugMode && <div className="absolute top-0 left-0 bg-green-500 text-white p-1 z-50">LEFT</div>}
             <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
           </div>
           
           {/* Center - Board */}
-          <div className="flex justify-center">
+          <div className={`flex justify-center ${debugMode ? 'border-4 border-yellow-500 relative' : ''}`}>
+            {debugMode && <div className="absolute top-0 left-1/2 -translate-x-1/2 bg-yellow-500 text-black p-1 z-50">CENTER</div>}
             <ResizableBoard
               gameState={gameState}
               onMove={handleMove}
@@ -69,10 +83,23 @@ export default function GameClient({ gameId }: GameClientProps) {
           </div>
           
           {/* Right Panel - Fixed width, vertically centered */}
-          <div className="flex items-center justify-center">
+          <div className={`flex items-center justify-center ${debugMode ? 'border-4 border-purple-500 relative' : ''}`}>
+            {debugMode && <div className="absolute top-0 right-0 bg-purple-500 text-white p-1 z-50">RIGHT</div>}
             <GameSidebar gameState={gameState} />
           </div>
         </div>
+        
+        {/* Debug toggle button */}
+        <button
+          onClick={() => {
+            const newDebugMode = !debugMode;
+            setDebugMode(newDebugMode);
+            localStorage.setItem('debugMode', newDebugMode.toString());
+          }}
+          className="fixed bottom-4 right-4 p-2 bg-background-secondary rounded-lg text-xs opacity-50 hover:opacity-100 transition-opacity"
+        >
+          {debugMode ? 'Hide' : 'Show'} Debug
+        </button>
       </div>
 
       {/* Mobile Layout */}
