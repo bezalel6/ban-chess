@@ -78,6 +78,7 @@ console.log(`[WebSocket] Server started on port 3001`);
 console.log(`[WebSocket] Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`[WebSocket] Allowed origins: ${allowedOrigins.join(', ')}`);
 console.log(`[WebSocket] Redis URL: ${process.env.REDIS_URL || 'redis://localhost:6379'}`);
+console.log(`[WebSocket] NEXT_PUBLIC_WEBSOCKET_URL: ${process.env.NEXT_PUBLIC_WEBSOCKET_URL}`);
 
 // Subscribe to Redis pub/sub channels for cross-server communication
 async function setupRedisPubSub() {

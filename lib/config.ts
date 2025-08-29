@@ -1,3 +1,5 @@
+console.log('NEXT_PUBLIC_WEBSOCKET_URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);
+console.log('Final WebSocket URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL || (process.env.NODE_ENV === 'production' ? 'wss://ws.chess.rndev.site' : 'ws://localhost:3001'));
 // Environment configuration
 export const config = {
   // WebSocket URL configuration

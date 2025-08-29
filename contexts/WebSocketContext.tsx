@@ -26,6 +26,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     if (!user) return null;
     
     // Just use the base URL - auth is handled by NextAuth cookies
+    console.log('[WebSocketProvider] socketUrl:', config.websocket.url);
     return config.websocket.url;
   }, [user]);
 
