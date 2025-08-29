@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { useGameState } from '@/hooks/useGameState';
 import type { Move, Ban } from '@/lib/game-types';
 import GameSidebar from './game/GameSidebar';
+import GameStatusPanel from './game/GameStatusPanel';
 
 const ChessBoard = dynamic(() => import('@/components/ChessBoard'), {
   ssr: false,
@@ -18,6 +20,7 @@ interface GameClientProps {
 export default function GameClient({ gameId }: GameClientProps) {
   const { gameState, error, connected, sendAction, joinGame } = useGameState();
   const [hasJoined, setHasJoined] = useState(false);
+  const router = useRouter();
   
   // Join game when component mounts and we're connected
   useEffect(() => {
@@ -30,6 +33,7 @@ export default function GameClient({ gameId }: GameClientProps) {
 
   const handleMove = (move: Move) => sendAction({ move });
   const handleBan = (ban: Ban) => sendAction({ ban });
+  const handleNewGame = () => router.push('/');
 
   // Loading states
   if (!connected) {
@@ -45,8 +49,14 @@ export default function GameClient({ gameId }: GameClientProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-7xl mx-auto">
-      <div className="md:col-span-2">
+    <div className="grid grid-cols-12 gap-4 max-w-[1400px] mx-auto p-4">
+      {/* Left Panel - Game Status and Chat */}
+      <div className="col-span-12 md:col-span-3 order-2 md:order-1">
+        <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
+      </div>
+      
+      {/* Center - Chess Board */}
+      <div className="col-span-12 md:col-span-6 order-1 md:order-2">
         <ChessBoard
           gameState={gameState}
           onMove={handleMove}
@@ -54,7 +64,9 @@ export default function GameClient({ gameId }: GameClientProps) {
           playerColor={gameState.playerColor}
         />
       </div>
-      <div className="md:col-span-1">
+      
+      {/* Right Panel - Players and Move History */}
+      <div className="col-span-12 md:col-span-3 order-3">
         <GameSidebar gameState={gameState} />
       </div>
     </div>
