@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ChessBoard from '../ChessBoard';
 import ChessBoardErrorBoundary from '../ChessBoardWrapper';
 import type { SimpleGameState, Move, Ban } from '@/lib/game-types';
@@ -44,6 +44,11 @@ export default function ResizableBoard({
     return roundToGrid(DEFAULT_SIZE);
   });
 
+  const [isResizing, setIsResizing] = useState(false);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const startSizeRef = useRef(0);
+  const startPosRef = useRef({ x: 0, y: 0 });
+
   // Save board size to localStorage when it changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -58,22 +63,47 @@ export default function ResizableBoard({
     setBoardSize(gridAlignedSize);
   }, []);
 
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleResize(parseInt(e.target.value, 10));
-  };
+  // Handle mouse down on resize handle
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    startSizeRef.current = boardSize;
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+  }, [boardSize]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowLeft' || e.key === '-') {
-      handleResize(boardSize - 8);
-    } else if (e.key === 'ArrowRight' || e.key === '+' || e.key === '=') {
-      handleResize(boardSize + 8);
-    }
-  };
+  // Handle mouse move for resizing
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Calculate diagonal distance for corner resize
+      const deltaX = e.clientX - startPosRef.current.x;
+      const deltaY = e.clientY - startPosRef.current.y;
+      // Use the average of X and Y movement for diagonal resize
+      const delta = (deltaX + deltaY) / 2;
+      const newSize = startSizeRef.current + delta;
+      handleResize(newSize);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, handleResize]);
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {/* Board Container with dynamic size */}
+      {/* Board Container with dynamic size and resize handle */}
       <div 
+        ref={boardRef}
+        className="relative"
         style={{ 
           width: `${boardSize}px`,
           height: `${boardSize}px`,
@@ -87,65 +117,25 @@ export default function ResizableBoard({
             playerColor={playerColor}
           />
         </ChessBoardErrorBoundary>
-      </div>
-
-      {/* Resize Controls - Lichess Style */}
-      <div className="flex items-center gap-4 bg-background-secondary rounded-lg p-2">
-        {/* Decrease Button */}
-        <button
-          onClick={() => handleResize(boardSize - 48)}
-          className="p-1 hover:bg-background-tertiary rounded transition-colors"
-          aria-label="Decrease board size"
+        
+        {/* Resize handle - Lichess style corner grip */}
+        <div
+          onMouseDown={handleMouseDown}
+          className={`absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize
+                     ${isResizing ? 'opacity-100' : 'opacity-60 hover:opacity-100'}
+                     transition-opacity`}
+          style={{
+            background: `linear-gradient(135deg, transparent 40%, rgba(255, 140, 0, 0.5) 40%, rgba(255, 140, 0, 0.5) 60%, transparent 60%),
+                        linear-gradient(135deg, transparent 65%, rgba(255, 140, 0, 0.5) 65%, rgba(255, 140, 0, 0.5) 85%, transparent 85%)`
+          }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-foreground-secondary">
-            <path d="M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-
-        {/* Slider */}
-        <div className="relative">
-          <input
-            type="range"
-            min={MIN_SIZE}
-            max={MAX_SIZE}
-            step={8}
-            value={boardSize}
-            onChange={handleSliderChange}
-            onKeyDown={handleKeyDown}
-            className="w-32 h-2 bg-background-tertiary rounded-lg appearance-none cursor-pointer
-                     [&::-webkit-slider-thumb]:appearance-none
-                     [&::-webkit-slider-thumb]:w-4
-                     [&::-webkit-slider-thumb]:h-4
-                     [&::-webkit-slider-thumb]:rounded-full
-                     [&::-webkit-slider-thumb]:bg-lichess-orange-500
-                     [&::-webkit-slider-thumb]:cursor-pointer
-                     [&::-webkit-slider-thumb]:hover:bg-lichess-orange-400
-                     [&::-moz-range-thumb]:w-4
-                     [&::-moz-range-thumb]:h-4
-                     [&::-moz-range-thumb]:rounded-full
-                     [&::-moz-range-thumb]:bg-lichess-orange-500
-                     [&::-moz-range-thumb]:cursor-pointer
-                     [&::-moz-range-thumb]:hover:bg-lichess-orange-400
-                     [&::-moz-range-thumb]:border-0"
-            aria-label="Board size"
-          />
+          {/* Visual indicator */}
+          <div className="absolute bottom-1 right-1">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-lichess-orange-500">
+              <path d="M1 11L11 1M6 11L11 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.7"/>
+            </svg>
+          </div>
         </div>
-
-        {/* Increase Button */}
-        <button
-          onClick={() => handleResize(boardSize + 48)}
-          className="p-1 hover:bg-background-tertiary rounded transition-colors"
-          aria-label="Increase board size"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-foreground-secondary">
-            <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-
-        {/* Size indicator */}
-        <span className="text-xs text-foreground-secondary min-w-[3rem] text-center">
-          {Math.round((boardSize / MAX_SIZE) * 100)}%
-        </span>
       </div>
     </div>
   );
