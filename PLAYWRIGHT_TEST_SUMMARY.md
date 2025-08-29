@@ -122,8 +122,8 @@ Ensure the application servers are running:
 # Terminal 1: Next.js dev server
 npm run dev:next
 
-# Terminal 2: WebSocket server  
-npm run ws-server
+# Terminal 2: WebSocket server (with hot reload)
+npm run dev:ws
 ```
 
 ### Execute Tests

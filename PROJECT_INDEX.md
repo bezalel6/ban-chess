@@ -201,17 +201,27 @@ stateDiagram-v2
 
 ### Commands
 
+#### Recommended Development Workflow
 ```bash
-# Development
-npm run dev           # Start both Next.js and WebSocket servers
-npm run dev:next      # Start Next.js only
-npm run dev:ws        # Start WebSocket server only
+# Terminal 1: WebSocket server with isolated logs
+npm run dev:ws        # Start WebSocket server with hot reload
 
-# Build & Production
+# Terminal 2: Next.js server with isolated logs  
+npm run dev:next      # Start Next.js development server
+
+# Alternative: Combined (less optimal for log analysis)
+npm run dev           # Start both servers concurrently
+```
+
+#### Build & Production
+```bash
 npm run build         # Production build
 npm run start         # Start production server
+npm run ws-server     # Production WebSocket server
+```
 
-# Code Quality
+#### Code Quality
+```bash
 npm run type-check    # TypeScript validation
 npm run lint          # ESLint checks
 npm run lint:fix      # Auto-fix linting issues

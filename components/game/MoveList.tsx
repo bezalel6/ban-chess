@@ -88,23 +88,31 @@ export default function MoveList({ history }: MoveListProps) {
 
   return (
     <div ref={scrollRef} className="bg-background-tertiary rounded-lg p-2 h-full overflow-y-auto">
-      <table className="w-full text-xs text-center">
+      <table className="w-full text-sm border-collapse border border-border">
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index} className="hover:bg-background-secondary h-7">
-              <td className="px-1 py-0.5 text-foreground-muted font-medium align-middle">{index + 1}.</td>
-              <td className="px-1 py-0.5 text-left align-middle">
+            <tr key={index} className="hover:bg-background-secondary/50 h-8">
+              <td className={`px-2 py-1 text-foreground-muted font-semibold align-middle text-center border border-border w-8 ${
+                index % 2 === 0 ? 'bg-background-secondary/30' : 'bg-background-tertiary/50'
+              }`}>
+                {index + 1}.
+              </td>
+              <td className={`px-2 py-1 text-left align-middle border border-border ${
+                index % 2 === 0 ? 'bg-background-secondary/20' : 'bg-background-tertiary/30'
+              }`}>
                 {row.white && (
-                  <span className="text-foreground">
-                    {row.white.ban && <span className="text-red-500">{row.white.ban} </span>}
+                  <span className="text-foreground font-medium">
+                    {row.white.ban && <span className="text-red-500 font-bold">{row.white.ban} </span>}
                     {row.white.move && <span>{row.white.move}</span>}
                   </span>
                 )}
               </td>
-              <td className="px-1 py-0.5 text-left align-middle">
+              <td className={`px-2 py-1 text-left align-middle border border-border ${
+                index % 2 === 0 ? 'bg-background-secondary/20' : 'bg-background-tertiary/30'
+              }`}>
                 {row.black && (
-                  <span className="text-foreground">
-                    {row.black.ban && <span className="text-red-500">{row.black.ban} </span>}
+                  <span className="text-foreground font-medium">
+                    {row.black.ban && <span className="text-red-500 font-bold">{row.black.ban} </span>}
                     {row.black.move && <span>{row.black.move}</span>}
                   </span>
                 )}

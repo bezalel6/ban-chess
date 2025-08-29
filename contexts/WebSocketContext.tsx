@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useMemo } from "react";
 import useWebSocket from "react-use-websocket";
 import { useAuth } from "@/components/AuthProvider";
+import { config } from "@/lib/config";
 
 interface WebSocketContextType {
   sendMessage: (message: string) => void;
@@ -19,15 +20,24 @@ export function useGameWebSocket() {
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const socketUrl = user 
-    ? `ws://localhost:8081?username=${encodeURIComponent(user.username)}&providerId=${encodeURIComponent(user.userId)}&provider=lichess`
-    : null;
+  
+  // Build WebSocket URL with authentication parameters
+  const socketUrl = useMemo(() => {
+    if (!user) return null;
+    
+    const url = new URL(config.websocket.url);
+    url.searchParams.set('username', user.username);
+    url.searchParams.set('providerId', user.userId);
+    url.searchParams.set('provider', 'lichess');
+    
+    return url.toString();
+  }, [user]);
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
     share: true, // Share connection across components
     shouldReconnect: () => true,
-    reconnectAttempts: 10,
-    reconnectInterval: 1000,
+    reconnectAttempts: config.websocket.maxReconnectAttempts,
+    reconnectInterval: config.websocket.reconnectInterval,
     // Prevent connection dropping during hot reload
     retryOnError: true,
   });

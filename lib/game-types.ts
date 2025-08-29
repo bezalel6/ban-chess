@@ -62,7 +62,7 @@ export interface SimpleGameState {
 
 // Server messages - simplified
 export type SimpleServerMsg = 
-  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number }
+  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; history?: HistoryEntry[] | string[]; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number }
   | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean; timeControl?: TimeControl }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }

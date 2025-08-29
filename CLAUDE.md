@@ -110,25 +110,41 @@ When changing ANY existing functionality:
 ---
 
 ## 8. Development Commands
+
+### Recommended Development Setup (Separate Terminals)
 ```bash
 # Install deps
 npm install
 
-# Dev server
+# Terminal 1: WebSocket server with detailed logs
+npm run dev:ws
+
+# Terminal 2: Next.js development server
+npm run dev:next
+```
+
+### Alternative Commands
+```bash
+# Single command (less optimal for debugging)
 npm run dev
 
-# Lint
-npm run lint
+# Production WebSocket server only
+npm run ws-server
 
-# Type check
+# Linting and validation
+npm run lint
 npm run type-check
 
-# Build
+# Build and production
 npm run build
-
-# Start production
 npm start
 ```
+
+### Benefits of Separate Terminals
+- **Clear log separation**: WebSocket and Next.js logs don't interfere
+- **Specific debugging**: Restart individual servers without affecting the other
+- **Performance monitoring**: Monitor each server's resource usage independently
+- **Error isolation**: Quickly identify whether issues are frontend or backend
 
 ---
 

@@ -33,8 +33,10 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.12",
+    "@types/ioredis": "^4.28.10",
     "ban-chess.ts": "^1.1.3",
     "howler": "^2.2.4",
+    "ioredis": "^5.7.0",
     "iron-session": "^8.0.4",
     "lucide-react": "^0.542.0",
     "nanoid": "^5.1.5",

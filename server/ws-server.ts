@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { BanChess } from 'ban-chess.ts';
-import type { SimpleServerMsg, SimpleClientMsg, TimeControl } from '../lib/game-types';
+import type { SimpleServerMsg, SimpleClientMsg, TimeControl, HistoryEntry } from '../lib/game-types';
 import { v4 as uuidv4 } from 'uuid';
 import { TimeManager } from './time-manager';
 import { validateNextAuthToken } from './auth-validation';
@@ -21,9 +21,33 @@ interface GameRoom {
   startTime?: number;
 }
 
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : process.env.NODE_ENV === 'production'
+    ? ['https://chess.rndev.site']
+    : ['http://localhost:3000', 'http://localhost:3001'];
+
 const wss = new WebSocketServer({ 
   port: 8081,
   verifyClient: async (info, cb) => {
+    // Check CORS origin
+    const origin = info.origin || info.req.headers.origin;
+    
+    if (origin) {
+      const isAllowed = allowedOrigins.some(allowed => {
+        // Allow exact match or wildcard for development
+        return allowed === '*' || origin === allowed || 
+               (process.env.NODE_ENV !== 'production' && origin.startsWith('http://localhost'));
+      });
+      
+      if (!isAllowed) {
+        console.log(`[WebSocket] Blocked connection from unauthorized origin: ${origin}`);
+        cb(false, 403, 'Forbidden: Invalid origin');
+        return;
+      }
+    }
+    
     // Validate NextAuth token during WebSocket handshake
     const token = await validateNextAuthToken(info.req);
     if (token) {
@@ -41,7 +65,9 @@ const queue: Player[] = [];
 const authenticatedPlayers = new Map<WebSocket, Player>();
 const playerToGame = new Map<string, string>(); // userId -> gameId
 
-console.log('WebSocket server (simplified) started on ws://localhost:8081');
+console.log(`[WebSocket] Server started on port 8081`);
+console.log(`[WebSocket] Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`[WebSocket] Allowed origins: ${allowedOrigins.join(', ')}`);
 
 function getPlayerUsernames(room: GameRoom): { white?: string; black?: string } {
   const usernames: { white?: string; black?: string } = {};
@@ -107,6 +133,7 @@ function handleTimeout(gameId: string, winner: 'white' | 'black') {
     isSoloGame: room.isSoloGame,
     gameOver: true,
     result: `${winner === 'white' ? 'White' : 'Black'} wins on time!`,
+    history: room.game.history() as HistoryEntry[], // Add move history
     timeControl: room.timeControl,
     clocks: room.timeManager ? room.timeManager.getClocks() : undefined
   };
@@ -206,6 +233,7 @@ function broadcastGameState(gameId: string) {
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? 'ban' : 'move',
     inCheck: isInCheck,
+    history: room.game.history() as HistoryEntry[], // Add move history from ban-chess.ts
     // For solo games, playerColor is the acting player
     ...(room.isSoloGame && { playerColor: actingPlayer }),
     // Add game over state

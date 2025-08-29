@@ -10,8 +10,11 @@ services:
       dockerfile: Dockerfile
     environment:
       - NODE_ENV=production
-      - WEBSOCKET_URL=ws://websocket:8081
+      - NEXT_PUBLIC_WEBSOCKET_URL=wss://chess-api.rndev.site
+      - NEXT_PUBLIC_API_URL=https://chess.rndev.site
       - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=https://chess.rndev.site
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     depends_on:
       - websocket
     networks:
@@ -20,6 +23,7 @@ services:
       # Coolify will auto-detect and configure these
       - coolify.managed=true
       - coolify.port=3000
+      - coolify.domain=chess.rndev.site
 
   # WebSocket Server
   websocket:
@@ -30,6 +34,9 @@ services:
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGINS=https://chess.rndev.site
+      - NEXTAUTH_URL=https://chess.rndev.site
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
     depends_on:
       - redis
     networks:
@@ -37,8 +44,7 @@ services:
     labels:
       - coolify.managed=true
       - coolify.port=8081
-      # Optional: expose WebSocket on subdomain
-      # - coolify.domain=ws.yourdomain.com
+      - coolify.domain=chess-api.rndev.site
 
   # Redis for WebSocket state
   redis:

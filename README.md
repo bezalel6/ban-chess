@@ -59,21 +59,29 @@ cd 2ban-2chess
 npm install
 ```
 
-### 2. Run WebSocket Server
+### 2. Start Development Servers
 
+**Recommended approach:** Run each server in a separate terminal for better log insight and debugging.
+
+**Terminal 1: WebSocket Server**
 ```bash
-npx ts-node server/ws-server.ts
+npm run dev:ws
 ```
+This starts the WebSocket server on **ws://localhost:8081** with hot reload.
 
-This starts a WebSocket server on **ws://localhost:8081**.
+**Terminal 2: Next.js Development Server**
+```bash
+npm run dev:next
+```
+This starts the Next.js app at [http://localhost:3000](http://localhost:3000).
 
-### 3. Run Next.js App
-
+**Alternative: Single Command** *(less optimal for debugging)*
 ```bash
 npm run dev
 ```
+Runs both servers concurrently, but logs are mixed and harder to analyze.
 
-App will be available at [http://localhost:3000](http://localhost:3000).
+> 📖 **For detailed development setup, debugging tips, and best practices, see [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)**
 
 ---
 
