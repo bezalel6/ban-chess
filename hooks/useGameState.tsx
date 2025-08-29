@@ -11,7 +11,14 @@ import soundManager from '@/lib/sound-manager';
 export function useGameState() {
   const { user } = useAuth();
   const router = useRouter();
-  const { sendMessage, lastMessage, readyState } = useGameWebSocket();
+  const wsContext = useGameWebSocket();
+  
+  // Handle null context (should not happen if provider is set up correctly)
+  if (!wsContext) {
+    throw new Error('useGameState must be used within WebSocketProvider');
+  }
+  
+  const { sendMessage, lastMessage, readyState } = wsContext;
   
   // State management
   const [gameState, setGameState] = useState<SimpleGameState | null>(null);
@@ -44,7 +51,7 @@ export function useGameState() {
       send({
         type: 'authenticate',
         userId: user.userId || '',
-        username: user.username
+        username: user.username || ''
       });
     }
     
@@ -160,8 +167,10 @@ export function useGameState() {
           setTimeout(() => setError(null), 5000);
           break;
           
-        default:
-          console.log('[GameState] Unhandled message type:', msg.type);
+        default: {
+          const _exhaustiveCheck: never = msg;
+          console.log('[GameState] Unhandled message type:', (_exhaustiveCheck as SimpleServerMsg).type);
+        }
       }
     } catch (err) {
       console.error('[GameState] Failed to parse message:', err);
