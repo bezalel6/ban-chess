@@ -10,7 +10,7 @@ COPY package*.json ./
 
 # Install production dependencies
 # Cache bust only when package.json changes
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm ci --only=production
 
 # ===== Builder Stage =====
 FROM node:20-alpine AS builder
@@ -18,7 +18,7 @@ WORKDIR /app
 
 # Copy package files and install ALL dependencies (including devDependencies)
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Copy configuration files next (changes less frequently than source code)
 COPY next.config.js ./
