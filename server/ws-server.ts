@@ -1017,6 +1017,30 @@ wss.on('connection', (ws: WebSocket, request) => {
   });
 });
 
+// Simple HTTP health check endpoint
+import { createServer } from 'http';
+
+const healthServer = createServer((req, res) => {
+  if (req.url === '/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      service: 'websocket-server',
+      connections: wss.clients.size,
+      activeManagers: timeManagers.size
+    }));
+  } else {
+    res.writeHead(404);
+    res.end('Not Found');
+  }
+});
+
+// Start health check server on port 8082
+healthServer.listen(8082, () => {
+  console.log('[WebSocket] Health check endpoint available on port 8082');
+});
+
 // Graceful shutdown
 const shutdown = async (signal: string) => {
   console.log(`\n[WebSocket] Received ${signal}, shutting down gracefully...`);
