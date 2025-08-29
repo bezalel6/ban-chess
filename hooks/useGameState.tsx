@@ -102,14 +102,14 @@ export function useGameState() {
           
         case 'solo-game-created':
           console.log('[GameState] Solo game created:', msg.gameId);
-          setCurrentGameId(msg.gameId);
+          // Don't set currentGameId here - let GameClient handle it when joining
           // Navigate immediately - the game page will handle joining
           router.push(`/game/${msg.gameId}`);
           break;
           
         case 'matched':
           console.log('[GameState] Matched with opponent, game:', msg.gameId);
-          setCurrentGameId(msg.gameId);
+          // Don't set currentGameId here - let GameClient handle it when joining
           // Navigate immediately - the game page will handle joining
           router.push(`/game/${msg.gameId}`);
           break;

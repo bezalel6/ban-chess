@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useGameState } from '@/hooks/useGameState';
 import type { Move, Ban } from '@/lib/game-types';
@@ -16,15 +16,17 @@ interface GameClientProps {
 }
 
 export default function GameClient({ gameId }: GameClientProps) {
-  const { gameState, error, connected, sendAction, joinGame, currentGameId } = useGameState();
+  const { gameState, error, connected, sendAction, joinGame } = useGameState();
+  const [hasJoined, setHasJoined] = useState(false);
   
   // Join game when component mounts and we're connected
   useEffect(() => {
-    if (connected && gameId && gameId !== currentGameId) {
+    if (connected && gameId && !hasJoined) {
       console.log('[GameClient] Joining game:', gameId);
       joinGame(gameId);
+      setHasJoined(true);
     }
-  }, [connected, gameId, currentGameId, joinGame]);
+  }, [connected, gameId, hasJoined, joinGame]);
 
   const handleMove = (move: Move) => sendAction({ move });
   const handleBan = (ban: Ban) => sendAction({ ban });
