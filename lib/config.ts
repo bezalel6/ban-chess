@@ -1,13 +1,15 @@
 import { getWebSocketUrl } from './websocket-config';
 
+const WEBSOCKET_URL = getWebSocketUrl(); // Force evaluation here
+
 console.log('NEXT_PUBLIC_WEBSOCKET_URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);
-console.log('Final WebSocket URL:', getWebSocketUrl());
+console.log('Final WebSocket URL:', WEBSOCKET_URL);
 
 // Environment configuration
 export const config = {
   // WebSocket URL configuration
   websocket: {
-    url: getWebSocketUrl(),
+    url: WEBSOCKET_URL,
     reconnectInterval: 3000,
     maxReconnectAttempts: 5,
   },
