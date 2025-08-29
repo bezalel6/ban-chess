@@ -48,7 +48,7 @@ if (Test-Path $envFile) {
             $key = $matches[1].Trim()
             $value = $matches[2].Trim()
             # Remove quotes if present
-            $value = $value -replace '^["'']|["'']$', ''
+            $value = $value.Trim('"').Trim("'")
             [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
         }
     }
@@ -124,7 +124,7 @@ if (-not (Test-Path .next\standalone)) {
     exit 1
 }
 
-if (-not (Test-Path server\ws-server.js)) {
+if (-not (Test-Path server\dist\ws-server.js)) {
     Write-Host "❌ No WebSocket server build found. Run without -SkipBuild first." -ForegroundColor Red
     exit 1
 }
@@ -151,7 +151,11 @@ if (Test-Path public) {
 Write-Host "   Preparing WebSocket server files..." -ForegroundColor White
 $wsDistDir = "$tempDir\ws-dist"
 New-Item -ItemType Directory -Path $wsDistDir | Out-Null
-Copy-Item -Force server\ws-server.js $wsDistDir\
+Copy-Item -Force server\dist\ws-server.js $wsDistDir\
+# Also copy source map for debugging if it exists
+if (Test-Path server\dist\ws-server.js.map) {
+    Copy-Item -Force server\dist\ws-server.js.map $wsDistDir\
+}
 Copy-Item -Force package.json $wsDistDir\
 Copy-Item -Force package-lock.json $wsDistDir\
 

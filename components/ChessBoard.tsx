@@ -2,7 +2,7 @@
 
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import { useState } from "react";
+import { useState, memo } from "react";
 import type {
   ReactChessGroundProps,
   Key,
@@ -40,13 +40,13 @@ function getPieceAt(fen: string, square: string): string | null {
   return null;
 }
 
-export default function ChessBoard({
+const ChessBoard = memo(function ChessBoard({
   gameState,
   onMove,
   onBan,
   playerColor = "white",
 }: ChessBoardProps) {
-  const [promotionMove, setPromotionMove] = useState<{
+  const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
     to: string;
   } | null>(null);
@@ -163,7 +163,7 @@ export default function ChessBoard({
 
             if (isPromotion && (destRank === "8" || destRank === "1")) {
               // Store the move and show promotion dialog
-              setPromotionMove({ from: orig, to: dest });
+              _setPromotionMove({ from: orig, to: dest });
             } else {
               onMove({
                 from: orig,
@@ -205,4 +205,6 @@ export default function ChessBoard({
       </div>
     </div>
   );
-}
+});
+
+export default ChessBoard;

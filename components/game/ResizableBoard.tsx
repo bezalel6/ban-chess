@@ -137,6 +137,22 @@ const ResizableBoard = memo(function ResizableBoard({
       document.body.style.cursor = '';
       // Ensure visual size matches actual size
       setVisualSize(boardSize);
+      
+      // Force chessground to recalculate piece positions after resize
+      // This prevents pieces from drifting off-center
+      requestAnimationFrame(() => {
+        const cgWrap = boardRef.current?.querySelector('.cg-wrap');
+        if (cgWrap) {
+          // Trigger a reflow to force position recalculation
+          const board = cgWrap.querySelector('.cg-board');
+          if (board) {
+            // Force a layout recalculation
+            (board as HTMLElement).style.display = 'none';
+            (board as HTMLElement).offsetHeight; // Trigger reflow
+            (board as HTMLElement).style.display = '';
+          }
+        }
+      });
     };
 
     // Add event listeners with passive: false for better performance
@@ -155,6 +171,35 @@ const ResizableBoard = memo(function ResizableBoard({
       document.body.style.cursor = '';
     };
   }, [isResizing, handleResize, boardSize]);
+
+  // Add resize observer to fix piece positions when board size changes
+  useEffect(() => {
+    if (!boardRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(() => {
+      // Fix piece positions after any size change
+      requestAnimationFrame(() => {
+        const pieces = boardRef.current?.querySelectorAll('.cg-board piece');
+        if (pieces && pieces.length > 0) {
+          // Force pieces to recenter by triggering a minor style update
+          pieces.forEach((piece) => {
+            const el = piece as HTMLElement;
+            const currentTransform = el.style.transform;
+            el.style.transform = 'translateZ(0)';
+            requestAnimationFrame(() => {
+              el.style.transform = currentTransform;
+            });
+          });
+        }
+      });
+    });
+    
+    resizeObserver.observe(boardRef.current);
+    
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [boardSize]);
 
   // Cleanup on unmount
   useEffect(() => {

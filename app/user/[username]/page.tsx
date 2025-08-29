@@ -112,7 +112,9 @@ export default function UserProfilePage() {
               <h1 className="text-2xl font-bold flex items-center gap-2">
                 {username}
                 {stats.rating >= 1500 && (
-                  <Shield className="h-5 w-5 text-lichess-orange-500" title="Established Player" />
+                  <span title="Established Player">
+                    <Shield className="h-5 w-5 text-lichess-orange-500" />
+                  </span>
                 )}
               </h1>
               <p className="text-sm text-foreground-muted">
