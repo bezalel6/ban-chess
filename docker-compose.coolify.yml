@@ -5,9 +5,7 @@ services:
   # Next.js Application
   app:
     image: ghcr.io/${GITHUB_REPOSITORY:-bezalel6/2ban-2chess}:${GITHUB_SHA:-latest}
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # No build section - using pre-built image from GitHub
     ports:
       - "3000:3000"  # Expose to host for Cloudflare tunnel
     environment:
@@ -30,9 +28,7 @@ services:
   # WebSocket Server
   websocket:
     image: ghcr.io/${GITHUB_REPOSITORY:-bezalel6/2ban-2chess}-websocket:${GITHUB_SHA:-latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.websocket
+    # No build section - using pre-built image from GitHub
     ports:
       - "3001:3001"  # Expose to host for Cloudflare tunnel
     environment:
