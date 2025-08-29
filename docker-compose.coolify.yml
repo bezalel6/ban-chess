@@ -8,6 +8,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    ports:
+      - "3000:3000"  # Expose to host for Cloudflare tunnel
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_WEBSOCKET_URL=wss://chess-api.rndev.site
@@ -31,6 +33,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.websocket
+    ports:
+      - "3001:3001"  # Expose to host for Cloudflare tunnel
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
@@ -50,7 +54,8 @@ services:
   redis:
     image: redis:7-alpine
     # Explicitly disable all authentication and protection
-    command: redis-server --appendonly yes --protected-mode no --requirepass ""
+    # Force no authentication - empty password
+    command: redis-server --appendonly yes --protected-mode no --bind 0.0.0.0 --requirepass ""
     networks:
       - coolify
     volumes:
