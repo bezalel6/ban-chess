@@ -43,7 +43,7 @@ services:
       - coolify
     labels:
       - coolify.managed=true
-      - coolify.port=8081
+      - coolify.port=3001
       - coolify.domain=chess-api.rndev.site
 
   # Redis for WebSocket state (no authentication)

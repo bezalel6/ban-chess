@@ -1036,9 +1036,9 @@ const healthServer = createServer((req, res) => {
   }
 });
 
-// Start health check server on port 8082
-healthServer.listen(8082, () => {
-  console.log('[WebSocket] Health check endpoint available on port 8082');
+// Start health check server on port 3002
+healthServer.listen(3002, () => {
+  console.log('[WebSocket] Health check endpoint available on port 3002');
 });
 
 // Graceful shutdown
