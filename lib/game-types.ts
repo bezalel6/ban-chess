@@ -28,6 +28,7 @@ export interface SimpleGameState {
   gameOver?: boolean;
   result?: string;
   inCheck?: boolean;  // Whether the current position has a check
+  history?: string[]; // Move history in SAN format
 }
 
 // Server messages - simplified

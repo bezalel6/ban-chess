@@ -15,30 +15,18 @@ export default function LoadingScreen({ message = "Loading..." }: LoadingScreenP
         
         {/* Loading bar */}
         <div className="w-48 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-600 rounded-full animate-loading-bar" />
+          <div 
+            className="h-full bg-blue-600 rounded-full"
+            style={{
+              animation: 'loading-bar 1.5s ease-in-out infinite',
+            }}
+          />
         </div>
         
         {/* Message */}
         <p className="text-lg text-muted-foreground font-medium">
           {message}
         </p>
-
-        <style jsx>{`
-          @keyframes loading-bar {
-            0% {
-              transform: translateX(-100%);
-            }
-            50% {
-              transform: translateX(0);
-            }
-            100% {
-              transform: translateX(100%);
-            }
-          }
-          .animate-loading-bar {
-            animation: loading-bar 1.5s ease-in-out infinite;
-          }
-        `}</style>
       </div>
     </div>
   );

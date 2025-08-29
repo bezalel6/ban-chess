@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { useGameWebSocket } from '@/contexts/WebSocketContext';
-import { parseFEN } from '@/lib/game-types';
 import type { Move, Ban } from '@/lib/game-types';
+import GameSidebar from './game/GameSidebar';
 
 const ChessBoard = dynamic(() => import('@/components/ChessBoard'), {
   ssr: false,
@@ -33,48 +33,18 @@ export default function GameClient({ gameId }: GameClientProps) {
     return <LoadingMessage message="Joining game..." />;
   }
 
-  const fenData = parseFEN(gameState.fen);
-  const isGameOver = gameState.gameOver || false;
-  const nextAction = gameState.nextAction || 'move';
-
   return (
-    <div className="space-y-4">
-      {/* Players */}
-      {gameState.players && (
-        <div className="flex justify-center gap-4 text-sm">
-          <span className={fenData.turn === 'white' ? 'font-bold' : ''}>
-            ⚪ {gameState.players.white || 'Waiting...'}
-          </span>
-          <span className="text-foreground-muted">vs</span>
-          <span className={fenData.turn === 'black' ? 'font-bold' : ''}>
-            ⚫ {gameState.players.black || 'Waiting...'}
-          </span>
-        </div>
-      )}
-
-      {/* Game Status */}
-      <div className="text-center text-lg font-semibold">
-        {isGameOver ? (
-          <span className="text-destructive">{gameState.result || 'Game Over'}</span>
-        ) : nextAction === 'ban' ? (
-          <span className="text-warning">
-            {fenData.turn === 'white' ? 'Black' : 'White'} is banning
-          </span>
-        ) : (
-          <span>{fenData.turn === 'white' ? '⚪ White' : '⚫ Black'} to move</span>
-        )}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-7xl mx-auto">
+      <div className="md:col-span-2">
+        <ChessBoard
+          gameState={gameState}
+          onMove={handleMove}
+          onBan={handleBan}
+          playerColor={gameState.playerColor}
+        />
       </div>
-
-      {/* Chess Board */}
-      <div className="flex justify-center">
-        <div className="w-full max-w-[600px]">
-          <ChessBoard
-            gameState={gameState}
-            onMove={handleMove}
-            onBan={handleBan}
-            playerColor={gameState.playerColor}
-          />
-        </div>
+      <div className="md:col-span-1">
+        <GameSidebar gameState={gameState} />
       </div>
     </div>
   );

@@ -112,7 +112,7 @@ function broadcastGameState(gameId: string) {
     isSoloGame: room.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? 'ban' : 'move',
-    inCheck: isInCheck,
+    history: room.game.history(),
     // For solo games, playerColor is the acting player
     ...(room.isSoloGame && { playerColor: actingPlayer }),
     // Add game over state
@@ -123,15 +123,6 @@ function broadcastGameState(gameId: string) {
         isStalemate ? 'Draw by stalemate' : 'Game over'
     })
   };
-  
-  // Send to all players in the room
-  const playerIds = [room.whitePlayerId, room.blackPlayerId].filter(Boolean);
-  playerIds.forEach(playerId => {
-    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
-    if (player && player.ws.readyState === WebSocket.OPEN) {
-      player.ws.send(JSON.stringify(stateMsg));
-    }
-  });
 }
 
 function matchPlayers() {
@@ -320,14 +311,6 @@ wss.on('connection', (ws: WebSocket) => {
             }
           }
           
-          ws.send(JSON.stringify({
-            type: 'joined',
-            gameId,
-            color,
-            players: getPlayerUsernames(room),
-            isSoloGame: room.isSoloGame
-          } as SimpleServerMsg));
-          
           // Send game state immediately, not with a timeout
           broadcastGameState(gameId);
           break;
@@ -352,10 +335,6 @@ wss.on('connection', (ws: WebSocket) => {
           
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);
-            // WORKAROUND: Re-create the game object from the new FEN.
-            // This prevents potential stale state issues within the ban-chess.ts library.
-            const newFen = room.game.fen();
-            room.game = new BanChess(newFen);
             broadcastGameState(gameId);
           } else {
             console.log(`Invalid action in game ${gameId}:`, action, 'Error:', result.error);

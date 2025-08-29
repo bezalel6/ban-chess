@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { createSoloGame, joinQueue } = useGameWebSocket();
+  const { createSoloGame, joinQueue, connected } = useGameWebSocket();
   const router = useRouter();
 
   const joinGameById = () => {
@@ -45,19 +45,22 @@ export default function HomePage() {
             <div className="flex flex-col gap-4 w-full">
               <button
                 onClick={createSoloGame}
-                className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground"
+                disabled={!connected}
+                className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Play Solo (Practice)
               </button>
               <button
                 onClick={joinQueue}
-                className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold"
+                disabled={!connected}
+                className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Find Opponent
               </button>
               <button
                 onClick={joinGameById}
-                className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground"
+                disabled={!connected}
+                className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Join with Game ID
               </button>
