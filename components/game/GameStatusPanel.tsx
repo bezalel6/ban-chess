@@ -12,12 +12,44 @@ export default function GameStatusPanel({ gameState, onNewGame }: GameStatusPane
   const currentBan = getCurrentBan(gameState.fen);
   const nextAction = gameState.nextAction || 'move';
   
+  // Format time control display
+  const formatTimeControl = () => {
+    if (!gameState.timeControl) return 'Unlimited';
+    const { initial, increment } = gameState.timeControl;
+    const minutes = Math.floor(initial / 60);
+    return `${minutes}+${increment}`;
+  };
+  
+  // Determine game mode
+  const gameMode = gameState.isSoloGame ? 'Solo' : 'Multiplayer';
+  
   return (
     <div className="bg-background-secondary rounded-lg p-4 h-full flex flex-col">
-      {/* Game Status Section */}
-      <div className="mb-6">
-        <h3 className="text-sm font-semibold text-foreground-muted mb-3">GAME STATUS</h3>
+      {/* Status Section - Consolidated */}
+      <div className="flex-1 overflow-y-auto">
+        <h3 className="text-sm font-semibold text-foreground-muted mb-3">STATUS</h3>
         
+        {/* Game Format */}
+        <div className="mb-4">
+          <div className="bg-background-tertiary rounded-md p-3 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-foreground-muted">Time Control:</span>
+              <span className="text-sm font-medium text-foreground">{formatTimeControl()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-foreground-muted">Mode:</span>
+              <span className="text-sm font-medium text-foreground">{gameMode}</span>
+            </div>
+            {gameState.playerColor && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-foreground-muted">Playing as:</span>
+                <span className="text-sm font-medium text-foreground capitalize">{gameState.playerColor}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Game State */}
         {gameState.gameOver ? (
           <div className="space-y-3">
             <div className="bg-yellow-500 text-black px-3 py-2 rounded-md font-bold text-center animate-pulse">
@@ -60,10 +92,10 @@ export default function GameStatusPanel({ gameState, onNewGame }: GameStatusPane
         )}
       </div>
       
-      {/* Game Chat Section (Placeholder for future) */}
-      <div className="flex-1 flex flex-col">
-        <h3 className="text-sm font-semibold text-foreground-muted mb-3">GAME CHAT</h3>
-        <div className="flex-1 bg-background-tertiary rounded-md p-3 overflow-y-auto">
+      {/* Game Chat Section - More Compact */}
+      <div className="mt-4 h-32 flex flex-col">
+        <h3 className="text-sm font-semibold text-foreground-muted mb-2">GAME CHAT</h3>
+        <div className="flex-1 bg-background-tertiary rounded-md p-2 overflow-y-auto">
           <p className="text-xs text-foreground-muted italic">Chat coming soon...</p>
         </div>
       </div>
