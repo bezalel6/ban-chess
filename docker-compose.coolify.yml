@@ -49,7 +49,8 @@ services:
   # Redis for WebSocket state (no authentication)
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --protected-mode no
+    # Explicitly disable all authentication and protection
+    command: redis-server --appendonly yes --protected-mode no --requirepass ""
     networks:
       - coolify
     volumes:
@@ -59,6 +60,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    environment:
+      # Ensure no password is set via environment
+      - REDIS_PASSWORD=
+      - ALLOW_EMPTY_PASSWORD=yes
 
 networks:
   coolify:

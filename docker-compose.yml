@@ -44,7 +44,8 @@ services:
   # Redis for WebSocket state (no authentication)
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    # Explicitly disable authentication
+    command: redis-server --appendonly yes --protected-mode no --requirepass ""
     ports:
       - "6379:6379"
     volumes:
@@ -56,6 +57,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    environment:
+      # Ensure no password is set
+      - ALLOW_EMPTY_PASSWORD=yes
 
 networks:
   app-network:
