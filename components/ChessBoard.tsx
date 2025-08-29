@@ -2,7 +2,7 @@
 
 import Chessground from "react-chessground";
 import type { ReactChessGroundProps, Key, Dests } from "react-chessground";
-import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
+import type { SimpleGameState, Move, Ban, HistoryEntry } from "@/lib/game-types";
 import { parseFEN, getCurrentBan } from "@/lib/game-types";
 import "react-chessground/dist/styles/chessground.css";
 
@@ -22,6 +22,13 @@ export default function ChessBoard({
   const fenData = parseFEN(gameState.fen);
   const currentBan = getCurrentBan(gameState.fen);
   const nextAction = gameState.nextAction || "move";
+  
+  // Check if we're in check - look at the last move in history for "+" notation
+  const isInCheck = gameState.history && gameState.history.length > 0 && 
+    typeof gameState.history[0] === 'object' && 
+    (gameState.history as HistoryEntry[]).some((entry: HistoryEntry) => 
+      entry.actionType === 'move' && entry.san && entry.san.includes('+')
+    );
 
   // Solo games: Show the perspective of the acting player (playerColor from server)
   // Multiplayer: Show the player's fixed color
@@ -83,7 +90,7 @@ export default function ChessBoard({
     autoCastle: true,
     highlight: {
       lastMove: true,
-      check: gameState.inCheck === true,
+      check: isInCheck === true,
     },
     lastMove: undefined,
     animation: {
@@ -131,14 +138,32 @@ export default function ChessBoard({
   };
   console.log(config.fen);
   return (
-    <div className="chess-board-container">
+    <div className="chess-board-container relative">
       <Chessground key={boardKey} {...config} />
+      
+      {/* Game Over Overlay */}
+      {gameState.gameOver && (
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+          <div className="bg-background p-6 rounded-lg shadow-xl text-center">
+            <h2 className="text-2xl font-bold mb-2">Game Over!</h2>
+            <p className="text-lg text-foreground">{gameState.result}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Banned Move Indicator */}
+      {currentBan && (
+        <div className="absolute top-2 left-2 bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium shadow-lg">
+          Banned: {currentBan.from}→{currentBan.to}
+        </div>
+      )}
 
       <style jsx>{`
         .chess-board-container {
           width: 100%;
           max-width: 600px;
           aspect-ratio: 1;
+          position: relative;
         }
       `}</style>
     </div>
