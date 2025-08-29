@@ -1,9 +1,6 @@
-'use client';
-
-import { useParams } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
-import { useState } from 'react';
 import { Trophy, Clock, TrendingUp, Shield, User, ChevronRight } from 'lucide-react';
+import { createAuthenticatedComponent } from '@/components/auth/withAuth';
+import type { AuthSession } from '@/types/auth';
 
 interface GameRecord {
   id: string;
@@ -14,13 +11,17 @@ interface GameRecord {
   date: string;
 }
 
-export default function UserProfilePage() {
-  const params = useParams();
-  const username = params.username as string;
-  const { user } = useAuth();
+interface UserProfilePageProps {
+  params: { username: string };
+  session?: AuthSession;
+}
+
+function AuthenticatedUserProfile({ params, session }: UserProfilePageProps) {
+  const username = params.username;
+  const user = session?.user;
   
   // Guest users don't have profiles
-  const isGuest = !user?.userId;
+  const isGuest = user?.provider === 'guest';
   const isOwnProfile = user?.username === username && !isGuest;
   
   // Mock data - in production this would come from an API

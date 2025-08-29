@@ -144,6 +144,17 @@ $appDistDir = "$tempDir\app-dist"
 New-Item -ItemType Directory -Path $appDistDir -Force | Out-Null
 Copy-Item -Recurse -Force .next\standalone\* $appDistDir
 
+# Fix the package.json to ensure npm start runs the standalone server
+Write-Host "   Fixing package.json for standalone mode..." -ForegroundColor White
+$packageJsonPath = "$appDistDir\package.json"
+if (Test-Path $packageJsonPath) {
+    $packageContent = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+    # Replace scripts with just a start command that runs server.js
+    $packageContent.scripts = @{ "start" = "node server.js" }
+    $packageContent | ConvertTo-Json -Depth 10 | Set-Content $packageJsonPath
+    Write-Host "   ✓ Package.json fixed for standalone" -ForegroundColor Green
+}
+
 # Copy static files and public assets
 Copy-Item -Recurse -Force .next\static "$appDistDir\.next\static"
 if (Test-Path public) {
