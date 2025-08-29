@@ -18,18 +18,30 @@ export default function ResizableBoard({
   onBan,
   playerColor = "white",
 }: ResizableBoardProps) {
-  // Default board size in pixels
+  // Default board size in pixels - use multiples of 8 for perfect square alignment
   const MIN_SIZE = 400;
   const MAX_SIZE = 800;
   const DEFAULT_SIZE = 600;
+  const PADDING = 32; // Total padding in chess-board-outer (16px each side)
+  
+  // Helper to ensure the INNER board (after padding) is divisible by 8
+  const roundToGrid = (size: number) => {
+    // Calculate what the inner size would be
+    const innerSize = size - PADDING;
+    // Round inner size to nearest multiple of 8
+    const roundedInner = Math.round(innerSize / 8) * 8;
+    // Add padding back to get the total size
+    return roundedInner + PADDING;
+  };
   
   const [boardSize, setBoardSize] = useState(() => {
     // Load saved size from localStorage
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('boardSize');
-      return saved ? parseInt(saved, 10) : DEFAULT_SIZE;
+      const size = saved ? parseInt(saved, 10) : DEFAULT_SIZE;
+      return roundToGrid(size);
     }
-    return DEFAULT_SIZE;
+    return roundToGrid(DEFAULT_SIZE);
   });
 
   // Save board size to localStorage when it changes
@@ -40,8 +52,10 @@ export default function ResizableBoard({
   }, [boardSize]);
 
   const handleResize = useCallback((newSize: number) => {
+    // Ensure size is divisible by 8 for perfect square alignment
     const clampedSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, newSize));
-    setBoardSize(clampedSize);
+    const gridAlignedSize = roundToGrid(clampedSize);
+    setBoardSize(gridAlignedSize);
   }, []);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,9 +64,9 @@ export default function ResizableBoard({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowLeft' || e.key === '-') {
-      handleResize(boardSize - 10);
+      handleResize(boardSize - 8);
     } else if (e.key === 'ArrowRight' || e.key === '+' || e.key === '=') {
-      handleResize(boardSize + 10);
+      handleResize(boardSize + 8);
     }
   };
 
@@ -79,7 +93,7 @@ export default function ResizableBoard({
       <div className="flex items-center gap-4 bg-background-secondary rounded-lg p-2">
         {/* Decrease Button */}
         <button
-          onClick={() => handleResize(boardSize - 50)}
+          onClick={() => handleResize(boardSize - 48)}
           className="p-1 hover:bg-background-tertiary rounded transition-colors"
           aria-label="Decrease board size"
         >
@@ -94,6 +108,7 @@ export default function ResizableBoard({
             type="range"
             min={MIN_SIZE}
             max={MAX_SIZE}
+            step={8}
             value={boardSize}
             onChange={handleSliderChange}
             onKeyDown={handleKeyDown}
@@ -118,7 +133,7 @@ export default function ResizableBoard({
 
         {/* Increase Button */}
         <button
-          onClick={() => handleResize(boardSize + 50)}
+          onClick={() => handleResize(boardSize + 48)}
           className="p-1 hover:bg-background-tertiary rounded transition-colors"
           aria-label="Increase board size"
         >

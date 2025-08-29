@@ -11,16 +11,6 @@ import type {
 import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
 import { parseFEN, getCurrentBan } from "@/lib/game-types";
 
-// Dynamic import of ReactChessground with SSR disabled
-// const Chessground = dynamic(() => import("@bezalel6/react-chessground"), {
-//   ssr: false,
-//   loading: () => (
-//     <div className="flex items-center justify-center w-full h-full">
-//       <div className="loading-spinner" />
-//     </div>
-//   ),
-// });
-
 interface ChessBoardProps {
   gameState: SimpleGameState;
   onMove: (move: Move) => void;
@@ -145,7 +135,7 @@ export default function ChessBoard({
   const config: ReactChessGroundProps = {
     fen: fenData.position,
     orientation,
-    coordinates: true,
+    coordinates: false,
     autoCastle: true,
     highlight: {
       lastMove: true,
@@ -213,41 +203,6 @@ export default function ChessBoard({
       <div className="chess-board-inner">
         <Chessground key={boardKey} {...config} />
       </div>
-
-      {/* Promotion Dialog */}
-      {promotionMove && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">
-              Choose promotion piece:
-            </h3>
-            <div className="flex gap-4">
-              {(["q", "r", "b", "n"] as const).map((piece) => (
-                <button
-                  key={piece}
-                  onClick={() => {
-                    onMove({
-                      from: promotionMove.from,
-                      to: promotionMove.to,
-                      promotion: piece,
-                    });
-                    setPromotionMove(null);
-                  }}
-                  className="w-16 h-16 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center text-3xl font-bold"
-                >
-                  {piece === "q"
-                    ? "♕"
-                    : piece === "r"
-                    ? "♖"
-                    : piece === "b"
-                    ? "♗"
-                    : "♘"}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
