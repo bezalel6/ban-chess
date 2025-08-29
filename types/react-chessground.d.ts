@@ -1,7 +1,7 @@
-// Custom type definitions for react-chessground
+// Custom type definitions for @bezalel6/react-chessground
 // Based on @types/react-chessground but with all types exported
 
-declare module 'react-chessground' {
+declare module '@bezalel6/react-chessground' {
   import React from 'react';
 
   export type Color = 'white' | 'black';

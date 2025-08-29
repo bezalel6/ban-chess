@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Chessground from "react-chessground";
-import type { ReactChessGroundProps, Key, Dests } from "react-chessground";
+import Chessground from "@bezalel6/react-chessground";
+import type { ReactChessGroundProps, Key, Dests } from "@bezalel6/react-chessground";
 import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
 import { parseFEN, getCurrentBan } from "@/lib/game-types";
-import "react-chessground/dist/styles/chessground.css";
+import "@bezalel6/react-chessground/dist/styles/chessground.css";
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
