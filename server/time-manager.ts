@@ -71,17 +71,20 @@ export class TimeManager {
   }
 
   switchPlayer(newPlayer: 'white' | 'black') {
-    // Stop current player's clock and add increment
-    if (this.activePlayer) {
+    // Store the current player before stopping
+    const previousPlayer = this.activePlayer;
+    
+    // Stop current player's clock
+    if (previousPlayer) {
       this.stop();
       
       // Add increment to the player who just moved (Fischer increment)
-      if (this.activePlayer === newPlayer) {
+      if (previousPlayer === newPlayer) {
         // This shouldn't happen in normal chess, but handle it anyway
         console.warn('Switching to same player:', newPlayer);
       } else {
         // Add increment to the player who just completed their turn
-        this.clocks[this.activePlayer].remaining += this.timeControl.increment * 1000;
+        this.clocks[previousPlayer].remaining += this.timeControl.increment * 1000;
       }
     }
     

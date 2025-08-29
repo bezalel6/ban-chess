@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run ws-server\"",
+    "dev": "concurrently -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
     "dev:next": "portio --mine 3000 && next dev",
-    "dev:ws": "portio --mine 8081 && nodemon server/ws-server.ts",
+    "dev:ws": "portio --mine 8081 && tsx watch server/ws-server.ts",
     "build": "next build",
     "start": "next start",
     "ws-server": "portio --mine 8081 && tsx server/ws-server.ts",
