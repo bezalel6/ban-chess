@@ -38,6 +38,16 @@ export async function middleware(request: NextRequest) {
       return Array.from(request.cookies.getAll());
     },
     has: (name: string) => request.cookies.has(name),
+    set: () => {
+      // Middleware cannot set cookies directly in Next.js
+      // This is handled by the response headers
+      return Promise.resolve();
+    },
+    delete: () => {
+      // Middleware cannot delete cookies directly in Next.js
+      // This is handled by the response headers
+      return Promise.resolve();
+    },
   };
   
   const session = await getIronSession<SessionData>(
