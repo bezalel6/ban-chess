@@ -6,6 +6,7 @@ import { Search, ChevronDown, LogOut, Settings, User } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { signOut } from 'next-auth/react';
 import MobileMenu from './MobileMenu';
+import Image from 'next/image'; // Add this import
 
 interface NavigationDropdownProps {
   label: string;
@@ -146,7 +147,12 @@ export default function Header() {
           {/* Logo */}
           <div className="flex items-center space-x-4">
             <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <div className="text-2xl">♟️</div>
+              <Image
+                src="/logo.png"
+                alt="Ban Chess Logo"
+                width={40} // Adjust as needed
+                height={40} // Adjust as needed
+              />
               <span className="text-xl font-bold text-foreground">Ban Chess</span>
             </Link>
           </div>
