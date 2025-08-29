@@ -1,15 +1,19 @@
 'use client';
 
-import type { SimpleGameState } from '@/lib/game-types';
+import type { SimpleGameState, GameEvent } from '@/lib/game-types';
 import { parseFEN, getNextAction, getWhoBans } from '@/lib/game-types';
 import PlayerInfo from './PlayerInfo';
 import MoveList from './MoveList';
+import GameEventLog from './GameEventLog';
 
 interface GameSidebarProps {
   gameState: SimpleGameState;
+  gameEvents?: GameEvent[];
+  onGiveTime?: () => void;
+  playerColor?: 'white' | 'black';
 }
 
-export default function GameSidebar({ gameState }: GameSidebarProps) {
+export default function GameSidebar({ gameState, gameEvents = [], onGiveTime, playerColor }: GameSidebarProps) {
   const { turn } = parseFEN(gameState.fen);
   const nextAction = getNextAction(gameState.fen);
   const whoBans = getWhoBans(gameState.fen);
@@ -45,6 +49,10 @@ export default function GameSidebar({ gameState }: GameSidebarProps) {
   // Get clocks for each player
   const topClock = playerIsWhite ? gameState.clocks?.black : gameState.clocks?.white;
   const bottomClock = playerIsWhite ? gameState.clocks?.white : gameState.clocks?.black;
+  
+  // Determine if player can give time (only to opponent, only if they're playing)
+  const canGiveTimeToTop = playerColor === 'white' && !playerIsWhite || playerColor === 'black' && playerIsWhite;
+  const canGiveTimeToBottom = playerColor === 'white' && playerIsWhite || playerColor === 'black' && !playerIsWhite;
 
   return (
     <div className="bg-background-secondary rounded-lg p-4 flex flex-col shadow-lg h-fit">
@@ -53,6 +61,8 @@ export default function GameSidebar({ gameState }: GameSidebarProps) {
         isTurn={isTopActive} 
         clock={topClock}
         isClockActive={isTopActive}
+        canGiveTime={canGiveTimeToTop && !!onGiveTime && !!gameState.timeControl && !gameState.gameOver}
+        onGiveTime={onGiveTime}
       />
       <div className="my-2 border-t border-border"></div>
       {/* Fixed height for 4 rows of moves (approximately 120px) */}
@@ -60,11 +70,18 @@ export default function GameSidebar({ gameState }: GameSidebarProps) {
         <MoveList history={gameState.history || []} />
       </div>
       <div className="my-2 border-t border-border"></div>
+      {/* Event log section */}
+      <div className="h-[150px] overflow-hidden mb-2">
+        <GameEventLog events={gameEvents} />
+      </div>
+      <div className="my-2 border-t border-border"></div>
       <PlayerInfo 
         username={bottomPlayer} 
         isTurn={isBottomActive} 
         clock={bottomClock}
         isClockActive={isBottomActive}
+        canGiveTime={canGiveTimeToBottom && !!onGiveTime && !!gameState.timeControl && !gameState.gameOver}
+        onGiveTime={onGiveTime}
       />
     </div>
   );

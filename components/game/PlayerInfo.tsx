@@ -2,15 +2,18 @@
 
 import { useGameTimer } from '@/hooks/useGameTimer';
 import type { PlayerClock } from '@/lib/game-types';
+import { Plus } from 'lucide-react';
 
 interface PlayerInfoProps {
   username: string;
   isTurn: boolean;
   clock?: PlayerClock;
   isClockActive?: boolean;
+  canGiveTime?: boolean;
+  onGiveTime?: () => void;
 }
 
-export default function PlayerInfo({ username, isTurn, clock, isClockActive = false }: PlayerInfoProps) {
+export default function PlayerInfo({ username, isTurn, clock, isClockActive = false, canGiveTime = false, onGiveTime }: PlayerInfoProps) {
   const { formattedTime, isLowTime, isCritical } = useGameTimer({
     clock,
     isActive: isClockActive,
@@ -43,8 +46,20 @@ export default function PlayerInfo({ username, isTurn, clock, isClockActive = fa
         <span className={`font-semibold text-lg ${isTurn ? 'text-foreground' : 'text-foreground-muted'}`}>
           {username}
         </span>
-        <div className={getClockClassName()}>
-          {clock ? formattedTime : '5:00'}
+        <div className="flex items-center gap-2">
+          <div className={getClockClassName()}>
+            {clock ? formattedTime : '5:00'}
+          </div>
+          {canGiveTime && onGiveTime && (
+            <button
+              onClick={onGiveTime}
+              className="p-2 rounded-md hover:bg-primary/20 transition-colors group"
+              title="Give 15 seconds to opponent"
+              aria-label="Give time to opponent"
+            >
+              <Plus className="w-4 h-4 text-foreground-muted group-hover:text-primary" />
+            </button>
+          )}
         </div>
       </div>
     </div>

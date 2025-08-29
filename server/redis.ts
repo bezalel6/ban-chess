@@ -34,20 +34,22 @@ interface QueuePlayerData {
   joinedAt: number;
 }
 
+// Redis connection configuration
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+console.log('[Redis] Connecting to:', redisUrl.replace(/:[^:@]*@/, ':***@')); // Log URL with password hidden
+
 // Create main Redis client for general operations
-export const redis = new Redis(
-  process.env.REDIS_URL || 'redis://localhost:6379',
-  {
-    retryStrategy: (times) => {
-      const delay = Math.min(times * 50, 2000);
-      console.log(`[Redis] Reconnecting attempt ${times}, delay: ${delay}ms`);
-      return delay;
-    },
-    reconnectOnError: (err) => {
-      const targetError = 'READONLY';
-      if (err.message.includes(targetError)) {
-        console.log('[Redis] Reconnecting due to READONLY error');
-        return true;
+export const redis = new Redis(redisUrl, {
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    console.log(`[Redis] Reconnecting attempt ${times}, delay: ${delay}ms`);
+    return delay;
+  },
+  reconnectOnError: (err) => {
+    const targetError = 'READONLY';
+    if (err.message.includes(targetError)) {
+      console.log('[Redis] Reconnecting due to READONLY error');
+      return true;
       }
       return false;
     },

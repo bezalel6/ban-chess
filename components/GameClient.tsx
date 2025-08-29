@@ -24,7 +24,7 @@ interface GameClientProps {
 }
 
 export default function GameClient({ gameId }: GameClientProps) {
-  const { gameState, error, connected, sendAction, joinGame } = useGameState();
+  const { gameState, error, connected, sendAction, joinGame, gameEvents, giveTime } = useGameState();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const router = useRouter();
@@ -112,7 +112,12 @@ export default function GameClient({ gameId }: GameClientProps) {
           {/* Right Panel - Fixed width, vertically centered */}
           <div className={`flex items-center justify-center ${debugMode ? 'border-4 border-purple-500 relative' : ''}`}>
             {debugMode && <div className="absolute top-0 right-0 bg-purple-500 text-white p-1 z-50">RIGHT</div>}
-            <GameSidebar gameState={gameState} />
+            <GameSidebar 
+              gameState={gameState} 
+              gameEvents={gameEvents}
+              onGiveTime={giveTime}
+              playerColor={gameState.playerColor}
+            />
           </div>
         </div>
         

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ReadyState } from 'react-use-websocket';
 import { useGameWebSocket } from '@/contexts/WebSocketContext';
 import { useAuth } from '@/components/AuthProvider';
-import type { SimpleGameState, SimpleServerMsg, SimpleClientMsg, Action, HistoryEntry } from '@/lib/game-types';
+import type { SimpleGameState, SimpleServerMsg, SimpleClientMsg, Action, HistoryEntry, GameEvent } from '@/lib/game-types';
 import soundManager from '@/lib/sound-manager';
 
 export function useGameState() {
@@ -25,6 +25,7 @@ export function useGameState() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
+  const [gameEvents, setGameEvents] = useState<GameEvent[]>([]);
   
   // Refs for tracking
   const previousFen = useRef<string | null>(null);
@@ -108,6 +109,11 @@ export function useGameState() {
             if (!lastHistoryMove || lastHistoryMove.fen !== msg.lastMove.fen) {
               moveHistory.current = [...moveHistory.current, msg.lastMove];
             }
+          }
+          
+          // Handle events if provided
+          if (msg.events) {
+            setGameEvents(msg.events);
           }
           
           // Update game state with current history
@@ -194,6 +200,13 @@ export function useGameState() {
           soundManager.play('game-end'); // Play sound only when server confirms timeout
           break;
           
+        case 'game-event':
+          // Add new event to the list
+          if (msg.event) {
+            setGameEvents(prev => [...prev, msg.event]);
+          }
+          break;
+          
         case 'error':
           console.error('[GameState] Server error:', msg.message);
           setError(msg.message);
@@ -250,6 +263,14 @@ export function useGameState() {
     }
   }, [connected, send]);
   
+  const giveTime = useCallback((amount: number = 15) => {
+    if (currentGameId && connected) {
+      send({ type: 'give-time', gameId: currentGameId, amount });
+    } else {
+      console.warn('[GameState] Cannot give time: not in game or not connected');
+    }
+  }, [currentGameId, connected, send]);
+  
   return {
     // State
     gameState,
@@ -257,6 +278,7 @@ export function useGameState() {
     connected,
     isAuthenticated,
     currentGameId,
+    gameEvents,
     
     // Actions
     sendAction,
@@ -264,6 +286,7 @@ export function useGameState() {
     joinQueue,
     leaveQueue,
     joinGame,
+    giveTime,
     
     // Raw access if needed
     readyState,

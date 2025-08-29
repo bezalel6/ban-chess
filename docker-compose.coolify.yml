@@ -46,13 +46,19 @@ services:
       - coolify.port=8081
       - coolify.domain=chess-api.rndev.site
 
-  # Redis for WebSocket state
+  # Redis for WebSocket state (no authentication)
   redis:
     image: redis:7-alpine
+    command: redis-server --appendonly yes --protected-mode no
     networks:
       - coolify
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 networks:
   coolify:
