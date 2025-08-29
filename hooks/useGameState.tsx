@@ -59,9 +59,11 @@ export function useGameState() {
   useEffect(() => {
     if (!lastMessage) return;
     
+    console.log('[GameState] Raw WebSocket message:', lastMessage.data);
+    
     try {
       const msg = JSON.parse(lastMessage.data) as SimpleServerMsg;
-      console.log('[GameState] Received:', msg.type);
+      console.log('[GameState] Parsed message type:', msg.type, 'Full message:', msg);
       
       switch (msg.type) {
         case 'authenticated': {
