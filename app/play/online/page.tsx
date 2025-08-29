@@ -1,28 +1,25 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useGameWebSocket } from '@/contexts/WebSocketContext';
+import { useGameState } from '@/hooks/useGameState';
 
 export default function OnlinePlayPage() {
-  const router = useRouter();
   const { user } = useAuth();
-  const { connected, gameState } = useGameWebSocket();
+  const { connected, joinQueue, leaveQueue } = useGameState();
 
   useEffect(() => {
-    // If a game is joined (e.g., from a match), redirect to it
-    if (gameState && gameState.gameId) {
-      router.push(`/game/${gameState.gameId}`);
-    }
-  }, [gameState, router]);
+    if (!connected) return;
 
-  useEffect(() => {
-    // Redirect if not logged in
-    if (!user) {
-      router.push('/auth/signin');
-    }
-  }, [user, router]);
+    // Join matchmaking queue immediately when connected
+    // The useGameState hook will handle the redirect when matched
+    joinQueue();
+
+    // Leave queue when component unmounts
+    return () => {
+      leaveQueue();
+    };
+  }, [connected, joinQueue, leaveQueue]);
 
   if (!user) {
     return (

@@ -6,10 +6,14 @@ import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { connected, createSoloGame } = useGameState();
+  const { connected } = useGameState();
   const router = useRouter();
 
-  const joinQueue = () => {
+  const playLocal = () => {
+    router.push('/play/local');
+  };
+
+  const playOnline = () => {
     router.push('/play/online');
   };
 
@@ -62,14 +66,14 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold mb-4">Play</h2>
             <div className="flex flex-col gap-4 w-full">
               <button
-                onClick={createSoloGame}
+                onClick={playLocal}
                 disabled={!connected}
                 className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Play Solo (Practice)
               </button>
               <button
-                onClick={joinQueue}
+                onClick={playOnline}
                 disabled={!connected}
                 className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >

@@ -66,16 +66,7 @@ export function useGameState() {
       switch (msg.type) {
         case 'authenticated': {
           setIsAuthenticated(true);
-          // Check if we need to join a game based on URL
-          const path = window.location.pathname;
-          if (path.startsWith('/game/')) {
-            const gameId = path.split('/')[2];
-            if (gameId && gameId !== currentGameId) {
-              console.log('[GameState] Auto-joining game from URL:', gameId);
-              setCurrentGameId(gameId);
-              send({ type: 'join-game', gameId });
-            }
-          }
+          // Don't auto-join here - let the game page handle it
           break;
         }
           
@@ -112,20 +103,15 @@ export function useGameState() {
         case 'solo-game-created':
           console.log('[GameState] Solo game created:', msg.gameId);
           setCurrentGameId(msg.gameId);
-          send({ type: 'join-game', gameId: msg.gameId });
-          // Navigate after join
-          setTimeout(() => {
-            router.push(`/game/${msg.gameId}`);
-          }, 100);
+          // Navigate immediately - the game page will handle joining
+          router.push(`/game/${msg.gameId}`);
           break;
           
         case 'matched':
           console.log('[GameState] Matched with opponent, game:', msg.gameId);
           setCurrentGameId(msg.gameId);
-          send({ type: 'join-game', gameId: msg.gameId });
-          setTimeout(() => {
-            router.push(`/game/${msg.gameId}`);
-          }, 100);
+          // Navigate immediately - the game page will handle joining
+          router.push(`/game/${msg.gameId}`);
           break;
           
         case 'queued':
