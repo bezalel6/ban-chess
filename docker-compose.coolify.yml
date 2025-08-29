@@ -1,69 +1,110 @@
-# Coolify-optimized Docker Compose
+# 2ban-2chess Production Deployment for Coolify
+# Maximum debugging enabled - Remove debug flags after confirming everything works!
 version: '3.8'
 
 services:
-  # Next.js Application
+  # ===== NEXT.JS APPLICATION =====
   app:
     image: ghcr.io/${GITHUB_REPOSITORY:-bezalel6/2ban-2chess}:${GITHUB_SHA:-latest}
-    # No build section - using pre-built image from GitHub
+    container_name: chess-app
     ports:
-      - "3000:3000"  # Expose to host for Cloudflare tunnel
+      - "3000:3000"
     environment:
+      # Core Configuration
       - NODE_ENV=production
-      - NEXT_PUBLIC_WEBSOCKET_URL=wss://chess-api.rndev.site
-      - NEXT_PUBLIC_API_URL=https://chess.rndev.site
-      - DATABASE_URL=${DATABASE_URL}
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      
+      # IMPORTANT: Update these domains to match your setup!
+      - NEXT_PUBLIC_APP_URL=https://chess.rndev.site
+      - NEXT_PUBLIC_WEBSOCKET_URL=wss://ws.chess.rndev.site
       - NEXTAUTH_URL=https://chess.rndev.site
+      
+      # Authentication
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      
+      # Redis Connection (internal Docker network - no password for simplicity)
+      - REDIS_URL=redis://redis:6379
+      
+      # DEBUG FLAGS - Remove these after confirming everything works
+      - DEBUG=*
+      - LOG_LEVEL=debug
+      - NEXT_PUBLIC_DEBUG_MODE=true
+      
     depends_on:
-      - websocket
+      redis:
+        condition: service_healthy
     networks:
       - coolify
     labels:
-      # Coolify will auto-detect and configure these
+      # Coolify domain configuration
       - coolify.managed=true
       - coolify.port=3000
       - coolify.domain=chess.rndev.site
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
 
-  # WebSocket Server
+  # ===== WEBSOCKET SERVER =====
   websocket:
     image: ghcr.io/${GITHUB_REPOSITORY:-bezalel6/2ban-2chess}-websocket:${GITHUB_SHA:-latest}
-    # No build section - using pre-built image from GitHub
+    container_name: chess-websocket
     ports:
-      - "3001:3001"  # Expose to host for Cloudflare tunnel
+      - "3001:3001"
     environment:
+      # Core Configuration
       - NODE_ENV=production
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-MyStr0ngR3d1sP@ssw0rd!}@redis:6379
-      - ALLOWED_ORIGINS=https://chess.rndev.site
+      - PORT=3001
+      
+      # Redis Connection - MUST match redis service (no password for now)
+      - REDIS_URL=redis://redis:6379
+      
+      # CORS - Hardcoded for simplicity (not using env var)
+      - ALLOWED_ORIGINS=https://chess.rndev.site,https://ws.chess.rndev.site
+      
+      # Authentication
       - NEXTAUTH_URL=https://chess.rndev.site
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      
+      # MAXIMUM DEBUG LOGGING - See everything!
+      - DEBUG=ws:*,redis:*,game:*,auth:*
+      - LOG_LEVEL=debug
+      - VERBOSE=true
+      
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - coolify
     labels:
+      # WebSocket subdomain configuration
       - coolify.managed=true
       - coolify.port=3001
-      - coolify.domain=chess-api.rndev.site
+      - coolify.domain=ws.chess.rndev.site
+    restart: unless-stopped
 
-  # Redis for WebSocket state (with authentication)
+  # ===== REDIS (No password for simplicity) =====
   redis:
     image: redis:7-alpine
-    # Set a password - use ${REDIS_PASSWORD} from environment
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-MyStr0ngR3d1sP@ssw0rd!}
+    container_name: chess-redis
+    # Simple Redis without password to eliminate auth issues
+    command: redis-server --appendonly yes --loglevel verbose
     networks:
       - coolify
     volumes:
       - redis-data:/data
+    ports:
+      - "6379:6379"  # Expose for debugging - remove in production!
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
-      retries: 5
-    environment:
-      # Ensure no password is set via environment
-      - REDIS_PASSWORD=
-      - ALLOW_EMPTY_PASSWORD=yes
+      retries: 10
+    restart: unless-stopped
 
 networks:
   coolify:
@@ -71,3 +112,4 @@ networks:
 
 volumes:
   redis-data:
+    driver: local

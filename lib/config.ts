@@ -4,7 +4,7 @@ export const config = {
   websocket: {
     url: process.env.NEXT_PUBLIC_WEBSOCKET_URL || (
       process.env.NODE_ENV === 'production'
-        ? 'wss://chess-api.rndev.site'
+        ? 'wss://ws.chess.rndev.site'  // Changed from chess-api to ws subdomain
         : 'ws://localhost:3001'
     ),
     reconnectInterval: 3000,
