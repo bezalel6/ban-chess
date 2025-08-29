@@ -1,4 +1,5 @@
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 interface LichessProfile {
   id: string;
@@ -9,6 +10,23 @@ interface LichessProfile {
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
   providers: [
+    // Guest login provider
+    CredentialsProvider({
+      id: "guest",
+      name: "Guest",
+      credentials: {},
+      async authorize() {
+        // Generate unique guest ID
+        const guestId = `guest_${Math.random().toString(36).substring(2, 10)}`;
+        const guestName = `Guest_${guestId.substring(6)}`;
+        
+        return {
+          id: guestId,
+          name: guestName,
+          email: `${guestId}@guest.local`,
+        };
+      },
+    }),
     {
       id: "lichess",
       name: "Lichess",
@@ -58,6 +76,12 @@ export const authOptions = {
           token.username = profile.name || profile.email?.split('@')[0] || 'User';
           token.providerId = profile.sub;
           token.provider = 'google';
+        }
+        // Handle Guest profile
+        else if (account.provider === 'guest') {
+          token.username = profile.name;
+          token.providerId = profile.id;
+          token.provider = 'guest';
         }
       }
       return token;
