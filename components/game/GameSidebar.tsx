@@ -47,7 +47,7 @@ export default function GameSidebar({ gameState }: GameSidebarProps) {
   const bottomClock = playerIsWhite ? gameState.clocks?.white : gameState.clocks?.black;
 
   return (
-    <div className="bg-background-secondary rounded-lg p-4 flex flex-col h-full shadow-lg">
+    <div className="bg-background-secondary rounded-lg p-4 flex flex-col shadow-lg h-fit">
       <PlayerInfo 
         username={topPlayer} 
         isTurn={isTopActive} 
@@ -55,7 +55,10 @@ export default function GameSidebar({ gameState }: GameSidebarProps) {
         isClockActive={isTopActive}
       />
       <div className="my-2 border-t border-border"></div>
-      <MoveList history={gameState.history || []} />
+      {/* Fixed height for 4 rows of moves (approximately 120px) */}
+      <div className="h-[120px] overflow-hidden">
+        <MoveList history={gameState.history || []} />
+      </div>
       <div className="my-2 border-t border-border"></div>
       <PlayerInfo 
         username={bottomPlayer} 

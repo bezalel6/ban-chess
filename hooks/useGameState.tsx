@@ -125,6 +125,35 @@ export function useGameState() {
           console.log('[GameState] Queued, position:', msg.position);
           break;
           
+        case 'clock-update':
+          // Update only the clocks in the current game state
+          setGameState(prev => {
+            if (prev && prev.gameId === msg.gameId) {
+              return {
+                ...prev,
+                clocks: msg.clocks
+              };
+            }
+            return prev;
+          });
+          break;
+          
+        case 'timeout':
+          console.log('[GameState] Timeout in game:', msg.gameId, 'Winner:', msg.winner);
+          // Update game state with timeout result - server is source of truth
+          setGameState(prev => {
+            if (prev && prev.gameId === msg.gameId) {
+              return {
+                ...prev,
+                gameOver: true,
+                result: `${msg.winner === 'white' ? 'White' : 'Black'} wins on time!`
+              };
+            }
+            return prev;
+          });
+          soundManager.play('game-end'); // Play sound only when server confirms timeout
+          break;
+          
         case 'error':
           console.error('[GameState] Server error:', msg.message);
           setError(msg.message);

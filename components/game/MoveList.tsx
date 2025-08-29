@@ -46,13 +46,13 @@ export default function MoveList({ history }: MoveListProps) {
   }
 
   return (
-    <div className="bg-background-tertiary rounded-lg p-2 flex-grow overflow-y-auto">
+    <div className="bg-background-tertiary rounded-lg p-2 h-full overflow-y-auto">
       <table className="w-full text-xs text-center">
         <tbody>
           {movePairs.map((pair, index) => (
-            <tr key={index} className="hover:bg-background-secondary">
-              <td className="px-1 py-1 text-foreground-muted font-medium">{index + 1}.</td>
-              <td className="px-1 py-1 text-left">
+            <tr key={index} className="hover:bg-background-secondary h-7">
+              <td className="px-1 py-0.5 text-foreground-muted font-medium align-top">{index + 1}.</td>
+              <td className="px-1 py-0.5 text-left align-top">
                 {pair[0] && (
                   <div>
                     {pair[0].ban && (
@@ -62,7 +62,7 @@ export default function MoveList({ history }: MoveListProps) {
                   </div>
                 )}
               </td>
-              <td className="px-1 py-1 text-left">
+              <td className="px-1 py-0.5 text-left align-top">
                 {pair[1] && (
                   <div>
                     {pair[1].ban && (

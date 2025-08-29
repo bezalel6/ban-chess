@@ -470,8 +470,10 @@ wss.on('connection', (ws: WebSocket) => {
                 nextPlayer = chessTurn;
               }
               
-              // Switch to the next player's clock
-              room.timeManager.switchPlayer(nextPlayer);
+              // Switch to the next player's clock (only if time manager exists)
+              if (room.timeManager) {
+                room.timeManager.switchPlayer(nextPlayer);
+              }
             }
             
             broadcastGameState(gameId);

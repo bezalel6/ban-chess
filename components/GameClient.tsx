@@ -49,33 +49,44 @@ export default function GameClient({ gameId }: GameClientProps) {
   }
 
   return (
-    <div className="flex gap-4 max-w-[1800px] mx-auto p-4 min-h-screen">
-      {/* Left Panel - Game Status and Chat */}
-      <div className="hidden md:block flex-shrink-0 w-72 max-h-[calc(100vh-2rem)] overflow-y-auto">
-        <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
+    <>
+      {/* Desktop Layout - Three column layout with centered board */}
+      <div className="hidden md:flex min-h-screen justify-center items-start p-4">
+        <div className="grid grid-cols-[18rem_1fr_18rem] gap-4 max-w-[1600px] w-full">
+          {/* Left Panel - Fixed width */}
+          <div className="max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
+          </div>
+          
+          {/* Center - Board */}
+          <div className="flex justify-center">
+            <ResizableBoard
+              gameState={gameState}
+              onMove={handleMove}
+              onBan={handleBan}
+              playerColor={gameState.playerColor}
+            />
+          </div>
+          
+          {/* Right Panel - Fixed width, vertically centered */}
+          <div className="flex items-center justify-center">
+            <GameSidebar gameState={gameState} />
+          </div>
+        </div>
       </div>
-      
-      {/* Center - Resizable Chess Board */}
-      <div className="flex-1 flex items-start justify-center">
+
+      {/* Mobile Layout */}
+      <div className="md:hidden flex flex-col gap-4 p-4">
         <ResizableBoard
           gameState={gameState}
           onMove={handleMove}
           onBan={handleBan}
           playerColor={gameState.playerColor}
         />
-      </div>
-      
-      {/* Right Panel - Players and Move History */}
-      <div className="hidden md:block flex-shrink-0 w-72 max-h-[calc(100vh-2rem)] overflow-y-auto">
-        <GameSidebar gameState={gameState} />
-      </div>
-
-      {/* Mobile: Stack panels below board */}
-      <div className="md:hidden flex flex-col gap-4">
         <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
         <GameSidebar gameState={gameState} />
       </div>
-    </div>
+    </>
   );
 }
 
