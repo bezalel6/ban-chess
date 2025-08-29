@@ -1,8 +1,11 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
+import { useState } from 'react';
 
 export default function SignInPage() {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleLichessSignIn = () => {
     signIn('lichess', { callbackUrl: '/' });
   };
@@ -11,22 +14,24 @@ export default function SignInPage() {
     signIn('google', { callbackUrl: '/' });
   };
 
-  const handleGuestSignIn = async () => {
-    try {
-      const result = await signIn('guest', { 
-        redirect: false,
-        guest: 'true'
-      });
-      
-      if (result?.ok) {
-        window.location.href = '/';
-      } else {
-        console.error('Guest sign-in failed:', result?.error);
-      }
-    } catch (error) {
-      console.error('Guest sign-in error:', error);
-    }
+  const handleGuestSignIn = () => {
+    setIsLoading(true);
+    // Use NextAuth's built-in redirect - cleaner and more direct
+    signIn('guest', { callbackUrl: '/' });
   };
+
+  // Show loading state during guest authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold mb-6">Welcome to 2 Ban 2 Chess</h2>
+          <div className="loading-spinner mb-6"></div>
+          <p className="text-muted-foreground">Signing you in as guest...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">

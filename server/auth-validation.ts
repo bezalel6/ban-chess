@@ -1,9 +1,10 @@
 import type { IncomingMessage } from 'http';
+import type { AuthProvider } from '../types/auth';
 
 interface AuthToken {
   username: string;
   providerId: string;
-  provider: 'lichess' | 'google';
+  provider: AuthProvider;
 }
 
 /**
@@ -18,7 +19,7 @@ export async function validateNextAuthToken(request: IncomingMessage): Promise<A
     const url = new URL(request.url || '', `http://${request.headers.host}`);
     const username = url.searchParams.get('username');
     const providerId = url.searchParams.get('providerId');
-    const provider = url.searchParams.get('provider') as 'lichess' | 'google' | null;
+    const provider = url.searchParams.get('provider') as AuthProvider | null;
 
     if (!username || !providerId || !provider) {
       return null;

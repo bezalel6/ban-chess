@@ -5,7 +5,7 @@ import { useGameState } from '@/hooks/useGameState';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { connected } = useGameState();
   const router = useRouter();
 
@@ -23,6 +23,11 @@ export default function HomePage() {
       router.push(`/game/${gameId}`);
     }
   };
+
+  // Don't show anything while loading to avoid flash
+  if (loading) {
+    return null;
+  }
 
   // Show sign-in prompt if not authenticated
   if (!user) {

@@ -1,5 +1,6 @@
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import type { AuthProvider } from "../types/auth";
 
 interface LichessProfile {
   id: string;
@@ -65,25 +66,26 @@ export const authOptions = {
   ],
   callbacks: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async jwt({ token, account, profile }: any) {
-      if (account && profile) {
+    async jwt({ token, account, profile, user }: any) {
+      // On first login, account will be present
+      if (account) {
         // Handle Lichess profile
-        if (account.provider === 'lichess') {
+        if (account.provider === 'lichess' && profile) {
           const lichessProfile = profile as LichessProfile;
           token.username = lichessProfile.username;
           token.providerId = lichessProfile.id;
           token.provider = 'lichess';
         }
         // Handle Google profile
-        else if (account.provider === 'google') {
+        else if (account.provider === 'google' && profile) {
           token.username = profile.name || profile.email?.split('@')[0] || 'User';
           token.providerId = profile.sub;
           token.provider = 'google';
         }
-        // Handle Guest profile
-        else if (account.provider === 'guest') {
-          token.username = profile.name;
-          token.providerId = profile.id;
+        // Handle Guest login (CredentialsProvider)
+        else if (account.provider === 'guest' && user) {
+          token.username = user.name;
+          token.providerId = user.id;
           token.provider = 'guest';
         }
       }
@@ -94,7 +96,7 @@ export const authOptions = {
       if (session.user) {
         session.user.username = token.username as string;
         session.user.providerId = token.providerId as string;
-        session.user.provider = token.provider as 'lichess' | 'google' | 'guest';
+        session.user.provider = token.provider as AuthProvider;
       }
       return session;
     },
