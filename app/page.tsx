@@ -17,12 +17,6 @@ export default function HomePage() {
     router.push('/play/online');
   };
 
-  const joinGameById = () => {
-    const gameId = prompt('Enter Game ID:');
-    if (gameId) {
-      router.push(`/game/${gameId}`);
-    }
-  };
 
   // Don't show anything while loading to avoid flash
   if (loading) {
@@ -83,13 +77,6 @@ export default function HomePage() {
                 className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Find Opponent
-              </button>
-              <button
-                onClick={joinGameById}
-                disabled={!connected}
-                className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Join with Game ID
               </button>
             </div>
           </div>
