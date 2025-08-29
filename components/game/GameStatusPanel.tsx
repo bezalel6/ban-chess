@@ -1,7 +1,7 @@
 'use client';
 
 import type { SimpleGameState } from '@/lib/game-types';
-import { getCurrentBan } from '@/lib/game-types';
+import { getCurrentBan, parseFEN } from '@/lib/game-types';
 
 interface GameStatusPanelProps {
   gameState: SimpleGameState;
@@ -22,7 +22,8 @@ export default function GameStatusPanel({ gameState, onNewGame }: GameStatusPane
   
   // Determine game mode
   const gameMode = gameState.isSoloGame ? 'Solo' : 'Multiplayer';
-  const isPlayerTurn = gameState.turn === gameState.playerColor;
+  const { turn } = parseFEN(gameState.fen);
+  const isPlayerTurn = turn === gameState.playerColor;
   
   return (
     <div className="bg-background-secondary rounded-lg p-3 flex flex-col">
