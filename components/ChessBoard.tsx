@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import Chessground from "@bezalel6/react-chessground";
-import type { ReactChessGroundProps, Key, Dests } from "@bezalel6/react-chessground";
+import "@bezalel6/react-chessground/dist/style.css";
+import { useState } from "react";
+import type {
+  ReactChessGroundProps,
+  Key,
+  Dests,
+} from "@bezalel6/react-chessground";
 import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
 import { parseFEN, getCurrentBan } from "@/lib/game-types";
-import "@bezalel6/react-chessground/dist/styles/chessground.css";
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
@@ -18,10 +22,10 @@ interface ChessBoardProps {
 function getPieceAt(fen: string, square: string): string | null {
   const file = square.charCodeAt(0) - 97; // a=0, b=1, etc.
   const rank = 8 - parseInt(square[1]); // 8=0, 7=1, etc.
-  
-  const rows = fen.split('/');
+
+  const rows = fen.split("/");
   const row = rows[rank];
-  
+
   let col = 0;
   for (const char of row) {
     if (/\d/.test(char)) {
@@ -42,7 +46,10 @@ export default function ChessBoard({
   onBan,
   playerColor = "white",
 }: ChessBoardProps) {
-  const [promotionMove, setPromotionMove] = useState<{from: string, to: string} | null>(null);
+  const [promotionMove, setPromotionMove] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
   // Safety check: If gameState is invalid, return a placeholder
   if (!gameState || !gameState.fen) {
     return (
@@ -151,10 +158,10 @@ export default function ChessBoard({
           } else {
             // Check if this is a pawn promotion
             const piece = getPieceAt(fenData.position, orig);
-            const isPromotion = piece === 'P' || piece === 'p';
+            const isPromotion = piece === "P" || piece === "p";
             const destRank = dest[1];
-            
-            if (isPromotion && (destRank === '8' || destRank === '1')) {
+
+            if (isPromotion && (destRank === "8" || destRank === "1")) {
               // Store the move and show promotion dialog
               setPromotionMove({ from: orig, to: dest });
             } else {
@@ -195,14 +202,16 @@ export default function ChessBoard({
     <div className="chess-board-wrapper">
       <div className="chess-board-container">
         <Chessground key={boardKey} {...config} />
-        
+
         {/* Promotion Dialog */}
         {promotionMove && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 shadow-xl">
-              <h3 className="text-lg font-semibold mb-4">Choose promotion piece:</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Choose promotion piece:
+              </h3>
               <div className="flex gap-4">
-                {(['q', 'r', 'b', 'n'] as const).map((piece) => (
+                {(["q", "r", "b", "n"] as const).map((piece) => (
                   <button
                     key={piece}
                     onClick={() => {
@@ -215,7 +224,13 @@ export default function ChessBoard({
                     }}
                     className="w-16 h-16 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center text-3xl font-bold"
                   >
-                    {piece === 'q' ? '♕' : piece === 'r' ? '♖' : piece === 'b' ? '♗' : '♘'}
+                    {piece === "q"
+                      ? "♕"
+                      : piece === "r"
+                      ? "♖"
+                      : piece === "b"
+                      ? "♗"
+                      : "♘"}
                   </button>
                 ))}
               </div>
