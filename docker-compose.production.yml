@@ -19,7 +19,7 @@ services:
       - HOSTNAME=0.0.0.0
       - PORT=3000
       # Copy your production env vars here
-      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws.chess.rndev.site}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws-chess.rndev.site}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - DATABASE_URL=${DATABASE_URL}
@@ -58,7 +58,7 @@ services:
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws.chess.rndev.site}
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws-chess.rndev.site}
     restart: unless-stopped
     depends_on:
       redis:

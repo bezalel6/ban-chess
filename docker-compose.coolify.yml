@@ -11,7 +11,7 @@ services:
       - "3000:3000"  # Expose to host for Cloudflare tunnel
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_WEBSOCKET_URL=wss://ws.chess.rndev.site
+      - NEXT_PUBLIC_WEBSOCKET_URL=wss://ws-chess.rndev.site
       - NEXT_PUBLIC_API_URL=https://chess.rndev.site
       - DATABASE_URL=${DATABASE_URL}
       - NEXTAUTH_URL=https://chess.rndev.site
@@ -46,7 +46,7 @@ services:
     labels:
       - coolify.managed=true
       - coolify.port=3001
-      - coolify.domain=ws.chess.rndev.site
+      - coolify.domain=ws-chess.rndev.site
 
   # Redis for WebSocket state (with authentication)
   redis:

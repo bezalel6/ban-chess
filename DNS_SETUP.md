@@ -5,16 +5,16 @@
 | Subdomain | Type | Points To | Proxy Status | Purpose |
 |-----------|------|-----------|--------------|---------|
 | `chess` | A | Your-Server-IP | 🟠 Proxied | Main app |
-| `ws.chess` | A | Your-Server-IP | ⚪ DNS Only | WebSocket |
+| `ws-chess` | A | Your-Server-IP | ⚪ DNS Only | WebSocket |
 
 ## Full URLs
 - Main App: `https://chess.rndev.site`
-- WebSocket: `wss://ws.chess.rndev.site`
+- WebSocket: `wss://ws-chess.rndev.site`
 
 ## Coolify Settings
 In Coolify, set these domains for each service:
 - **app** container → `chess.rndev.site`
-- **websocket** container → `ws.chess.rndev.site`
+- **websocket** container → `ws-chess.rndev.site`
 - **redis** container → No domain (internal only)
 
 ## Important Notes
