@@ -73,7 +73,12 @@ export function useGameState() {
         }
           
         case 'state':
-          setGameState(msg);
+          setGameState({
+            ...msg,
+            timeControl: msg.timeControl,
+            clocks: msg.clocks,
+            startTime: msg.startTime
+          });
           setCurrentGameId(msg.gameId);
           // Play sound effects for moves
           if (previousFen.current && msg.fen !== previousFen.current) {

@@ -1,7 +1,8 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { BanChess } from 'ban-chess.ts';
-import type { SimpleServerMsg, SimpleClientMsg } from '../lib/game-types';
+import type { SimpleServerMsg, SimpleClientMsg, TimeControl } from '../lib/game-types';
 import { v4 as uuidv4 } from 'uuid';
+import { TimeManager } from './time-manager';
 
 interface Player {
   userId: string;
@@ -14,6 +15,9 @@ interface GameRoom {
   whitePlayerId?: string;
   blackPlayerId?: string;
   isSoloGame?: boolean;
+  timeControl?: TimeControl;
+  timeManager?: TimeManager;
+  startTime?: number;
 }
 
 const wss = new WebSocketServer({ port: 8081 });
@@ -48,6 +52,78 @@ function getPlayerUsernames(room: GameRoom): { white?: string; black?: string } 
   }
   
   return usernames;
+}
+
+function handleTimeout(gameId: string, winner: 'white' | 'black') {
+  const room = games.get(gameId);
+  if (!room) return;
+  
+  console.log(`[handleTimeout] Player ${winner === 'white' ? 'black' : 'white'} ran out of time in game ${gameId}`);
+  
+  // Stop the time manager
+  if (room.timeManager) {
+    room.timeManager.destroy();
+  }
+  
+  // Send timeout message
+  const timeoutMsg: SimpleServerMsg = {
+    type: 'timeout',
+    gameId,
+    winner
+  };
+  
+  const playersToNotify = new Set<string>();
+  if (room.whitePlayerId) playersToNotify.add(room.whitePlayerId);
+  if (room.blackPlayerId) playersToNotify.add(room.blackPlayerId);
+  
+  playersToNotify.forEach(playerId => {
+    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
+    if (player && player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(JSON.stringify(timeoutMsg));
+    }
+  });
+  
+  // Update game state to show timeout
+  const stateMsg: SimpleServerMsg = {
+    type: 'state',
+    fen: room.game.fen(),
+    gameId,
+    players: getPlayerUsernames(room),
+    isSoloGame: room.isSoloGame,
+    gameOver: true,
+    result: `${winner === 'white' ? 'White' : 'Black'} wins on time!`,
+    timeControl: room.timeControl,
+    clocks: room.timeManager ? room.timeManager.getClocks() : undefined
+  };
+  
+  playersToNotify.forEach(playerId => {
+    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
+    if (player && player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(JSON.stringify(stateMsg));
+    }
+  });
+}
+
+function broadcastClockUpdate(gameId: string) {
+  const room = games.get(gameId);
+  if (!room || !room.timeManager) return;
+  
+  const clockMsg: SimpleServerMsg = {
+    type: 'clock-update',
+    gameId,
+    clocks: room.timeManager.getClocks()
+  };
+  
+  const playersToNotify = new Set<string>();
+  if (room.whitePlayerId) playersToNotify.add(room.whitePlayerId);
+  if (room.blackPlayerId) playersToNotify.add(room.blackPlayerId);
+  
+  playersToNotify.forEach(playerId => {
+    const player = Array.from(authenticatedPlayers.values()).find(p => p.userId === playerId);
+    if (player && player.ws.readyState === WebSocket.OPEN) {
+      player.ws.send(JSON.stringify(clockMsg));
+    }
+  });
 }
 
 function broadcastGameState(gameId: string) {
@@ -120,6 +196,12 @@ function broadcastGameState(gameId: string) {
       result: isCheckmate ? 
         `${chessTurn === 'white' ? 'Black' : 'White'} wins by checkmate!` : 
         isStalemate ? 'Draw by stalemate' : 'Game over'
+    }),
+    // Add time control data if present
+    ...(room.timeControl && {
+      timeControl: room.timeControl,
+      clocks: room.timeManager ? room.timeManager.getClocks() : undefined,
+      startTime: room.startTime
     })
   };
   
@@ -146,13 +228,25 @@ function matchPlayers() {
     const player1 = queue.shift()!;
     const player2 = queue.shift()!;
     const gameId = uuidv4();
+    const timeControl = { initial: 300, increment: 0 }; // Default 5+0 for matchmaking
     
     const room: GameRoom = {
       game: new BanChess(),
       whitePlayerId: player1.userId,
       blackPlayerId: player2.userId,
-      isSoloGame: false
+      isSoloGame: false,
+      timeControl,
+      startTime: Date.now()
     };
+    
+    // Create time manager for multiplayer games
+    room.timeManager = new TimeManager(
+      timeControl,
+      (winner) => handleTimeout(gameId, winner),
+      () => broadcastClockUpdate(gameId)
+    );
+    // Start white's clock
+    room.timeManager.start('white');
     
     games.set(gameId, room);
     playerToGame.set(player1.userId, gameId);
@@ -164,7 +258,8 @@ function matchPlayers() {
         type: 'matched',
         gameId,
         color: 'white',
-        opponent: player2.username
+        opponent: player2.username,
+        timeControl
       } as SimpleServerMsg));
     }
     
@@ -173,11 +268,12 @@ function matchPlayers() {
         type: 'matched',
         gameId,
         color: 'black',
-        opponent: player1.username
+        opponent: player1.username,
+        timeControl
       } as SimpleServerMsg));
     }
     
-    console.log(`Matched ${player1.username} vs ${player2.username} in game ${gameId}`);
+    console.log(`Matched ${player1.username} vs ${player2.username} in game ${gameId} with time control ${timeControl.initial}+${timeControl.increment}`);
     updateQueuePositions();
   }
 }
@@ -279,18 +375,33 @@ wss.on('connection', (ws: WebSocket) => {
           }
           
           const gameId = uuidv4();
+          const timeControl = msg.timeControl || { initial: 300, increment: 0 }; // Default 5+0
+          
           const room: GameRoom = {
             game: new BanChess(),
             whitePlayerId: currentPlayer.userId,
             blackPlayerId: currentPlayer.userId,
-            isSoloGame: true
+            isSoloGame: true,
+            timeControl,
+            startTime: Date.now()
           };
+          
+          // Create time manager if time control is specified
+          if (timeControl) {
+            room.timeManager = new TimeManager(
+              timeControl,
+              (winner) => handleTimeout(gameId, winner),
+              () => broadcastClockUpdate(gameId)
+            );
+            // Start white's clock (white always moves first)
+            room.timeManager.start('white');
+          }
           
           games.set(gameId, room);
           playerToGame.set(currentPlayer.userId, gameId);
           
-          ws.send(JSON.stringify({ type: 'solo-game-created', gameId } as SimpleServerMsg));
-          console.log(`Solo game ${gameId} created for ${currentPlayer.username}`);
+          ws.send(JSON.stringify({ type: 'solo-game-created', gameId, timeControl } as SimpleServerMsg));
+          console.log(`Solo game ${gameId} created for ${currentPlayer.username} with time control ${timeControl.initial}+${timeControl.increment}`);
           break;
         }
         
@@ -334,7 +445,41 @@ wss.on('connection', (ws: WebSocket) => {
           
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);
+            
+            // Handle clock switching after successful move/ban
+            if (room.timeManager && !room.game.gameOver()) {
+              const fen = room.game.fen();
+              const fenParts = fen.split(' ');
+              const chessTurn = fenParts[1] === 'w' ? 'white' : 'black';
+              const banState = fenParts[6];
+              const isNextActionBan = banState && banState.includes(':ban');
+              
+              // Determine who acts next
+              let nextPlayer: 'white' | 'black';
+              if (room.isSoloGame) {
+                // In solo games, determine the acting player
+                if (isNextActionBan) {
+                  // In ban phase, the other player acts
+                  nextPlayer = chessTurn === 'white' ? 'black' : 'white';
+                } else {
+                  // In move phase, the current turn player acts
+                  nextPlayer = chessTurn;
+                }
+              } else {
+                // In multiplayer, simply follow the turn
+                nextPlayer = chessTurn;
+              }
+              
+              // Switch to the next player's clock
+              room.timeManager.switchPlayer(nextPlayer);
+            }
+            
             broadcastGameState(gameId);
+            
+            // Stop clocks if game is over
+            if (room.game.gameOver() && room.timeManager) {
+              room.timeManager.destroy();
+            }
           } else {
             console.log(`Invalid action in game ${gameId}:`, action, 'Error:', result.error);
             ws.send(JSON.stringify({ 

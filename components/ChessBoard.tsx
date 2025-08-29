@@ -165,23 +165,9 @@ export default function ChessBoard({
 
   return (
     <div className="chess-board-wrapper">
-      {/* Board Container - Clean and simple */}
       <div className="chess-board-container">
         <Chessground key={boardKey} {...config} />
       </div>
-
-      <style jsx>{`
-        .chess-board-wrapper {
-          width: 100%;
-          aspect-ratio: 1;
-        }
-        .chess-board-container {
-          width: 100%;
-          height: 100%;
-          position: relative;
-          isolation: isolate;
-        }
-      `}</style>
     </div>
   );
 }

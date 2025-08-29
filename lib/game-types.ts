@@ -24,6 +24,18 @@ export interface HistoryEntry {
 
 export type Action = { move: Move } | { ban: Ban };
 
+// Time control configuration
+export interface TimeControl {
+  initial: number;      // Initial time in seconds
+  increment: number;    // Fischer increment in seconds
+}
+
+// Player clock state
+export interface PlayerClock {
+  remaining: number;    // Milliseconds remaining
+  lastUpdate: number;   // Server timestamp of last update
+}
+
 // Minimal game state - FEN contains everything we need
 export interface SimpleGameState {
   fen: string;  // Extended FEN with ban state from ban-chess.ts
@@ -40,25 +52,33 @@ export interface SimpleGameState {
   result?: string;
   inCheck?: boolean;  // Whether the current position has a check
   history?: HistoryEntry[] | string[]; // Move history - can be strings or HistoryEntry objects from ban-chess.ts
+  timeControl?: TimeControl;  // Time control settings
+  clocks?: {
+    white: PlayerClock;
+    black: PlayerClock;
+  };
+  startTime?: number;   // Game start timestamp
 }
 
 // Server messages - simplified
 export type SimpleServerMsg = 
-  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean }
-  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean }
+  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number }
+  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean; timeControl?: TimeControl }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
-  | { type: 'matched'; gameId: string; color: 'white' | 'black'; opponent?: string }
+  | { type: 'matched'; gameId: string; color: 'white' | 'black'; opponent?: string; timeControl?: TimeControl }
   | { type: 'error'; message: string }
-  | { type: 'solo-game-created'; gameId: string };
+  | { type: 'solo-game-created'; gameId: string; timeControl?: TimeControl }
+  | { type: 'clock-update'; gameId: string; clocks: { white: PlayerClock; black: PlayerClock } }
+  | { type: 'timeout'; gameId: string; winner: 'white' | 'black' };
 
 // Client messages - simplified
 export type SimpleClientMsg =
   | { type: 'authenticate'; userId: string; username: string }
   | { type: 'join-game'; gameId: string }
-  | { type: 'join-queue' }
+  | { type: 'join-queue'; timeControl?: TimeControl }
   | { type: 'leave-queue' }
-  | { type: 'create-solo-game' }
+  | { type: 'create-solo-game'; timeControl?: TimeControl }
   | { type: 'action'; gameId: string; action: Action };  // Combined move and ban
 
 // Helper functions to parse FEN

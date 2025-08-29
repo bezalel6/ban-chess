@@ -8,7 +8,7 @@ import type { Move, Ban } from '@/lib/game-types';
 import GameSidebar from './game/GameSidebar';
 import GameStatusPanel from './game/GameStatusPanel';
 
-const ChessBoard = dynamic(() => import('@/components/ChessBoard'), {
+const ResizableBoard = dynamic(() => import('@/components/game/ResizableBoard'), {
   ssr: false,
   loading: () => <div className="aspect-square bg-background-secondary rounded animate-pulse" />,
 });
@@ -49,15 +49,15 @@ export default function GameClient({ gameId }: GameClientProps) {
   }
 
   return (
-    <div className="grid grid-cols-12 gap-4 max-w-[1400px] mx-auto p-4">
+    <div className="flex gap-4 max-w-[1800px] mx-auto p-4 min-h-screen">
       {/* Left Panel - Game Status and Chat */}
-      <div className="col-span-12 md:col-span-3 order-2 md:order-1">
+      <div className="hidden md:block flex-shrink-0 w-72 max-h-[calc(100vh-2rem)] overflow-y-auto">
         <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
       </div>
       
-      {/* Center - Chess Board */}
-      <div className="col-span-12 md:col-span-6 order-1 md:order-2">
-        <ChessBoard
+      {/* Center - Resizable Chess Board */}
+      <div className="flex-1 flex items-start justify-center">
+        <ResizableBoard
           gameState={gameState}
           onMove={handleMove}
           onBan={handleBan}
@@ -66,7 +66,13 @@ export default function GameClient({ gameId }: GameClientProps) {
       </div>
       
       {/* Right Panel - Players and Move History */}
-      <div className="col-span-12 md:col-span-3 order-3">
+      <div className="hidden md:block flex-shrink-0 w-72 max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <GameSidebar gameState={gameState} />
+      </div>
+
+      {/* Mobile: Stack panels below board */}
+      <div className="md:hidden flex flex-col gap-4">
+        <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
         <GameSidebar gameState={gameState} />
       </div>
     </div>
