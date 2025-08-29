@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import { useState, useTransition } from 'react';
+import { Search, ChevronDown, LogOut, Settings, User } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { signOut } from 'next-auth/react';
 import MobileMenu from './MobileMenu';
 
 interface NavigationDropdownProps {
@@ -51,6 +52,13 @@ function NavigationDropdown({ label, items }: NavigationDropdownProps) {
 
 function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSignOut = () => {
+    startTransition(() => {
+      signOut({ callbackUrl: '/' });
+    });
+  };
 
   return (
     <div className="relative">
@@ -64,29 +72,36 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
           </span>
         </div>
         <span className="text-sm font-medium">{user.username || 'User'}</span>
+        <div className="w-2 h-2 bg-green-500 rounded-full ml-1" title="Online" />
       </button>
       
       {isOpen && (
         <div className="absolute top-full right-0 w-48 bg-background-secondary border border-border rounded-lg shadow-lg py-2 z-50 mt-1">
           <Link
             href={`/user/${user.username || 'profile'}`}
-            className="block px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+            className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+            onClick={() => setIsOpen(false)}
           >
+            <User className="h-4 w-4 mr-2" />
             Profile
           </Link>
           <Link
             href="/settings"
-            className="block px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+            className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+            onClick={() => setIsOpen(false)}
           >
+            <Settings className="h-4 w-4 mr-2" />
             Settings
           </Link>
           <div className="border-t border-border my-1"></div>
-          <Link
-            href="/auth/logout"
-            className="block px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+          <button
+            onClick={handleSignOut}
+            disabled={isPending}
+            className="flex items-center w-full px-4 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
           >
-            Sign out
-          </Link>
+            <LogOut className="h-4 w-4 mr-2" />
+            {isPending ? 'Signing out...' : 'Sign out'}
+          </button>
         </div>
       )}
     </div>

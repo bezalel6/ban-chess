@@ -93,6 +93,16 @@ a {
 
 /* Utility classes using @apply */
 @layer components {
+  /* Global button styles - ensure all buttons have pointer cursor */
+  button {
+    @apply cursor-pointer;
+  }
+  
+  /* Preserve cursor-not-allowed for disabled buttons */
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
+  
   .container-custom {
     @apply max-w-6xl mx-auto px-5;
   }

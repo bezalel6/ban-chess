@@ -1,3 +1,5 @@
+import { DefaultSession } from "next-auth"
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -8,7 +10,7 @@ declare module "next-auth" {
       username: string;
       providerId: string;
       provider: 'lichess' | 'google';
-    }
+    } & DefaultSession["user"]
   }
 
   interface User {

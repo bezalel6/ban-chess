@@ -23,9 +23,10 @@ export const authOptions = {
       userinfo: "https://lichess.org/api/account",
       clientId: process.env.LICHESS_CLIENT_ID || "2ban-2chess-local-dev",
       clientSecret: "", // Lichess doesn't require a secret for public clients
-      checks: ["pkce", "state"],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      checks: ["pkce" as any, "state" as any],
       client: {
-        token_endpoint_auth_method: "none",
+        token_endpoint_auth_method: "none" as const,
       },
       profile(profile: LichessProfile) {
         return {
