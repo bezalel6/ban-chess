@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { getCurrentUser } from "@/lib/auth-unified";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import UserDisplay from "@/components/UserDisplay";
+import ConnectionStatusOverlay from "@/components/ConnectionStatusOverlay";
 
 export const metadata: Metadata = {
   title: "2 Ban 2 Chess",
@@ -24,6 +25,7 @@ export default async function RootLayout({
       <body className="bg-background text-foreground min-h-screen">
         <AuthProvider userPromise={Promise.resolve(user)}>
           <WebSocketProvider>
+            <ConnectionStatusOverlay />
             <UserDisplay />
             {/* Simple persistent header */}
             <header className="border-b border-border bg-background p-4">

@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useGameWebSocket } from '@/contexts/WebSocketContext';
+import { useGameState } from '@/hooks/useGameState';
 import type { Move, Ban } from '@/lib/game-types';
 import GameSidebar from './game/GameSidebar';
 
@@ -15,7 +15,7 @@ interface GameClientProps {
 }
 
 export default function GameClient({ gameId }: GameClientProps) {
-  const { gameState, error, connected, sendAction } = useGameWebSocket();
+  const { gameState, error, connected, sendAction } = useGameState();
 
   const handleMove = (move: Move) => sendAction({ move });
   const handleBan = (ban: Ban) => sendAction({ ban });

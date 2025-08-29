@@ -1,13 +1,17 @@
 'use client';
 
 import { useAuth } from '@/components/AuthProvider';
-import { useGameWebSocket } from '@/contexts/WebSocketContext';
+import { useGameState } from '@/hooks/useGameState';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { createSoloGame, joinQueue, connected } = useGameWebSocket();
+  const { connected, createSoloGame } = useGameState();
   const router = useRouter();
+
+  const joinQueue = () => {
+    router.push('/play/online');
+  };
 
   const joinGameById = () => {
     const gameId = prompt('Enter Game ID:');
@@ -16,6 +20,7 @@ export default function HomePage() {
     }
   };
 
+  // Show sign-in prompt if not authenticated
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
@@ -30,6 +35,20 @@ export default function HomePage() {
     );
   }
 
+  // Show loading state while connecting
+  if (!connected) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">2 Ban 2 Chess</h1>
+          <p className="text-foreground-muted mb-4">Playing as {user.username}</p>
+          <div className="loading-spinner mb-4"></div>
+          <p className="text-foreground-muted">Connecting to game server...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -38,7 +57,6 @@ export default function HomePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Column: Actions */}
         <div className="md:col-span-2 space-y-4">
           <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-4">Play</h2>
@@ -68,7 +86,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Right Column: Info */}
         <div className="space-y-8">
           <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-4">Live Games</h2>

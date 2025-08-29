@@ -1,11 +1,17 @@
-'use client';
+"use client";
 
-import { createContext, useContext, ReactNode } from 'react';
-import useWebSocket from 'react-use-websocket';
-import { useAuth } from '@/components/AuthProvider';
+import { createContext, useContext, ReactNode } from "react";
+import useWebSocket from "react-use-websocket";
+import { useAuth } from "@/components/AuthProvider";
+
+interface WebSocketContextType {
+  sendMessage: (message: string) => void;
+  lastMessage: MessageEvent<string> | null;
+  readyState: number;
+}
 
 // This context will provide the raw functions from the hook
-const WebSocketContext = createContext<any>(null);
+const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
 export function useGameWebSocket() {
   return useContext(WebSocketContext);
@@ -13,23 +19,14 @@ export function useGameWebSocket() {
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const socketUrl = user ? 'ws://localhost:8081' : null;
+  const socketUrl = user ? "ws://localhost:8081" : null;
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
     share: true, // This is the most important part
     shouldReconnect: () => true,
   });
 
-  // Authenticate on connect
-  useEffect(() => {
-    if (user && readyState === ReadyState.OPEN) {
-      sendMessage(JSON.stringify({ 
-        type: 'authenticate', 
-        userId: user.userId, 
-        username: user.username 
-      }));
-    }
-  }, [user, readyState, sendMessage]);
+  // Remove authentication from here - it's handled in useGameState hook
 
   const value = {
     sendMessage,
