@@ -311,14 +311,14 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container-custom py-8">
-        <h1 className="text-3xl font-bold text-foreground mb-8">
+      <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 lg:mb-8">
           Game Analysis
         </h1>
         
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
           {/* Left Sidebar - Import/Export */}
-          <div className="w-80 flex-shrink-0">
+          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
             <ImportExportPanel 
               onImport={handleImport}
               onExport={handleExport}
@@ -327,13 +327,15 @@ export default function AnalysisPage() {
           </div>
           
           {/* Center - Board and Controls */}
-          <div className="flex-1 flex flex-col items-center gap-4">
-            <ResizableBoard
-              gameState={currentGameState}
-              onMove={handleMove}
-              onBan={handleBan}
-              playerColor="white"
-            />
+          <div className="flex-1 min-w-0 flex flex-col items-center gap-4">
+            <div className="w-full max-w-2xl">
+              <ResizableBoard
+                gameState={currentGameState}
+                onMove={handleMove}
+                onBan={handleBan}
+                playerColor="white"
+              />
+            </div>
             
             <NavigationControls
               onStart={goToStart}
@@ -346,7 +348,7 @@ export default function AnalysisPage() {
           </div>
           
           {/* Right Sidebar - Moves List */}
-          <div className="w-80 flex-shrink-0">
+          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
             <MovesList
               moves={moves}
               currentMoveIndex={currentMoveIndex}

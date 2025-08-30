@@ -73,8 +73,8 @@ export default function ImportExportPanel({
   }, [exportText, onExport]);
 
   return (
-    <div className="bg-background-secondary rounded-xl p-6 shadow-lg">
-      <h2 className="text-xl font-bold text-foreground mb-6">
+    <div className="bg-background-secondary rounded-xl p-4 sm:p-6 shadow-lg w-full">
+      <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">
         Import / Export Game
       </h2>
 
@@ -94,12 +94,12 @@ Example: b:e2e4 m:e7e5 b:d2d4 m:d7d5"
                    focus:outline-none focus:ring-2 focus:ring-lichess-orange-500"
         />
         
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-col sm:flex-row gap-2 mt-3">
           <button
             onClick={handleImport}
             disabled={!importText.trim()}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 
-                     bg-lichess-orange-500 text-white rounded-lg font-medium
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 
+                     bg-lichess-orange-500 text-white rounded-lg font-medium text-sm
                      hover:bg-lichess-orange-600 transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -107,8 +107,8 @@ Example: b:e2e4 m:e7e5 b:d2d4 m:d7d5"
             Import
           </button>
           
-          <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 
-                         bg-background-tertiary text-foreground rounded-lg font-medium
+          <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 
+                         bg-background-tertiary text-foreground rounded-lg font-medium text-sm
                          hover:bg-lichess-brown-500/20 transition-colors cursor-pointer">
             <ClipboardIcon className="w-4 h-4" />
             Load File
@@ -145,39 +145,39 @@ Example: b:e2e4 m:e7e5 b:d2d4 m:d7d5"
                    focus:outline-none focus:ring-2 focus:ring-lichess-orange-500"
         />
         
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-col sm:flex-row gap-2 mt-3">
           <button
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 
-                     bg-lichess-orange-500 text-white rounded-lg font-medium
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 
+                     bg-lichess-orange-500 text-white rounded-lg font-medium text-sm
                      hover:bg-lichess-orange-600 transition-colors"
           >
-            <DownloadIcon className="w-4 h-4" />
-            Generate
+            <DownloadIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="truncate">Generate</span>
           </button>
           
           <button
             onClick={handleCopy}
             disabled={!exportText && !currentNotation}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 
-                     bg-background-tertiary text-foreground rounded-lg font-medium
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 
+                     bg-background-tertiary text-foreground rounded-lg font-medium text-sm
                      hover:bg-lichess-brown-500/20 transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <ClipboardCopyIcon className="w-4 h-4" />
-            Copy
+            <ClipboardCopyIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="truncate">Copy</span>
           </button>
           
           <button
             onClick={handleFileSave}
             disabled={!exportText && !currentNotation}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 
-                     bg-background-tertiary text-foreground rounded-lg font-medium
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-2 
+                     bg-background-tertiary text-foreground rounded-lg font-medium text-sm
                      hover:bg-lichess-brown-500/20 transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <DownloadIcon className="w-4 h-4" />
-            Save
+            <DownloadIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="truncate">Save</span>
           </button>
         </div>
         

@@ -79,12 +79,12 @@ export default function MovesList({
   };
 
   return (
-    <div className="bg-background-secondary rounded-xl p-6 shadow-lg">
-      <h2 className="text-xl font-bold text-foreground mb-4">
+    <div className="bg-background-secondary rounded-xl p-4 sm:p-6 shadow-lg w-full overflow-hidden">
+      <h2 className="text-lg sm:text-xl font-bold text-foreground mb-3 sm:mb-4">
         Moves
       </h2>
       
-      <div className="space-y-1 max-h-[600px] overflow-y-auto">
+      <div className="space-y-1 max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] overflow-y-auto overflow-x-hidden pr-1">
         {movePairs.length === 0 ? (
           <div className="text-foreground-subtle text-sm py-4 text-center">
             No moves yet. Start playing!
@@ -97,10 +97,10 @@ export default function MovesList({
             return (
               <div 
                 key={index}
-                className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-background-tertiary/50"
+                className="flex items-center gap-1 sm:gap-2 py-1 sm:py-1.5 px-1 sm:px-2 rounded hover:bg-background-tertiary/50"
               >
                 {/* Move number */}
-                <span className="text-foreground-muted text-sm font-medium w-8">
+                <span className="text-foreground-muted text-xs sm:text-sm font-medium w-6 sm:w-8 flex-shrink-0">
                   {pair.moveNumber}.
                 </span>
                 
@@ -108,15 +108,15 @@ export default function MovesList({
                 {pair.ban && (
                   <button
                     onClick={() => onMoveClick(banIndex + 1)}
-                    className={`flex-1 text-left px-2 py-1 rounded text-sm font-mono transition-colors
+                    className={`flex-1 min-w-0 text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs sm:text-sm font-mono transition-colors overflow-hidden
                       ${banIndex < currentMoveIndex 
                         ? 'bg-destructive-500/20 text-destructive-400 hover:bg-destructive-500/30' 
                         : banIndex === currentMoveIndex - 1
                         ? 'bg-destructive-500/40 text-destructive-400 font-bold'
                         : 'text-foreground-subtle hover:text-foreground'}`}
                   >
-                    <span className="text-xs text-destructive-400 mr-1">BAN</span>
-                    {formatMove(pair.ban)}
+                    <span className="text-[10px] sm:text-xs text-destructive-400 mr-0.5 sm:mr-1">BAN</span>
+                    <span className="truncate">{formatMove(pair.ban)}</span>
                   </button>
                 )}
                 
@@ -124,20 +124,20 @@ export default function MovesList({
                 {pair.move && (
                   <button
                     onClick={() => onMoveClick(moveIndex + 1)}
-                    className={`flex-1 text-left px-2 py-1 rounded text-sm font-mono transition-colors
+                    className={`flex-1 min-w-0 text-left px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs sm:text-sm font-mono transition-colors overflow-hidden
                       ${moveIndex < currentMoveIndex 
                         ? 'bg-lichess-green/20 text-success-400 hover:bg-lichess-green/30' 
                         : moveIndex === currentMoveIndex - 1
                         ? 'bg-lichess-green/40 text-success-400 font-bold'
                         : 'text-foreground-subtle hover:text-foreground'}`}
                   >
-                    {formatMove(pair.move)}
+                    <span className="truncate">{formatMove(pair.move)}</span>
                   </button>
                 )}
                 
                 {/* Empty slot if only ban */}
                 {pair.ban && !pair.move && (
-                  <div className="flex-1" />
+                  <div className="flex-1 min-w-0" />
                 )}
               </div>
             );
