@@ -1,7 +1,20 @@
 import { redis, getGameState, getActionHistory, getGameEvents } from '../redis';
 import { bufferedPersistence } from './buffered-persistence';
 import { BanChess } from 'ban-chess.ts';
-import { toSquare, toBanChessSquare } from '../../lib/utils/ban-chess-bridge';
+
+// Type conversion utilities - inlined to avoid module resolution issues
+function toSquare(value: string): unknown {
+  // Simple validation and branding
+  if (!/^[a-h][1-8]$/.test(value)) {
+    throw new Error(`Invalid chess square notation: ${value}`);
+  }
+  return value as unknown;
+}
+
+function toBanChessSquare(square: unknown): unknown {
+  // Pass through for ban-chess.ts compatibility
+  return square;
+}
 
 /**
  * Game Archiver Service
