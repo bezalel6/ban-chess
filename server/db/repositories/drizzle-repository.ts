@@ -6,11 +6,11 @@
 import { db } from '@/server/db';
 import { users, games, moves, gameEvents } from '@/server/db/schema';
 import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
-import { eq, and, gte, sql, desc } from 'drizzle-orm';
+import { eq, and, gte, sql, desc, isNull } from 'drizzle-orm';
 import type { Result } from '@/lib/utils/types';
 import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
+import { isSuccess } from '@/lib/utils/type-guards';
 import { createBrand } from '@/lib/utils/types';
-import type { UserId } from '@/lib/utils/types';
 import type { DatabaseError } from '@/lib/utils/database-types';
 
 // Let Drizzle infer the types - no duplication!
@@ -66,7 +66,7 @@ export const userRepo = {
         .orderBy(desc(users.rating))
         .limit(limit);
 
-      return { ok: true, value: result };
+      return createSuccess(result);
     } catch (error) {
       const dbError: DatabaseError = {
         code: 'DATABASE_ERROR',
@@ -95,10 +95,11 @@ export const userRepo = {
         .limit(1);
 
       if (!user) {
-        return {
-          ok: false,
-          error: new Error(`User ${userId} not found`),
-        };
+        return createFailure({
+          code: 'NOT_FOUND',
+          message: `User ${userId} not found`,
+          table: 'users',
+        } as DatabaseError);
       }
 
       // Calculate updates
@@ -118,7 +119,7 @@ export const userRepo = {
         .where(eq(users.id, userId))
         .returning();
 
-      return { ok: true, value: updated };
+      return createSuccess(updated);
     } catch (error) {
       const dbError: DatabaseError = {
         code: 'DATABASE_ERROR',
@@ -135,18 +136,18 @@ export const userRepo = {
    */
   async isBanned(userId: string): Promise<DbResult<boolean>> {
     const result = await this.findByUsername(userId);
-    if (!result.ok) return result;
+    if (!isSuccess(result)) return result;
 
-    const user = result.value;
-    if (!user) return { ok: true, value: false };
+    const user = result.data;
+    if (!user) return createSuccess(false);
 
     // Business logic for ban checking
-    if (!user.isActive) return { ok: true, value: true };
+    if (!user.isActive) return createSuccess(true);
     if (user.bannedUntil && user.bannedUntil > new Date()) {
-      return { ok: true, value: true };
+      return createSuccess(true);
     }
 
-    return { ok: true, value: false };
+    return createSuccess(false);
   },
 };
 
@@ -161,15 +162,15 @@ export const gameRepo = {
     try {
       // Add branded type safety
       if (data.whitePlayerId) {
-        data.whitePlayerId = createBrand<UserId>(data.whitePlayerId);
+        data.whitePlayerId = createBrand<string, 'UserId'>(data.whitePlayerId);
       }
       if (data.blackPlayerId) {
-        data.blackPlayerId = createBrand<UserId>(data.blackPlayerId);
+        data.blackPlayerId = createBrand<string, 'UserId'>(data.blackPlayerId);
       }
 
       const [game] = await db.insert(games).values(data).returning();
 
-      return { ok: true, value: game };
+      return createSuccess(game);
     } catch (error) {
       const dbError: DatabaseError = {
         code: 'DATABASE_ERROR',
@@ -192,12 +193,12 @@ export const gameRepo = {
         .where(
           and(
             sql`${games.whitePlayerId} = ${userId} OR ${games.blackPlayerId} = ${userId}`,
-            eq(games.result, null)
+            isNull(games.result)
           )
         )
         .orderBy(desc(games.startedAt));
 
-      return { ok: true, value: result };
+      return createSuccess(result);
     } catch (error) {
       const dbError: DatabaseError = {
         code: 'DATABASE_ERROR',
@@ -229,13 +230,14 @@ export const gameRepo = {
         .returning();
 
       if (!updated) {
-        return {
-          ok: false,
-          error: new Error(`Game ${gameId} not found`),
-        };
+        return createFailure({
+          code: 'NOT_FOUND',
+          message: `Game ${gameId} not found`,
+          table: 'games',
+        } as DatabaseError);
       }
 
-      return { ok: true, value: updated };
+      return createSuccess(updated);
     } catch (error) {
       const dbError: DatabaseError = {
         code: 'DATABASE_ERROR',
@@ -259,7 +261,7 @@ export const moveRepo = {
     try {
       const [created] = await db.insert(moves).values(move).returning();
 
-      return { ok: true, value: created };
+      return createSuccess(created);
     } catch (error) {
       const dbError: DatabaseError = {
         code: 'DATABASE_ERROR',
@@ -282,7 +284,7 @@ export const moveRepo = {
         .where(eq(moves.gameId, gameId))
         .orderBy(moves.moveNumber);
 
-      return { ok: true, value: result };
+      return createSuccess(result);
     } catch (error) {
       const dbError: DatabaseError = {
         code: 'DATABASE_ERROR',
@@ -303,13 +305,14 @@ export async function withResult<T>(
 ): Promise<DbResult<T>> {
   try {
     const result = await operation();
-    return { ok: true, value: result };
+    return createSuccess(result);
   } catch (error) {
-    return {
-      ok: false,
-      error:
-        error instanceof Error ? error : new Error('Database operation failed'),
-    };
+    return createFailure({
+      code: 'DATABASE_ERROR',
+      message:
+        error instanceof Error ? error.message : 'Database operation failed',
+      detail: error instanceof Error ? error.stack : undefined,
+    } as DatabaseError);
   }
 }
 
@@ -317,15 +320,18 @@ export async function withResult<T>(
  * Transaction helper with Result pattern
  */
 export async function transaction<T>(
-  fn: (tx: typeof db) => Promise<T>
+  fn: Parameters<typeof db.transaction>[0]
 ): Promise<DbResult<T>> {
   try {
-    const result = await db.transaction(fn);
-    return { ok: true, value: result };
+    const result = await db.transaction(
+      fn as unknown as Parameters<typeof db.transaction>[0]
+    );
+    return createSuccess(result as T);
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error : new Error('Transaction failed'),
-    };
+    return createFailure({
+      code: 'TRANSACTION_ERROR',
+      message: error instanceof Error ? error.message : 'Transaction failed',
+      detail: error instanceof Error ? error.stack : undefined,
+    } as DatabaseError);
   }
 }

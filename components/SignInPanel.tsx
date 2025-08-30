@@ -3,7 +3,6 @@
 import { signIn, useSession } from 'next-auth/react';
 import { useState } from 'react';
 import Image from 'next/image';
-import { withAuth } from './auth/withAuth';
 
 interface SignInPanelProps {
   compact?: boolean;

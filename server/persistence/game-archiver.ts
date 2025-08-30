@@ -1,6 +1,7 @@
 import { redis, getGameState, getActionHistory, getGameEvents } from '../redis';
 import { bufferedPersistence } from './buffered-persistence';
 import { BanChess } from 'ban-chess.ts';
+import { toSquare, toBanChessSquare } from '@/lib/utils/ban-chess-bridge';
 
 /**
  * Game Archiver Service
@@ -58,8 +59,8 @@ export class GameArchiver {
 
         if (type === 'b') {
           // Ban action
-          const from = uci.slice(0, 2) as unknown;
-          const to = uci.slice(2, 4) as unknown;
+          const from = toBanChessSquare(toSquare(uci.slice(0, 2)));
+          const to = toBanChessSquare(toSquare(uci.slice(2, 4)));
           const banResult = game.play({ ban: { from, to } });
           if (banResult.success) {
             bannedMoves.push(uci);
@@ -67,8 +68,8 @@ export class GameArchiver {
           }
         } else if (type === 'm') {
           // Move action
-          const from = uci.slice(0, 2) as unknown;
-          const to = uci.slice(2, 4) as unknown;
+          const from = toBanChessSquare(toSquare(uci.slice(0, 2)));
+          const to = toBanChessSquare(toSquare(uci.slice(2, 4)));
           const promotion = uci[4] as 'q' | 'r' | 'b' | 'n' | undefined;
           const moveResult = game.play({ move: { from, to, promotion } });
           if (moveResult.success) {

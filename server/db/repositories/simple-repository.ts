@@ -6,6 +6,7 @@
 import { db } from '@/server/db';
 import { users, games, moves } from '@/server/db/schema';
 import { eq } from 'drizzle-orm';
+import type { InferInsertModel } from 'drizzle-orm';
 import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
 import type { Result } from '@/lib/utils/types';
 import type { DatabaseError } from '@/lib/utils/database-types';
@@ -89,7 +90,10 @@ export const userRepository = {
     userData: Record<string, unknown>
   ): Promise<Result<UserRecord, DatabaseError>> {
     try {
-      const result = await db.insert(users).values(userData).returning();
+      const result = await db
+        .insert(users)
+        .values(userData as InferInsertModel<typeof users>)
+        .returning();
 
       return createSuccess(result[0]);
     } catch (error) {
@@ -104,7 +108,9 @@ export const userRepository = {
     try {
       const result = await db
         .update(users)
-        .set({ ...userData, lastSeenAt: new Date() })
+        .set({ ...userData, lastSeenAt: new Date() } as Partial<
+          InferInsertModel<typeof users>
+        >)
         .where(eq(users.id, id))
         .returning();
 
@@ -149,7 +155,10 @@ export const gameRepository = {
     gameData: Record<string, unknown>
   ): Promise<Result<GameRecord, DatabaseError>> {
     try {
-      const result = await db.insert(games).values(gameData).returning();
+      const result = await db
+        .insert(games)
+        .values(gameData as InferInsertModel<typeof games>)
+        .returning();
 
       return createSuccess(result[0]);
     } catch (error) {
@@ -164,7 +173,7 @@ export const gameRepository = {
     try {
       const result = await db
         .update(games)
-        .set(gameData)
+        .set(gameData as Partial<InferInsertModel<typeof games>>)
         .where(eq(games.id, id))
         .returning();
 
@@ -209,7 +218,10 @@ export const moveRepository = {
     moveData: Record<string, unknown>
   ): Promise<Result<MoveRecord, DatabaseError>> {
     try {
-      const result = await db.insert(moves).values(moveData).returning();
+      const result = await db
+        .insert(moves)
+        .values(moveData as InferInsertModel<typeof moves>)
+        .returning();
 
       return createSuccess(result[0]);
     } catch (error) {
