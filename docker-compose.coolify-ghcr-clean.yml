@@ -1,0 +1,82 @@
+# Coolify Docker Compose using GitHub Container Registry with Redis fix
+# This version pulls pre-built images from GitHub Packages
+version: '3.8'
+
+services:
+  # Next.js Application (from GitHub Container Registry)
+  app:
+    image: ghcr.io/bezalel6/2ban-2chess:latest
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws-chess.rndev.site}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://chess.rndev.site}
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://chess.rndev.site}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    depends_on:
+      - websocket
+    networks:
+      - coolify
+    labels:
+      - coolify.managed=true
+      - coolify.port=3000
+      - coolify.domain=chess.rndev.site
+    restart: unless-stopped
+
+  # WebSocket Server
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=production
+      # Option 1: No password (simpler, less secure)
+      - REDIS_URL=redis://redis:6379
+      # Option 2: With password (uncomment and set REDIS_PASSWORD in Coolify)
+      # - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://chess.rndev.site}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    depends_on:
+      - redis
+    networks:
+      - coolify
+    labels:
+      - coolify.managed=true
+      - coolify.port=3001
+      - coolify.domain=ws-chess.rndev.site
+    restart: unless-stopped
+
+  # Redis for WebSocket state (NO authentication for simplicity)
+  redis:
+    image: redis:7-alpine
+    # Option 1: No password (simpler)
+    command: redis-server --appendonly yes
+    # Option 2: With password (uncomment and set REDIS_PASSWORD in Coolify)
+    # command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    networks:
+      - coolify
+    volumes:
+      # Use a named volume to avoid permission issues
+      - redis-data:/data
+    healthcheck:
+      # Option 1: No password
+      test: ['CMD', 'redis-cli', 'ping']
+      # Option 2: With password (uncomment if using password)
+      # test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  redis-data:
+    driver: local

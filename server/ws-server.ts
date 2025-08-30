@@ -359,6 +359,24 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     return;
   }
 
+  // Don't send updates for games that are already over
+  if (gameState.gameOver) {
+    // Send a minimal message indicating game is over
+    ws.send(
+      JSON.stringify({
+        type: 'state',
+        gameId,
+        gameOver: true,
+        result: gameState.result || 'Game over',
+        players: await getPlayerUsernames(gameState),
+      })
+    );
+    console.log(
+      `[sendFullGameState] Game ${gameId} is over, sent minimal state`
+    );
+    return;
+  }
+
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
 
