@@ -521,6 +521,14 @@ async function broadcastGameState(gameId: string) {
     return;
   }
 
+  // Don't broadcast updates for games that are already over
+  if (gameState.gameOver) {
+    console.log(
+      `[broadcastGameState] Game ${gameId} is already over, skipping broadcast`
+    );
+    return;
+  }
+
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
 
@@ -1515,7 +1523,19 @@ wss.on('connection', (ws: WebSocket, request) => {
         console.log(
           `Player ${currentPlayer.username} disconnected from game ${gameId}`
         );
-        // Note: We don't remove the game or player from game, allowing reconnection
+
+        // Check if game is over and clean up if needed
+        const gameState = await getGameState(gameId);
+        if (gameState?.gameOver) {
+          // Unsubscribe from the game channel if game is over
+          try {
+            await redisSub.unsubscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+            console.log(`Unsubscribed from completed game ${gameId}`);
+          } catch {
+            // Ignore unsubscribe errors
+          }
+        }
+        // Note: We don't remove active games, allowing reconnection
       }
     }
     // Clean up ping/pong tracking
