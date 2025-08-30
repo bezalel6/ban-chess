@@ -143,7 +143,7 @@ export function useGameState() {
           
           if (msg.gameOver) {
             console.log('[GameState] Game Over:', msg.result);
-            soundManager.play('game-end');
+            soundManager.playEvent('game-end');
           }
           break;
           
@@ -153,7 +153,7 @@ export function useGameState() {
           // Clear history for new game
           moveHistory.current = [];
           // Server will send a full state message next
-          soundManager.play('game-start');
+          soundManager.playEvent('game-start');
           break;
           
         case 'solo-game-created':
@@ -200,7 +200,7 @@ export function useGameState() {
             }
             return prev;
           });
-          soundManager.play('game-end'); // Play sound only when server confirms timeout
+          soundManager.playEvent('game-end'); // Play sound only when server confirms timeout
           break;
           
         case 'game-event':
