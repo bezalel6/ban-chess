@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import type { SerializedAction } from '@/lib/game-types';
+import { strToSquare } from '@/lib/game-types';
 
 interface MovesListProps {
   moves: SerializedAction[];
@@ -86,6 +87,11 @@ export default function MovesList({
     const from = notation.substring(0, 2);
     const to = notation.substring(2, 4);
     const promotion = notation.substring(4);
+
+    // Validate that both squares are valid before formatting
+    if (!strToSquare(from) || !strToSquare(to)) {
+      return notation; // Return raw notation if validation fails
+    }
 
     // Format as algebraic notation (simplified)
     const formatted = `${from}-${to}${promotion ? '=' + promotion.toUpperCase() : ''}`;

@@ -33,6 +33,11 @@ const menuSections: MobileMenuSection[] = [
         href: '/analysis',
         description: 'Analyze positions and games',
       },
+      {
+        label: 'Sound Settings',
+        href: '/sound-settings',
+        description: 'Customize game sounds',
+      },
     ],
   },
 ];

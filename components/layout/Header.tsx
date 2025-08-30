@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { Search, LogOut, Settings, User } from 'lucide-react';
+import { Search, LogOut, Settings, User, Volume2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { signOut } from 'next-auth/react';
 import MobileMenu from './MobileMenu';
@@ -134,6 +134,16 @@ export default function Header() {
           {/* User Actions */}
           <div className='flex items-center space-x-3'>
             <SearchButton />
+            <Link
+              href='/sound-settings'
+              className='relative p-3 text-foreground-muted hover:text-foreground hover:bg-background-secondary rounded-lg transition-colors group'
+              title='Sound Settings'
+            >
+              <div className='flex items-center gap-1'>
+                <Volume2 className='h-4 w-4' />
+                <Settings className='h-3 w-3 text-foreground-muted/70 group-hover:text-foreground/70' />
+              </div>
+            </Link>
             {user ? (
               <UserMenu user={user} />
             ) : (

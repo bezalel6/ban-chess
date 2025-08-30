@@ -4,7 +4,6 @@ import typescript from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
-import prettier from 'eslint-plugin-prettier';
 import prettierConfig from 'eslint-config-prettier';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,7 +34,7 @@ const config = [
       '@typescript-eslint': typescript,
       react: react,
       'react-hooks': reactHooks,
-      prettier: prettier,
+      // prettier plugin removed - let Prettier work independently
     },
     rules: {
       'no-unused-vars': 'off', // Turn off base rule as it doesn't understand TypeScript
@@ -51,16 +50,11 @@ const config = [
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       'no-console': 'off', // Allow console logs for debugging
       'react/no-unescaped-entities': 'warn',
-      // Prettier integration
-      'prettier/prettier': 'error',
-      // Quote rules (enforced by Prettier, but good to be explicit)
-      quotes: [
-        'error',
-        'single',
-        { avoidEscape: true, allowTemplateLiterals: true },
-      ],
-      // JSX quote rules
-      'jsx-quotes': ['error', 'prefer-single'],
+      // Remove prettier/prettier rule to prevent conflicts - let Prettier handle formatting
+      // 'prettier/prettier': 'error', // REMOVED - causes race conditions with format on save
+      // Remove quote rules - let Prettier handle all formatting
+      // quotes: ['error', 'single', { avoidEscape: true, allowTemplateLiterals: true }], // REMOVED
+      // 'jsx-quotes': ['error', 'prefer-single'], // REMOVED
     },
   },
   // Specific configuration for E2E test files

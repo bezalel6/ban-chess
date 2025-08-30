@@ -9,7 +9,7 @@ import type {
   Dests,
 } from '@bezalel6/react-chessground';
 import type { SimpleGameState, Move, Ban } from '@/lib/game-types';
-import { parseFEN, getCurrentBan } from '@/lib/game-types';
+import { parseFEN, getCurrentBan, strToSquare } from '@/lib/game-types';
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
@@ -78,13 +78,19 @@ const ChessBoard = memo(function ChessBoard({
   const dests: Dests = new Map<Key, Key[]>();
   if (gameState.legalActions) {
     gameState.legalActions.forEach((action: string) => {
-      const from = action.substring(0, 2) as Key;
-      const to = action.substring(2, 4) as Key;
+      const fromStr = action.substring(0, 2);
+      const toStr = action.substring(2, 4);
 
-      if (!dests.has(from)) {
-        dests.set(from, []);
+      // Validate that both are valid chess squares before using them
+      if (strToSquare(fromStr) && strToSquare(toStr)) {
+        const from = fromStr as Key;
+        const to = toStr as Key;
+
+        if (!dests.has(from)) {
+          dests.set(from, []);
+        }
+        dests.get(from)!.push(to);
       }
-      dests.get(from)!.push(to);
     });
   }
 

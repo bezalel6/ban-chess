@@ -219,10 +219,13 @@ export function getCurrentBan(fen: string): Ban | null {
   if (banState && banState.includes(':') && !banState.includes(':ban')) {
     const banStr = banState.split(':')[1];
     if (banStr && banStr.length >= 4) {
-      return {
-        from: banStr.substring(0, 2),
-        to: banStr.substring(2, 4),
-      };
+      const from = banStr.substring(0, 2);
+      const to = banStr.substring(2, 4);
+
+      // Validate that both squares are valid chess notation
+      if (strToSquare(from) && strToSquare(to)) {
+        return { from, to };
+      }
     }
   }
   return null;
