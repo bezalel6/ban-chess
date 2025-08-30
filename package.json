@@ -43,6 +43,7 @@
     "@tailwindcss/postcss": "^4.1.12",
     "@types/ioredis": "^4.28.10",
     "@types/pg": "^8.15.5",
+    "bad-words": "^4.0.0",
     "ban-chess.ts": "^1.2.2",
     "dotenv": "^17.2.1",
     "drizzle-kit": "^0.31.4",

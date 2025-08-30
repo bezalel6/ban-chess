@@ -5,6 +5,8 @@ interface AuthToken {
   username: string;
   providerId: string;
   provider: AuthProvider;
+  dbUserId?: string; // Our PostgreSQL user ID
+  role?: string; // User role (player, moderator, admin, etc.)
 }
 
 /**
@@ -20,6 +22,8 @@ export async function validateNextAuthToken(request: IncomingMessage): Promise<A
     const username = url.searchParams.get('username');
     const providerId = url.searchParams.get('providerId');
     const provider = url.searchParams.get('provider') as AuthProvider | null;
+    const dbUserId = url.searchParams.get('dbUserId');
+    const role = url.searchParams.get('role');
 
     if (!username || !providerId || !provider) {
       return null;
@@ -28,7 +32,9 @@ export async function validateNextAuthToken(request: IncomingMessage): Promise<A
     return {
       username,
       providerId,
-      provider
+      provider,
+      dbUserId: dbUserId || undefined,
+      role: role || 'player'
     };
   } catch (error) {
     console.error('Token validation error:', error);

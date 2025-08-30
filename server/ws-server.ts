@@ -723,15 +723,26 @@ wss.on('connection', (ws: WebSocket, request) => {
   });
   
   // Get auth info from the request that was validated during handshake
-  const reqWithAuth = request as typeof request & { authToken?: { providerId: string; username: string; provider: string } };
+  const reqWithAuth = request as typeof request & { 
+    authToken?: { 
+      providerId: string; 
+      username: string; 
+      provider: string;
+      dbUserId?: string;
+      role?: string;
+    } 
+  };
   const authToken = reqWithAuth.authToken;
   let currentPlayer: Player | null = null;
   
   // Auto-authenticate if token present
   (async () => {
     if (authToken) {
+      // Use database user ID if available, otherwise fall back to provider ID
+      const userId = authToken.dbUserId || authToken.providerId;
+      
       currentPlayer = { 
-        userId: authToken.providerId, 
+        userId,
         username: authToken.username, 
         ws 
       };
@@ -750,19 +761,19 @@ wss.on('connection', (ws: WebSocket, request) => {
       // Send authentication confirmation
       ws.send(JSON.stringify({
         type: 'authenticated',
-        userId: authToken.providerId,
+        userId,
         username: authToken.username
       } as SimpleServerMsg));
       
       // Check if player was in a game (reconnection)
-      const gameId = await redis.get(KEYS.PLAYER_GAME(authToken.providerId));
+      const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
       if (gameId) {
         const gameState = await getGameState(gameId);
         if (gameState) {
           // Subscribe to game channel
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
           
-          const color: 'white' | 'black' = gameState.whitePlayerId === authToken.providerId ? 'white' : 'black';
+          const color: 'white' | 'black' = gameState.whitePlayerId === userId ? 'white' : 'black';
           console.log(`${authToken.username} reconnected to game ${gameId} as ${color}`);
           // Restore time manager if needed
           await restoreTimeManager(gameId, gameState);
