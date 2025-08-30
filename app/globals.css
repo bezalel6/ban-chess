@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../styles/3d-animations.css";
 
 @theme {
   /* Lichess-inspired Brand Colors */
@@ -218,6 +219,36 @@ a {
     position: relative !important;
     /* Optimize for smooth piece animations */
     transform: translateZ(0);
+    /* Prevent sub-pixel positioning */
+    transform-origin: 0 0;
+  }
+  
+  /* Fuse cg-container and cg-board together */
+  .chess-board-inner .cg-wrap .cg-container,
+  .chess-board-inner .cg-wrap cg-container {
+    position: absolute !important;
+    /* CRITICAL: Force exact 0 positioning, override any inline styles */
+    top: 0px !important;
+    left: 0px !important;
+    right: auto !important;
+    bottom: auto !important;
+    /* Use inset to ensure all edges are at 0 */
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    /* Force exact 0,0 transform to override any inline styles */
+    transform: translate3d(0px, 0px, 0px) !important;
+    /* Ensure pixel-perfect alignment */
+    transform-origin: 0 0 !important;
+    /* Disable any margins or padding */
+    margin: 0 !important;
+    padding: 0 !important;
+    /* Force box model to include borders */
+    box-sizing: border-box !important;
+    /* Prevent floating point rounding in positioning */
+    will-change: auto !important;
+    /* Ensure no translate adjustments */
+    translate: none !important;
   }
 
   /* Smooth resize container for performance - Lichess-inspired */
@@ -236,6 +267,11 @@ a {
     transition-property: width, height;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
+    /* Force pixel boundaries to prevent sub-pixel rendering */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    /* Ensure container dimensions are always whole pixels */
+    transform-style: flat;
   }
 
   /* Disable transitions during active resize for immediate feedback */
@@ -288,6 +324,19 @@ a {
     height: 100% !important;
     top: 0 !important;
     left: 0 !important;
+    /* Fuse with container - prevent any separation */
+    transform: none !important;
+    transform-origin: 0 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    /* Prevent sub-pixel rendering issues */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    /* Force pixel snapping to prevent float positioning */
+    will-change: auto !important;
+    /* Ensure board stays locked to container */
+    pointer-events: auto;
+    box-sizing: border-box !important;
   }
   
   /* Override chessground's piece positioning to prevent drift */

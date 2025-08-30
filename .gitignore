@@ -107,3 +107,4 @@ redis-data/
 # Generated documentation
 claudedocs/
 coolify-deployment/
+coolify-build-server/
