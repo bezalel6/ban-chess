@@ -58,8 +58,8 @@ export function useGameState() {
   // Authenticate when connection opens
   useEffect(() => {
     if (readyState === ReadyState.OPEN && user) {
-      // Only authenticate if we haven't authenticated in this connection
-      if (!isAuthenticated && !authSent.current) {
+      // Only authenticate once per connection using ref
+      if (!authSent.current) {
         authSent.current = true;
         console.log('[GameState] Authenticating:', user.username);
         send({
@@ -75,7 +75,7 @@ export function useGameState() {
       authSent.current = false;
       setIsAuthenticated(false);
     }
-  }, [readyState, user, send, isAuthenticated]);
+  }, [readyState, user, send]); // Removed isAuthenticated from deps to prevent re-runs
 
   // Handle incoming messages
   useEffect(() => {

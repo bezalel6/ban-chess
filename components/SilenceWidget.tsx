@@ -77,7 +77,7 @@ export default function SilenceWidget() {
         </span>
       </button>
 
-      <audio ref={audioRef} src='/sounds/silence.mp3' loop preload='auto' />
+      <audio ref={audioRef} src='/sounds/Silence.mp3' loop preload='auto' />
     </div>
   );
 }
