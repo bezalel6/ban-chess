@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback, useRef } from 'react';
 import type { Result } from '@/lib/utils';
+import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
 
 // Global type safety violator registry (name and shame!)
 const HALL_OF_SHAME = new Set<string>();
@@ -105,9 +106,9 @@ export function useStrictTypeEnforcement() {
    * Force type-safe operations
    */
   const enforceResult = useCallback(
-    <T, E>(promise: Promise<T>): Promise<Result<T, E>> => {
+    <T, E = Error>(promise: Promise<T>): Promise<Result<T, E>> => {
       return promise
-        .then((value): Result<T, E> => ({ ok: true, value }) as Result<T, E>)
+        .then((value): Result<T, E> => createSuccess(value))
         .catch((error): Result<T, E> => {
           // Shame them for not handling errors properly
           console.warn(`
@@ -115,7 +116,7 @@ export function useStrictTypeEnforcement() {
 Use Result<T, E> pattern instead of raw promises.
 Error will be wrapped in Result type for you (this time).
         `);
-          return { ok: false, error } as Result<T, E>;
+          return createFailure(error as E);
         });
     },
     []

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { db, games, users } from '@/server/db';
 import { and, desc, eq, or } from 'drizzle-orm';
 import type { Result } from '@/lib/utils';
+import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
+import { isSuccess } from '@/lib/utils/type-guards';
 import type { PaginatedResponse } from '@/lib/utils/api-types';
 import { createApiResponse, createErrorResponse } from '@/lib/utils/api-types';
 
@@ -55,10 +57,9 @@ export async function GET(
 
     // Don't provide games for guest accounts
     if (username.toLowerCase().startsWith('guest')) {
-      return {
-        ok: false,
-        error: new Error('Guest accounts do not have game history'),
-      };
+      return createFailure(
+        new Error('Guest accounts do not have game history')
+      );
     }
 
     // Fetch user from database
@@ -69,10 +70,7 @@ export async function GET(
       .limit(1);
 
     if (!userResult || userResult.length === 0) {
-      return {
-        ok: false,
-        error: new Error('User not found'),
-      };
+      return createFailure(new Error('User not found'));
     }
 
     const userData = userResult[0];
@@ -176,23 +174,31 @@ export async function GET(
       });
     }
 
-    return {
-      ok: true,
-      value: {
-        data: transformedGames,
-        total: transformedGames.length,
+    const page = Math.floor(offset / limit) + 1;
+    const totalPages = Math.ceil(transformedGames.length / limit);
+
+    const response: UserGamesResponse = {
+      success: true,
+      data: transformedGames,
+      pagination: {
+        page,
         limit,
-        offset,
-        hasMore: transformedGames.length === limit,
+        total: transformedGames.length,
+        totalPages,
+        hasNext: transformedGames.length === limit,
+        hasPrev: offset > 0,
       },
+      timestamp: new Date().toISOString(),
     };
+
+    return createSuccess(response);
   };
 
   // Execute with Result pattern
   const result = await fetchUserGames();
 
-  if (result.ok) {
-    return NextResponse.json(createApiResponse(result.value));
+  if (isSuccess(result)) {
+    return NextResponse.json(createApiResponse(result.data));
   }
 
   // Handle errors with proper status codes

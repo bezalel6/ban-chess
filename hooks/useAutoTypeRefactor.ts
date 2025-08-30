@@ -6,7 +6,8 @@
 
 import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Result } from '@/lib/utils';
-import { createBrand } from '@/lib/utils';
+import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
+import { createBrand } from '@/lib/utils/types';
 import type { UserId, GameId } from '@/lib/utils';
 
 /**
@@ -35,20 +36,20 @@ export function useAutoTypeRefactor() {
               // Cache successful results for performance
               const key = JSON.stringify(value).slice(0, 100);
               cache.current.set(key, value);
-              return { ok: true, value } as Result<T, E>;
+              return createSuccess(value);
             })
             .catch((error): Result<T, E> => {
               // Enhance error with useful context
               const enhancedError = enhanceError(error);
-              return { ok: false, error: enhancedError } as Result<T, E>;
+              return createFailure(enhancedError as E);
             });
         }
 
         // Synchronous success
-        return { ok: true, value: result } as Result<T, E>;
+        return createSuccess(result);
       } catch (error) {
         // Synchronous error with enhancement
-        return { ok: false, error: enhanceError(error) } as Result<T, E>;
+        return createFailure(enhanceError(error) as E);
       }
     },
     []
@@ -64,13 +65,13 @@ export function useAutoTypeRefactor() {
         context?.toLowerCase().includes('user') ||
         value.startsWith('user_')
       ) {
-        return createBrand<UserId>(value);
+        return createBrand<string, 'UserId'>(value);
       }
       if (
         context?.toLowerCase().includes('game') ||
         value.startsWith('game_')
       ) {
-        return createBrand<GameId>(value);
+        return createBrand<string, 'GameId'>(value);
       }
 
       // Pattern matching for common ID formats
@@ -81,8 +82,8 @@ export function useAutoTypeRefactor() {
       ) {
         // UUID - try to determine type from cache or context
         const cachedType = cache.current.get(`id_type_${value}`);
-        if (cachedType === 'user') return createBrand<UserId>(value);
-        if (cachedType === 'game') return createBrand<GameId>(value);
+        if (cachedType === 'user') return createBrand<string, 'UserId'>(value);
+        if (cachedType === 'game') return createBrand<string, 'GameId'>(value);
       }
 
       return value;
@@ -213,14 +214,13 @@ export function useAutoTypeRefactor() {
         const structureKey = `structure_${JSON.stringify(Object.keys(parsed)).slice(0, 50)}`;
         cache.current.set(structureKey, enhanced);
 
-        return { ok: true, value: enhanced as T };
+        return createSuccess(enhanced as T);
       } catch (error) {
-        return {
-          ok: false,
-          error: new Error(
+        return createFailure(
+          new Error(
             `JSON parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-          ),
-        };
+          )
+        );
       }
     },
     []
@@ -249,7 +249,9 @@ export function useAutoTypeRefactor() {
         // Limit cache size
         if (cache.current.size > 100) {
           const firstKey = cache.current.keys().next().value;
-          cache.current.delete(firstKey);
+          if (firstKey !== undefined) {
+            cache.current.delete(firstKey);
+          }
         }
 
         return result;

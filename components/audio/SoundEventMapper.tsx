@@ -51,9 +51,11 @@ export default function SoundEventMapperPro() {
     soundName: '',
   });
   const [eventCardGlow, setEventCardGlow] = useState<EventType | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Load yoinked sounds from localStorage on mount
   useEffect(() => {
+    setMounted(true);
     const savedYoinked = localStorage.getItem('yoinkedSounds');
     if (savedYoinked) {
       setYoinkedSounds(JSON.parse(savedYoinked));
@@ -158,6 +160,63 @@ export default function SoundEventMapperPro() {
     },
     [currentEvent]
   );
+
+  // Don't render carousel until client-side to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <div className='space-y-8 relative'>
+        {/* Event Carousel Skeleton - matches exact structure */}
+        <section aria-label='Select game event to map a sound'>
+          <div className='relative py-2'>
+            {/* Gradient edges */}
+            <div className='pointer-events-none absolute top-2 bottom-2 left-0 w-20 bg-gradient-to-r from-gray-950 to-transparent z-10' />
+            <div className='pointer-events-none absolute top-2 bottom-2 right-0 w-20 bg-gradient-to-l from-gray-950 to-transparent z-10' />
+
+            <div className='flex items-center gap-2'>
+              {/* Previous button skeleton */}
+              <div className='h-10 w-10 rounded-xl border border-border/50 bg-background-secondary animate-pulse' />
+
+              {/* Carousel skeleton */}
+              <div className='grow overflow-hidden py-4'>
+                <div className='flex items-center gap-6 justify-center'>
+                  {/* Show 3 skeleton cards */}
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className='w-[184px] px-3 py-2'>
+                      <div className='w-full h-[140px] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 animate-pulse' />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Next button skeleton */}
+              <div className='h-10 w-10 rounded-xl border border-border/50 bg-background-secondary animate-pulse' />
+            </div>
+
+            {/* Dots skeleton */}
+            <div className='mt-4 flex justify-center gap-1.5'>
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={i}
+                  className='h-2 w-2 rounded-full bg-gray-600 animate-pulse'
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Soundboard skeleton */}
+        <section className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'>
+          {/* Show skeleton cards for sounds */}
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              className='p-3 bg-gray-900 rounded-lg shadow-md animate-pulse h-[120px]'
+            />
+          ))}
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-8 relative'>
@@ -277,12 +336,12 @@ export default function SoundEventMapperPro() {
       {/* Soundboard */}
       <section
         aria-label='Available sounds'
-        className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6'
+        className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'
       >
         {availableSounds.map(sound => (
           <article
             key={sound.file || sound.name}
-            className='relative p-6 bg-gray-900 rounded-xl shadow-md text-white hover:shadow-lg transition-shadow'
+            className='relative p-3 bg-gray-900 rounded-lg shadow-md text-white hover:shadow-lg transition-shadow'
           >
             {/* Test audio icon in top-left corner */}
             {sound.file && (
@@ -290,16 +349,16 @@ export default function SoundEventMapperPro() {
                 type='button'
                 aria-label={`Preview ${sound.name}`}
                 onClick={() => new Audio(sound.file).play()}
-                className='absolute top-3 left-3 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500'
+                className='absolute top-2 left-2 p-1 rounded bg-gray-800 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500'
               >
-                <Volume2 className='h-4 w-4 text-gray-400 hover:text-white' />
+                <Volume2 className='h-3 w-3 text-gray-400 hover:text-white' />
               </button>
             )}
 
             {/* Sound name centered */}
-            <div className='flex flex-col items-center pt-8'>
+            <div className='flex flex-col items-center pt-5'>
               <span
-                className='font-medium mb-4 text-center line-clamp-2'
+                className='text-xs font-medium mb-2 text-center line-clamp-2'
                 title={sound.name}
               >
                 {sound.name}
@@ -310,7 +369,7 @@ export default function SoundEventMapperPro() {
                 type='button'
                 aria-label={`Use ${sound.name} for ${eventMetadata[currentEvent].name}`}
                 onClick={e => handleAssign(sound.file, sound.name, e)}
-                className='w-full px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transform hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500'
+                className='w-full px-2 py-1.5 text-xs rounded bg-amber-500 text-white font-medium hover:bg-amber-600 transform hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500'
               >
                 Use
               </button>
@@ -322,18 +381,18 @@ export default function SoundEventMapperPro() {
         <button
           type='button'
           onClick={() => setOpenMaker(true)}
-          className='flex flex-col items-center justify-center p-6 bg-gray-900 rounded-xl shadow-md text-white hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500'
+          className='flex flex-col items-center justify-center p-3 bg-gray-900 rounded-lg shadow-md text-white hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500'
           aria-label='Create custom sound'
         >
-          <Plus className='h-8 w-8 mb-2 text-amber-500' />
-          <span className='font-medium'>Create Custom</span>
+          <Plus className='h-5 w-5 mb-1 text-amber-500' />
+          <span className='text-xs font-medium'>Create Custom</span>
         </button>
 
         {/* Custom sounds */}
         {customSounds.map((sound, idx) => (
           <article
             key={`custom-${idx}`}
-            className='relative p-6 bg-gray-900 rounded-xl shadow-md text-white hover:shadow-lg transition-shadow'
+            className='relative p-3 bg-gray-900 rounded-lg shadow-md text-white hover:shadow-lg transition-shadow'
           >
             {/* Test audio icon in top-left corner */}
             <button
@@ -346,9 +405,9 @@ export default function SoundEventMapperPro() {
             </button>
 
             {/* Sound name centered */}
-            <div className='flex flex-col items-center pt-8'>
+            <div className='flex flex-col items-center pt-5'>
               <span
-                className='font-medium mb-4 text-center line-clamp-2'
+                className='text-xs font-medium mb-2 text-center line-clamp-2'
                 title={sound.name}
               >
                 {sound.name}
@@ -359,7 +418,7 @@ export default function SoundEventMapperPro() {
                 type='button'
                 aria-label={`Use ${sound.name} for ${eventMetadata[currentEvent].name}`}
                 onClick={e => handleAssign(sound.file, sound.name, e)}
-                className='w-full px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transform hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500'
+                className='w-full px-2 py-1.5 text-xs rounded bg-amber-500 text-white font-medium hover:bg-amber-600 transform hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500'
               >
                 Use
               </button>
@@ -371,7 +430,7 @@ export default function SoundEventMapperPro() {
         {yoinkedSounds.map((sound, idx) => (
           <article
             key={`yoinked-${idx}`}
-            className='relative p-6 bg-gray-900 rounded-xl shadow-md text-white hover:shadow-lg transition-shadow border border-red-900/30'
+            className='relative p-3 bg-gray-900 rounded-lg shadow-md text-white hover:shadow-lg transition-shadow border border-red-900/30'
           >
             {/* Test audio icon in top-left corner */}
             <button
@@ -384,9 +443,9 @@ export default function SoundEventMapperPro() {
             </button>
 
             {/* Sound name centered */}
-            <div className='flex flex-col items-center pt-8'>
+            <div className='flex flex-col items-center pt-5'>
               <span
-                className='font-medium mb-4 text-center line-clamp-2'
+                className='text-xs font-medium mb-2 text-center line-clamp-2'
                 title={sound.name}
               >
                 {sound.name}
@@ -397,7 +456,7 @@ export default function SoundEventMapperPro() {
                 type='button'
                 aria-label={`Use ${sound.name} for ${eventMetadata[currentEvent].name}`}
                 onClick={e => handleAssign(sound.file, sound.name, e)}
-                className='w-full px-4 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transform hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500'
+                className='w-full px-2 py-1.5 text-xs rounded bg-amber-500 text-white font-medium hover:bg-amber-600 transform hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500'
               >
                 Use
               </button>

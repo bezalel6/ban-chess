@@ -9,6 +9,13 @@ import type {
   Ban,
   SerializedAction,
 } from '@/lib/game-types';
+import {
+  toBanChessMove,
+  toBanChessBan,
+  fromBanChessSerializedAction,
+  toBanChessSerializedAction,
+  validateSerializedActions,
+} from '@/lib/utils/ban-chess-bridge';
 import ImportExportPanel from '@/components/analysis/ImportExportPanel';
 import GameStatePanel from '@/components/analysis/GameStatePanel';
 import NavigationControls from '@/components/analysis/NavigationControls';
@@ -22,36 +29,23 @@ const ResizableBoard = dynamic(
 // Initial position for a new game
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-// Type guards and converters for ban-chess library compatibility
-function isValidSquare(square: string): boolean {
-  return /^[a-h][1-8]$/.test(square);
-}
-
-function convertMoveForBanChess(move: Move): Move {
-  // Validate squares are in correct format
-  if (!isValidSquare(move.from) || !isValidSquare(move.to)) {
-    throw new Error(`Invalid square format: ${move.from} to ${move.to}`);
+// Helper function to apply actions to BanChess instance
+function applyActionToGame(
+  game: BanChess,
+  action: { move?: Move; ban?: Ban }
+): { success: boolean; error?: string } {
+  try {
+    if (action.move) {
+      const banChessMove = toBanChessMove(action.move);
+      return game.play({ move: banChessMove });
+    } else if (action.ban) {
+      const banChessBan = toBanChessBan(action.ban);
+      return game.play({ ban: banChessBan });
+    }
+    return { success: false, error: 'No valid action provided' };
+  } catch (error) {
+    return { success: false, error: String(error) };
   }
-
-  // The ban-chess library expects specific square types, but we can pass
-  // validated strings and it will handle them correctly
-  return {
-    from: move.from,
-    to: move.to,
-    promotion: move.promotion,
-  };
-}
-
-function convertBanForBanChess(ban: Ban): Move {
-  // Validate squares are in correct format
-  if (!isValidSquare(ban.from) || !isValidSquare(ban.to)) {
-    throw new Error(`Invalid square format for ban: ${ban.from} to ${ban.to}`);
-  }
-
-  return {
-    from: ban.from,
-    to: ban.to,
-  };
 }
 
 export default function AnalysisPage() {
@@ -115,36 +109,6 @@ export default function AnalysisPage() {
     };
   }, [currentGame]);
 
-  // Helper to apply a move or ban to the game
-  const applyAction = useCallback(
-    (game: BanChess, action: { move?: Move; ban?: Ban }) => {
-      try {
-        if (action.move) {
-          const convertedMove = convertMoveForBanChess(action.move);
-          // Use the game.play method with the validated move object
-          return (
-            game as {
-              play: (action: unknown) => { success: boolean; error?: string };
-            }
-          ).play({ move: convertedMove });
-        } else if (action.ban) {
-          const convertedBan = convertBanForBanChess(action.ban);
-          // Use the game.play method with the validated ban object
-          return (
-            game as {
-              play: (action: unknown) => { success: boolean; error?: string };
-            }
-          ).play({ ban: convertedBan });
-        }
-        return { success: false, error: 'No action provided' };
-      } catch (error) {
-        console.error('Failed to apply action:', error);
-        return { success: false, error: String(error) };
-      }
-    },
-    []
-  );
-
   // Handle move from the board
   const handleMove = useCallback(
     (move: Move) => {
@@ -155,13 +119,15 @@ export default function AnalysisPage() {
       }
 
       const newGame = new BanChess(currentGame.fen());
-      const result = applyAction(newGame, { move });
+      const result = applyActionToGame(newGame, { move });
 
       if (result.success) {
         try {
-          const serialized = BanChess.serializeAction({
-            move: convertMoveForBanChess(move),
+          const banChessMove = toBanChessMove(move);
+          const serializedString = BanChess.serializeAction({
+            move: banChessMove,
           });
+          const serialized = fromBanChessSerializedAction(serializedString);
 
           if (currentMoveIndex < gameHistory.length - 1) {
             // We're in the middle of history, need to branch
@@ -182,7 +148,7 @@ export default function AnalysisPage() {
         console.error('Move failed:', result.error);
       }
     },
-    [currentGame, currentMoveIndex, gameHistory, moves, applyAction]
+    [currentGame, currentMoveIndex, gameHistory, moves]
   );
 
   // Handle ban from the board
@@ -195,13 +161,15 @@ export default function AnalysisPage() {
       }
 
       const newGame = new BanChess(currentGame.fen());
-      const result = applyAction(newGame, { ban });
+      const result = applyActionToGame(newGame, { ban });
 
       if (result.success) {
         try {
-          const serialized = (
-            BanChess as { serializeAction: (action: unknown) => string }
-          ).serializeAction({ ban: convertBanForBanChess(ban) });
+          const banChessBan = toBanChessBan(ban);
+          const serializedString = BanChess.serializeAction({
+            ban: banChessBan,
+          });
+          const serialized = fromBanChessSerializedAction(serializedString);
 
           if (currentMoveIndex < gameHistory.length - 1) {
             // We're in the middle of history, need to branch
@@ -222,7 +190,7 @@ export default function AnalysisPage() {
         console.error('Ban failed:', result.error);
       }
     },
-    [currentGame, currentMoveIndex, gameHistory, moves, applyAction]
+    [currentGame, currentMoveIndex, gameHistory, moves]
   );
 
   // Navigation functions
@@ -250,26 +218,30 @@ export default function AnalysisPage() {
   const handleImport = useCallback((notation: string) => {
     try {
       // Parse the notation as BCN (space-separated actions)
-      const actions = notation.trim().split(/\s+/) as SerializedAction[];
+      const actionStrings = notation.trim().split(/\s+/);
 
-      if (actions.length === 0) {
+      if (actionStrings.length === 0) {
         return;
       }
 
+      // Validate and convert to SerializedAction array
+      const actions = validateSerializedActions(actionStrings);
+      const actionStringsForBanChess = actionStrings; // Use plain strings for ban-chess.ts
+
       // Try to replay the game from these actions (validates them)
-      BanChess.replayFromActions(actions);
+      BanChess.replayFromActions(actionStringsForBanChess);
 
       // Build the history by replaying move by move
       const newHistory: BanChess[] = [new BanChess()];
       const tempGame = new BanChess();
 
-      for (const action of actions) {
-        const result = tempGame.playSerializedAction(action);
+      for (const actionString of actionStringsForBanChess) {
+        const result = tempGame.playSerializedAction(actionString);
         if (result.success) {
           // Create a new game instance at this position
           newHistory.push(new BanChess(tempGame.fen()));
         } else {
-          console.error('Failed to apply action:', action);
+          console.error('Failed to apply action:', actionString);
           break;
         }
       }
@@ -282,14 +254,15 @@ export default function AnalysisPage() {
       // Try PGN format
       try {
         const newGame = new BanChess(undefined, notation);
-        const history = newGame.getActionHistory();
+        const historyStrings = newGame.getActionHistory();
+        const history = validateSerializedActions(historyStrings);
 
         // Rebuild the game history
         const newHistory: BanChess[] = [new BanChess()];
         const tempGame = new BanChess();
 
-        for (const action of history) {
-          tempGame.playSerializedAction(action);
+        for (const actionString of historyStrings) {
+          tempGame.playSerializedAction(actionString);
           newHistory.push(new BanChess(tempGame.fen()));
         }
 
@@ -304,8 +277,8 @@ export default function AnalysisPage() {
 
   // Export BCN
   const handleExport = useCallback(() => {
-    // Generate BCN format from moves
-    return moves.join(' ');
+    // Convert SerializedActions back to strings and join
+    return moves.map(move => toBanChessSerializedAction(move)).join(' ');
   }, [moves]);
 
   // Keyboard navigation

@@ -3,11 +3,7 @@
  */
 
 import { db } from '@/server/db';
-import type {
-  DbResult,
-  DbTransaction,
-  BaseModel,
-} from '@/lib/utils/database-types';
+import type { DbResult, BaseModel } from '@/lib/utils/database-types';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
@@ -175,12 +171,10 @@ export abstract class BaseRepository<
   /**
    * Execute a transaction
    */
-  async transaction<T>(
-    fn: (tx: DbTransaction) => Promise<T>
-  ): Promise<DbResult<T>> {
+  async transaction<T>(fn: (tx: unknown) => Promise<T>): Promise<DbResult<T>> {
     try {
       const result = await db.transaction(async tx => {
-        return await fn(tx as DbTransaction);
+        return await fn(tx);
       });
 
       return {

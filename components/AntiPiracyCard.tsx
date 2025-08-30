@@ -38,6 +38,8 @@ export default function AntiPiracyCard({
     setTimeout(() => {
       setShowFlag(true);
       localStorage.setItem('pirateRevealed', 'true');
+      // Dispatch custom event to notify ThemeBrowser
+      window.dispatchEvent(new Event('pirateUnlocked'));
     }, 1500);
   };
 

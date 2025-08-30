@@ -68,20 +68,30 @@ export const availableSounds = [
   { file: null, name: 'No Sound' },
 ] as const;
 
-// Default sound file for each event type
+// Default sound file for each event type - using chess.com URLs
 const defaultEventSoundMap: Record<EventType, string | null> = {
-  'game-invite': '/sounds/game-start.wav',
-  'game-start': '/sounds/game-start.wav',
-  ban: '/sounds/ban.wav',
-  move: '/sounds/move.wav',
-  'opponent-move': '/sounds/opponent-move.wav',
-  capture: '/sounds/capture.wav',
-  castle: '/sounds/castle.wav',
-  check: '/sounds/check.wav',
-  promote: '/sounds/promote.wav',
-  'draw-offer': '/sounds/game-start.wav',
-  'time-warning': '/sounds/check.wav',
-  'game-end': '/sounds/game-end.wav',
+  'game-invite':
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/notify.mp3',
+  'game-start':
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-start.mp3',
+  ban: 'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/boom.mp3',
+  move: 'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3',
+  'opponent-move':
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-opponent.mp3',
+  capture:
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3',
+  castle:
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/castle.mp3',
+  check:
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3',
+  promote:
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/promote.mp3',
+  'draw-offer':
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/draw-offer.mp3',
+  'time-warning':
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/tenseconds.mp3',
+  'game-end':
+    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-end.mp3',
 };
 
 class SoundManager {
@@ -98,15 +108,16 @@ class SoundManager {
   }
 
   private initializeSounds() {
-    // Preload all available sound files
-    availableSounds.forEach(sound => {
-      if (sound.file) {
+    // Preload default chess.com sounds
+    Object.values(defaultEventSoundMap).forEach(soundUrl => {
+      if (soundUrl) {
         this.sounds.set(
-          sound.file,
+          soundUrl,
           new Howl({
-            src: [sound.file],
+            src: [soundUrl],
             volume: this.volume,
             preload: true,
+            html5: true, // Use HTML5 audio for cross-origin requests
           })
         );
       }
@@ -195,13 +206,15 @@ class SoundManager {
 
         this.sounds.set(soundFile, howlLike as unknown as Howl);
       } else {
-        // Regular files use Howl
+        // Regular files and chess.com URLs use Howl
+        const isChessComUrl = soundFile.includes('chesscomfiles.com');
         this.sounds.set(
           soundFile,
           new Howl({
             src: [soundFile],
             volume: this.volume,
             preload: true,
+            html5: isChessComUrl, // Use HTML5 for chess.com URLs
           })
         );
       }
@@ -279,26 +292,28 @@ class SoundManager {
 
   // Load a preset sound configuration
   loadPreset(preset: 'classic' | 'modern' | 'minimal') {
+    const baseUrl =
+      'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/';
     const presets: Record<string, Partial<Record<EventType, string | null>>> = {
       classic: {
-        'game-start': '/sounds/game-start.mp3',
-        move: '/sounds/move.mp3',
-        capture: '/sounds/capture.mp3',
-        castle: '/sounds/castle.mp3',
-        check: '/sounds/check.mp3',
-        'game-end': '/sounds/game-end.mp3',
+        'game-start': `${baseUrl}default/game-start.mp3`,
+        move: `${baseUrl}default/move-self.mp3`,
+        capture: `${baseUrl}default/capture.mp3`,
+        castle: `${baseUrl}default/castle.mp3`,
+        check: `${baseUrl}default/move-check.mp3`,
+        'game-end': `${baseUrl}default/game-end.mp3`,
       },
       modern: {
-        'game-start': '/sounds/digital-start.mp3',
-        move: '/sounds/digital-move.mp3',
-        capture: '/sounds/digital-capture.mp3',
-        check: '/sounds/digital-check.mp3',
-        'game-end': '/sounds/digital-end.mp3',
+        'game-start': `${baseUrl}futuristic/game-start.mp3`,
+        move: `${baseUrl}futuristic/move-self.mp3`,
+        capture: `${baseUrl}futuristic/capture.mp3`,
+        check: `${baseUrl}futuristic/move-check.mp3`,
+        'game-end': `${baseUrl}futuristic/game-end.mp3`,
       },
       minimal: {
-        move: '/sounds/soft-click.mp3',
-        capture: '/sounds/soft-capture.mp3',
-        check: '/sounds/soft-alert.mp3',
+        move: `${baseUrl}sfx/move-self.mp3`,
+        capture: `${baseUrl}sfx/capture.mp3`,
+        check: `${baseUrl}sfx/move-check.mp3`,
       },
     };
 
@@ -322,6 +337,72 @@ class SoundManager {
         sound.load();
       }
     });
+  }
+
+  resetToDefaults() {
+    // Reset to standard theme
+    this.applyTheme('standard');
+    localStorage.removeItem('selectedSoundTheme');
+    localStorage.removeItem('yoinkedSounds');
+  }
+
+  applyTheme(theme: string) {
+    // Map themes to chess.com sound themes
+    const chessComThemeMap: Record<string, string> = {
+      standard: 'default',
+      futuristic: 'futuristic',
+      piano: 'piano',
+      robot: 'robot',
+      sfx: 'sfx',
+      nes: 'nes',
+      lisp: 'lisp',
+      woodland: 'woodland',
+      instrument: 'instrument',
+      pirate: 'default', // Use default for pirate theme (or any custom theme)
+    };
+
+    const chessComTheme = chessComThemeMap[theme] || 'default';
+    const baseUrl = `https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/${chessComTheme}/`;
+
+    // Map our events to chess.com sound files
+    const eventToFile: Record<string, string> = {
+      'game-invite': 'notify',
+      'game-start': 'game-start',
+      ban: 'boom', // Use boom sound for ban
+      move: 'move-self',
+      'opponent-move': 'move-opponent',
+      capture: 'capture',
+      castle: 'castle',
+      check: 'move-check',
+      promote: 'promote',
+      'draw-offer': 'draw-offer',
+      'time-warning': 'tenseconds',
+      'game-end': 'game-end',
+    };
+
+    for (const [event, file] of Object.entries(eventToFile)) {
+      const soundUrl = `${baseUrl}${file}.mp3`;
+      this.eventSoundMap[event as EventType] = soundUrl;
+
+      // Preload the sound from chess.com
+      if (!this.sounds.has(soundUrl)) {
+        this.sounds.set(
+          soundUrl,
+          new Howl({
+            src: [soundUrl],
+            volume: this.volume,
+            preload: true,
+            html5: true, // Use HTML5 audio for cross-origin requests
+          })
+        );
+      }
+    }
+
+    this.savePreferences();
+  }
+
+  private saveToLocalStorage() {
+    this.savePreferences();
   }
 }
 

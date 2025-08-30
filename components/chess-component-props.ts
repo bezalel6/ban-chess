@@ -11,12 +11,22 @@ import type {
   PlayerClock,
   GameEvent,
 } from '@/lib/game-types';
-import type { FEN, Square, ChessMove, PGN } from '@/lib/utils/types';
+import type { FEN, Square, PGN } from '@/lib/utils/types';
 import type {
   ChessBoardProps as BaseChessBoardProps,
-  ChessMoveHandler,
-  ChessTimerProps,
+  ChessMove,
 } from '@/lib/utils/react-types';
+
+// Define missing type handlers
+export type ChessMoveHandler = (move: ChessMove) => void;
+
+export interface ChessTimerProps {
+  initialTime: number;
+  increment?: number;
+  running?: boolean;
+  onUpdate?: (remainingTime: number) => void;
+  onTimeout?: () => void;
+}
 
 /**
  * Enhanced ChessBoard component props with full type safety

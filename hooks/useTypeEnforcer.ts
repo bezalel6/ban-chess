@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Result } from '@/lib/utils';
+import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
 
 // Track type safety violations
 const typeViolations = new Map<string, number>();
@@ -26,7 +27,7 @@ export function useTypeEnforcer<T>(
   const [isAnnoyed, setIsAnnoyed] = useState(false);
   const [annoyanceMessage, setAnnoyanceMessage] = useState('');
   const violationCount = useRef(0);
-  const lastCheckTime = useRef(Date.now());
+  const _lastCheckTime = useRef(Date.now());
 
   useEffect(() => {
     const violations: string[] = [];
@@ -55,14 +56,20 @@ export function useTypeEnforcer<T>(
 
       // Check for discriminated unions
       if (options?.enforceDiscriminatedUnions) {
-        if ('history' in value && Array.isArray((value as any).history)) {
-          const history = (value as any).history;
-          if (history.some((item: any) => typeof item === 'string')) {
+        const valueWithHistory = value as unknown as { history?: unknown[] };
+        if ('history' in value && Array.isArray(valueWithHistory.history)) {
+          const history = valueWithHistory.history;
+          if (history.some((item: unknown) => typeof item === 'string')) {
             violations.push(
               '❌ MIXED TYPE ARRAY! History should only contain HistoryEntry objects!'
             );
           }
-          if (history.some((item: any) => item && !item.timestamp)) {
+          if (
+            history.some(item => {
+              const historyItem = item as { timestamp?: unknown };
+              return historyItem && !historyItem.timestamp;
+            })
+          ) {
             violations.push(
               '📅 MISSING TIMESTAMP! All HistoryEntry objects must have timestamps!'
             );
@@ -272,12 +279,12 @@ export function useResultEnforcer<T, E>(
     operation()
       .then(value => {
         if (mounted) {
-          setResult({ ok: true, value } as Result<T, E>);
+          setResult(createSuccess(value));
         }
       })
       .catch(error => {
         if (mounted) {
-          setResult({ ok: false, error } as Result<T, E>);
+          setResult(createFailure(error as E));
           errorHandler?.(error);
         }
       });
@@ -285,7 +292,7 @@ export function useResultEnforcer<T, E>(
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [operation, errorHandler]);
 
   // Force acknowledgment if not using Result pattern
   if (!enforcer.isTypeSafe) {

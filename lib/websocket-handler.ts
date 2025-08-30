@@ -4,11 +4,40 @@
 
 import type { SimpleServerMsg, SimpleClientMsg } from '@/lib/game-types';
 import type { Result } from '@/lib/utils';
-import {
-  parseClientMessage,
-  parseServerMessage,
-  createMessage,
-} from '@/lib/utils/websocket-types';
+import { isSuccess } from '@/lib/utils/type-guards';
+import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
+
+/**
+ * Validates a server message
+ */
+function validateServerMessage(data: unknown): Result<SimpleServerMsg, Error> {
+  if (!data || typeof data !== 'object') {
+    return createFailure(new Error('Invalid server message format'));
+  }
+
+  const msg = data as Record<string, unknown>;
+  if (!msg.type || typeof msg.type !== 'string') {
+    return createFailure(new Error('Server message missing type field'));
+  }
+
+  return createSuccess(msg as SimpleServerMsg);
+}
+
+/**
+ * Validates a client message
+ */
+function validateClientMessage(data: unknown): Result<SimpleClientMsg, Error> {
+  if (!data || typeof data !== 'object') {
+    return createFailure(new Error('Invalid client message format'));
+  }
+
+  const msg = data as Record<string, unknown>;
+  if (!msg.type || typeof msg.type !== 'string') {
+    return createFailure(new Error('Client message missing type field'));
+  }
+
+  return createSuccess(msg as SimpleClientMsg);
+}
 
 /**
  * Parses and validates incoming WebSocket messages
@@ -22,9 +51,9 @@ export function parseWebSocketMessage<
       const parsed = JSON.parse(data);
 
       if (messageType === 'server') {
-        return parseServerMessage(parsed) as Result<T, Error>;
+        return validateServerMessage(parsed) as Result<T, Error>;
       } else {
-        return parseClientMessage(parsed) as Result<T, Error>;
+        return validateClientMessage(parsed) as Result<T, Error>;
       }
     }
 
@@ -36,18 +65,16 @@ export function parseWebSocketMessage<
 
     // Handle direct object
     if (messageType === 'server') {
-      return parseServerMessage(data) as Result<T, Error>;
+      return validateServerMessage(data) as Result<T, Error>;
     } else {
-      return parseClientMessage(data) as Result<T, Error>;
+      return validateClientMessage(data) as Result<T, Error>;
     }
   } catch (error) {
-    return {
-      ok: false,
-      error:
-        error instanceof Error
-          ? error
-          : new Error('Failed to parse WebSocket message'),
-    };
+    return createFailure(
+      error instanceof Error
+        ? error
+        : new Error('Failed to parse WebSocket message')
+    );
   }
 }
 
@@ -57,7 +84,7 @@ export function parseWebSocketMessage<
 export function createWebSocketMessage<
   T extends SimpleServerMsg | SimpleClientMsg,
 >(type: T['type'], payload: Omit<T, 'type'>): string {
-  const message = createMessage(type, payload);
+  const message = { type, ...payload };
   return JSON.stringify(message);
 }
 
@@ -125,7 +152,7 @@ export class WebSocketMessageHandler<
     type: K,
     handler: (msg: Extract<T, { type: K }>) => void | Promise<void>
   ): this {
-    this.handlers.set(type, handler);
+    this.handlers.set(type, handler as (msg: T) => void | Promise<void>);
     return this;
   }
 
@@ -138,30 +165,26 @@ export class WebSocketMessageHandler<
   ): Promise<Result<void, Error>> {
     const parsed = parseWebSocketMessage<T>(data, messageType);
 
-    if (!parsed.ok) {
+    if (!isSuccess(parsed)) {
       return parsed;
     }
 
-    const message = parsed.value;
+    const message = parsed.data;
     const handler = this.handlers.get(message.type);
 
     if (!handler) {
-      return {
-        ok: false,
-        error: new Error(
-          `No handler registered for message type: ${message.type}`
-        ),
-      };
+      return createFailure(
+        new Error(`No handler registered for message type: ${message.type}`)
+      );
     }
 
     try {
       await handler(message);
-      return { ok: true, value: undefined };
+      return createSuccess(undefined);
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Handler failed'),
-      };
+      return createFailure(
+        error instanceof Error ? error : new Error('Handler failed')
+      );
     }
   }
 }

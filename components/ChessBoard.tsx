@@ -9,6 +9,7 @@ import type {
   Dests,
 } from '@bezalel6/react-chessground';
 import type { SimpleGameState, Move, Ban } from '@/lib/game-types';
+import { toSquare } from '@/lib/utils/ban-chess-bridge';
 import { parseFEN, getCurrentBan, strToSquare } from '@/lib/game-types';
 
 interface ChessBoardProps {
@@ -160,7 +161,7 @@ const ChessBoard = memo(function ChessBoard({
       events: {
         after: (orig: string, dest: string) => {
           if (nextAction === 'ban') {
-            onBan({ from: orig, to: dest });
+            onBan({ from: toSquare(orig), to: toSquare(dest) });
           } else {
             // Check if this is a pawn promotion
             const piece = getPieceAt(fenData.position, orig);
@@ -169,11 +170,11 @@ const ChessBoard = memo(function ChessBoard({
 
             if (isPromotion && (destRank === '8' || destRank === '1')) {
               // Store the move and show promotion dialog
-              _setPromotionMove({ from: orig, to: dest });
+              _setPromotionMove({ from: toSquare(orig), to: toSquare(dest) });
             } else {
               onMove({
-                from: orig,
-                to: dest,
+                from: toSquare(orig),
+                to: toSquare(dest),
                 promotion: undefined,
               });
             }

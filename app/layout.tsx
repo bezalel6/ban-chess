@@ -7,6 +7,7 @@ import { WebSocketProvider } from '@/contexts/WebSocketContext';
 import Header from '@/components/layout/Header';
 import ConnectionStatusOverlay from '@/components/ConnectionStatusOverlay';
 import WebSocketStatusWidget from '@/components/WebSocketStatusWidget';
+import SilenceWidget from '@/components/SilenceWidget';
 
 export const metadata: Metadata = {
   title: 'BanChess',
@@ -45,6 +46,7 @@ export default function RootLayout({
           <WebSocketProvider>
             <ConnectionStatusOverlay />
             <WebSocketStatusWidget />
+            <SilenceWidget />
             <Header />
 
             {/* Main content */}

@@ -1,7 +1,8 @@
 'use client';
 
 import SoundEventMapper from '@/components/audio/SoundEventMapper';
-import { Volume2, ArrowLeft, VolumeX } from 'lucide-react';
+import ThemeBrowser from '@/components/audio/ThemeBrowser';
+import { Volume2, ArrowLeft, VolumeX, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import soundManager from '@/lib/sound-manager';
@@ -18,23 +19,37 @@ export default function SoundSettingsPage() {
     if (savedVolume) {
       const volume = parseInt(savedVolume);
       setGlobalVolume(volume);
-      soundManager.setGlobalVolume(volume / 100);
+      soundManager.setVolume(volume / 100);
+    } else {
+      // Initialize from soundManager's current volume
+      const currentVolume = soundManager.getVolume();
+      setGlobalVolume(Math.round(currentVolume * 100));
     }
-    if (savedMuted) setIsMuted(savedMuted === 'true');
+
+    if (savedMuted === 'true') {
+      setIsMuted(true);
+      soundManager.setEnabled(false);
+    } else {
+      setIsMuted(false);
+      soundManager.setEnabled(true);
+    }
   }, []);
 
-  const handleVolumeRelease = () => {
-    // User released the slider - save and play sound
-    localStorage.setItem('globalVolume', globalVolume.toString());
-    soundManager.setGlobalVolume(globalVolume / 100);
-
-    // Simple test beep
+  const handleVolumeChange = (value: number) => {
+    setGlobalVolume(value);
+    // Update soundManager volume in real-time
     if (!isMuted) {
-      const audio = new Audio();
-      audio.src =
-        'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2Gy/LTgDQIGGS47OScTw0PVqzn77VeFAg+mdn1wnkpBSx+zPLaizsIGGS56+OeTQ4MW6bj8L5tHgg5k9z1w3IqBSh+yO/ej0ULElyx6OynVBULR6Xf87xnIAYsgsn1048+CRZitur0pmkVCkOf4PK8aB4GM4zU8tGAOAoXY7bs5pFODgtVqOPyvmsfBi+Fz/LWhjgJFmO06+qhVBAKTKPi9bllHwUvg8/y14k7CRVlturmplMMC1Kq4/S7ZiAFLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDCM0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqbj9bxnHwUuhM/y1YY6CRVlturmplQN';
-      audio.volume = (globalVolume / 100) * 0.3;
-      audio.play().catch(() => {});
+      soundManager.setVolume(value / 100);
+    }
+  };
+
+  const handleVolumeRelease = () => {
+    // Save to localStorage when user releases slider
+    localStorage.setItem('globalVolume', globalVolume.toString());
+
+    // Play a test sound
+    if (!isMuted) {
+      soundManager.playEvent('move');
     }
   };
 
@@ -42,15 +57,14 @@ export default function SoundSettingsPage() {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
     localStorage.setItem('isMuted', newMuted.toString());
-    soundManager.toggleMute();
 
-    // Play a sound when unmuting to indicate the current volume
-    if (!newMuted) {
-      const audio = new Audio();
-      audio.src =
-        'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBi2Gy/LTgDQIGGS47OScTw0PVqzn77VeFAg+mdn1wnkpBSx+zPLaizsIGGS56+OeTQ4MW6bj8L5tHgg5k9z1w3IqBSh+yO/ej0ULElyx6OynVBULR6Xf87xnIAYsgsn1048+CRZitur0pmkVCkOf4PK8aB4GM4zU8tGAOAoXY7bs5pFODgtVqOPyvmsfBi+Fz/LWhjgJFmO06+qhVBAKTKPi9bllHwUvg8/y14k7CRVlturmplMMC1Kq4/S7ZiAFLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7Zh8FLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDCM0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqfj9bxnHwUuhM/y1YY6CRVlturmplQNCVGm4/W7ZiAGLoXO8tWHOwkWZLXr56hTEwxRpuP0u2ccBDaL0/PQfzcIF2a16+ejUBAKUqbj9bxnHwUuhM/y1YY6CRVlturmplQN';
-      audio.volume = (globalVolume / 100) * 0.3;
-      audio.play().catch(() => {});
+    if (newMuted) {
+      soundManager.setEnabled(false);
+    } else {
+      soundManager.setEnabled(true);
+      soundManager.setVolume(globalVolume / 100);
+      // Play a test sound when unmuting
+      soundManager.playEvent('move');
     }
   };
 
@@ -58,7 +72,7 @@ export default function SoundSettingsPage() {
     <div className='min-h-screen bg-background'>
       {/* Enhanced Header with Volume Controls */}
       <div className='border-b border-border bg-background-secondary'>
-        <div className='flex items-center h-20 px-4 sm:px-6 lg:px-8'>
+        <div className='flex items-center h-16 px-4 sm:px-6 lg:px-8'>
           {/* Left Section - Navigation and Title */}
           <div className='flex items-center gap-4 mr-8'>
             <Link
@@ -100,7 +114,7 @@ export default function SoundSettingsPage() {
                 min='0'
                 max='100'
                 value={globalVolume}
-                onChange={e => setGlobalVolume(parseInt(e.target.value))}
+                onChange={e => handleVolumeChange(parseInt(e.target.value))}
                 onMouseUp={handleVolumeRelease}
                 onTouchEnd={handleVolumeRelease}
                 disabled={isMuted}
@@ -140,27 +154,51 @@ export default function SoundSettingsPage() {
       </div>
 
       {/* Main Content - More Compact */}
-      <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6'>
-        <div className='space-y-6'>
+      <div className='mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-4'>
+        <div className='space-y-4'>
+          {/* Theme Browser */}
+          <div className='bg-background-secondary rounded-lg p-4'>
+            <ThemeBrowser />
+          </div>
+
           {/* Event Sound Mapping */}
-          <div className='bg-background-secondary rounded-xl p-6'>
-            <div className='flex items-center justify-between mb-6'>
-              <h2 className='text-lg font-semibold'>Event Sound Mapping</h2>
+          <div className='bg-background-secondary rounded-lg p-4'>
+            <div className='flex items-center justify-between mb-4'>
+              <h2 className='text-base font-semibold'>Custom Sound Mapping</h2>
               <button
                 onClick={() => {
                   soundManager.resetToDefaults();
                   window.location.reload();
                 }}
-                className='px-4 py-2 bg-background-tertiary hover:bg-background text-sm rounded-lg transition-colors border border-border'
+                className='px-3 py-1.5 bg-background-tertiary hover:bg-background text-sm rounded-lg transition-colors border border-border'
               >
                 Reset to Defaults
               </button>
             </div>
-            <p className='text-sm text-foreground-muted mb-6'>
-              Customize sounds for different game events. Click an event to
-              select it, then choose a sound to assign.
+            <p className='text-xs text-foreground-muted mb-4'>
+              Fine-tune individual sounds for specific game events. Mix and
+              match sounds from different themes.
             </p>
             <SoundEventMapper />
+          </div>
+        </div>
+
+        {/* Attribution Footer */}
+        <div className='mt-6 pt-4 border-t border-border/50'>
+          <div className='flex items-center justify-center gap-2 text-xs text-foreground-muted'>
+            <Info className='h-3 w-3' />
+            <span>
+              Sound effects are from{' '}
+              <a
+                href='https://lichess.org'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='text-amber-500 hover:text-amber-400 underline decoration-dotted underline-offset-2'
+              >
+                lichess.org
+              </a>
+              , the free and open-source chess platform
+            </span>
           </div>
         </div>
       </div>
