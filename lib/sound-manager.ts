@@ -122,10 +122,7 @@ class SoundManager {
       const savedEventMap = localStorage.getItem('soundEventMap');
 
       if (savedEnabled !== null) {
-        // this.enabled = savedEnabled === "true";
-
-        this.enabled = true;
-        savedEnabled === 'true';
+        this.enabled = savedEnabled === 'true';
       }
 
       if (savedVolume !== null) {
@@ -181,6 +178,8 @@ class SoundManager {
         const howlLike = {
           play: () => {
             audio.currentTime = 0;
+            // Always apply current volume when playing
+            audio.volume = this.volume;
             audio.play().catch(() => {});
           },
           stop: () => {
@@ -188,7 +187,13 @@ class SoundManager {
             audio.currentTime = 0;
           },
           volume: (v?: number) => {
-            if (v !== undefined) audio.volume = v;
+            if (v !== undefined) {
+              audio.volume = v;
+              // Also update the internal volume reference
+              if (v !== this.volume) {
+                this.volume = v;
+              }
+            }
             return audio.volume;
           },
           state: () => 'loaded' as const,

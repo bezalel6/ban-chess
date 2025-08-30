@@ -9,7 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
  */
 
 interface OAuthUser {
-  googleId?: string;
+  providerId: string; // Provider-specific ID (Google sub, Lichess ID, etc)
+  provider: 'google' | 'lichess';
   email?: string | null;
   name?: string | null;
   image?: string | null;
@@ -18,14 +19,17 @@ interface OAuthUser {
 /**
  * Create or update a user from OAuth login
  * Handles username collisions and profanity filtering
+ * Works with multiple OAuth providers (Google, Lichess)
  */
 export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
   id: string;
   username: string;
   role: string;
 }> {
-  if (!oauthUser.googleId) {
-    throw new Error('Google ID is required for OAuth user creation');
+  if (!oauthUser.providerId || !oauthUser.provider) {
+    throw new Error(
+      'Provider ID and provider type are required for OAuth user creation'
+    );
   }
 
   try {
@@ -44,6 +48,10 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
         .update(users)
         .set({ lastSeenAt: new Date() })
         .where(eq(users.id, existingUser.id));
+
+      console.log(
+        `[Auth] Existing user signed in: ${existingUser.username} via ${oauthUser.provider}`
+      );
 
       return {
         id: existingUser.id,
@@ -64,12 +72,14 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
       email: oauthUser.email || undefined,
       role: 'player' as const, // Default role for new users
       isActive: true,
+      createdAt: new Date(),
+      lastSeenAt: new Date(),
     };
 
     await db.insert(users).values(newUser);
 
     console.log(
-      `[Auth] Created new user: ${uniqueUsername} (${oauthUser.email})`
+      `[Auth] Created new user: ${uniqueUsername} (${oauthUser.email}) via ${oauthUser.provider}`
     );
 
     return {
@@ -79,6 +89,15 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
     };
   } catch (error) {
     console.error('[Auth] Error syncing OAuth user:', error);
+    // Add more detailed error information for debugging
+    if (error instanceof Error) {
+      console.error('[Auth] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        provider: oauthUser.provider,
+        email: oauthUser.email,
+      });
+    }
     throw error;
   }
 }

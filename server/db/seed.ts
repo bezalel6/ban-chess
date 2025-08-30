@@ -1,6 +1,11 @@
-import { db, users, systemSettings } from './index';
 import { v4 as uuidv4 } from 'uuid';
-import 'dotenv/config';
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+// Load .env.local before importing db
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+
+import { db, users, systemSettings } from './index';
 
 /**
  * Database seed script

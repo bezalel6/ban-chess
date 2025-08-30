@@ -1,7 +1,6 @@
 'use client';
 
-import SoundEventMapperWithSecret from '@/components/audio/SoundEventMapperWithSecret';
-import ThemeBrowser from '@/components/audio/ThemeBrowser';
+import SoundCustomizerFixed from '@/components/audio/SoundCustomizerFixed';
 import { Volume2, ArrowLeft, VolumeX, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -12,21 +11,22 @@ export default function SoundSettingsPage() {
   const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-    // Load saved volume settings ONCE on mount
-    const savedVolume = localStorage.getItem('globalVolume');
-    const savedMuted = localStorage.getItem('isMuted');
+    // Load saved volume settings ONCE on mount - use soundManager's keys
+    const savedVolume = localStorage.getItem('soundVolume');
+    const savedEnabled = localStorage.getItem('soundEnabled');
 
     if (savedVolume) {
-      const volume = parseInt(savedVolume);
-      setGlobalVolume(volume);
-      soundManager.setVolume(volume / 100);
+      const volume = parseFloat(savedVolume);
+      setGlobalVolume(Math.round(volume * 100));
+      soundManager.setVolume(volume);
     } else {
       // Initialize from soundManager's current volume
       const currentVolume = soundManager.getVolume();
       setGlobalVolume(Math.round(currentVolume * 100));
     }
 
-    if (savedMuted === 'true') {
+    // Check if sounds are enabled (inverse of muted)
+    if (savedEnabled === 'false') {
       setIsMuted(true);
       soundManager.setEnabled(false);
     } else {
@@ -44,8 +44,8 @@ export default function SoundSettingsPage() {
   };
 
   const handleVolumeRelease = () => {
-    // Save to localStorage when user releases slider
-    localStorage.setItem('globalVolume', globalVolume.toString());
+    // Save to localStorage when user releases slider - use soundManager's key format
+    localStorage.setItem('soundVolume', (globalVolume / 100).toString());
 
     // Play a test sound
     if (!isMuted) {
@@ -56,7 +56,8 @@ export default function SoundSettingsPage() {
   const toggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
-    localStorage.setItem('isMuted', newMuted.toString());
+    // Use soundManager's key (inverse logic: enabled vs muted)
+    localStorage.setItem('soundEnabled', (!newMuted).toString());
 
     if (newMuted) {
       soundManager.setEnabled(false);
@@ -156,15 +157,10 @@ export default function SoundSettingsPage() {
       {/* Main Content - More Compact */}
       <div className='mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-4'>
         <div className='space-y-4'>
-          {/* Theme Browser */}
-          <div className='bg-background-secondary rounded-lg p-4'>
-            <ThemeBrowser />
-          </div>
-
-          {/* Event Sound Mapping */}
+          {/* Sound Customizer - All-in-one component */}
           <div className='bg-background-secondary rounded-lg p-4'>
             <div className='flex items-center justify-between mb-4'>
-              <h2 className='text-base font-semibold'>Custom Sound Mapping</h2>
+              <h2 className='text-base font-semibold'>Sound Configuration</h2>
               <button
                 onClick={() => {
                   soundManager.resetToDefaults();
@@ -175,11 +171,7 @@ export default function SoundSettingsPage() {
                 Reset to Defaults
               </button>
             </div>
-            <p className='text-xs text-foreground-muted mb-4'>
-              Fine-tune individual sounds for specific game events. Mix and
-              match sounds from different themes.
-            </p>
-            <SoundEventMapperWithSecret />
+            <SoundCustomizerFixed />
           </div>
         </div>
 
@@ -236,6 +228,15 @@ export default function SoundSettingsPage() {
 
         .slider:disabled::-moz-range-thumb {
           cursor: not-allowed;
+        }
+
+        /* Deep press effect for selected items */
+        .pressed-effect {
+          transform: translateY(2px);
+          box-shadow:
+            inset 0 4px 8px rgba(0, 0, 0, 0.4),
+            inset 0 2px 4px rgba(0, 0, 0, 0.3),
+            0 1px 2px rgba(0, 0, 0, 0.2) !important;
         }
       `}</style>
     </div>

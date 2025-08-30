@@ -93,6 +93,135 @@ export const eventToSoundFile: Record<string, string> = {
   'game-end': 'Victory',
 };
 
+// Track which sound files exist for each theme
+const themeSoundAvailability: Record<SoundTheme, string[]> = {
+  standard: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  futuristic: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  piano: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  robot: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  sfx: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  nes: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  lisp: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  woodland: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'Draw',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+    'NewChallenge',
+  ],
+  instrument: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Defeat',
+    'NewChallenge',
+    'GenericNotify',
+    'Explosion',
+    'LowTime',
+  ],
+  pirate: [
+    'Move',
+    'Capture',
+    'Check',
+    'Victory',
+    'Explosion',
+    'GenericNotify',
+    'LowTime',
+    'NewChallenge',
+  ],
+};
+
+// Check if a sound exists for a theme
+export function soundExistsForTheme(
+  theme: SoundTheme,
+  soundFile: string
+): boolean {
+  return themeSoundAvailability[theme]?.includes(soundFile) ?? false;
+}
+
 // Get full path to a local sound file (lichess sounds)
 export function getSoundPath(
   theme: SoundTheme,
@@ -101,6 +230,16 @@ export function getSoundPath(
 ): string | null {
   const soundFile = eventToSoundFile[event];
   if (!soundFile) return null;
+
+  // Check if this sound exists for the theme
+  if (!soundExistsForTheme(theme, soundFile)) {
+    // Fallback to standard theme
+    if (theme !== 'standard' && soundExistsForTheme('standard', soundFile)) {
+      theme = 'standard';
+    } else {
+      return null;
+    }
+  }
 
   // For instrument theme, use special instrument sounds
   if (theme === 'instrument') {
@@ -120,29 +259,11 @@ export function getSoundPath(
     if (instrumentFile) {
       return `${instrumentFile}.${format}`;
     }
-    // Fallback to standard if no mapping
-    theme = 'standard';
   }
 
   // Special path for pirate theme (simplified sounds)
   if (theme === 'pirate') {
-    const pirateFile = `/sounds/pirate/${soundFile}.mp3`;
-    // Check if this file exists in pirate folder, otherwise fallback
-    const pirateFiles = [
-      'Capture',
-      'Check',
-      'Explosion',
-      'GenericNotify',
-      'LowTime',
-      'Move',
-      'NewChallenge',
-      'Victory',
-    ];
-    if (pirateFiles.includes(soundFile)) {
-      return pirateFile;
-    }
-    // Fallback to standard if file doesn't exist
-    theme = 'standard';
+    return `/sounds/pirate/${soundFile}.mp3`;
   }
 
   // Standard path for lichess themes

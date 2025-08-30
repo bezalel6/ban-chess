@@ -1,7 +1,14 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Volume2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import {
+  Volume2,
+  ChevronLeft,
+  ChevronRight,
+  TestTube,
+  VolumeX,
+} from 'lucide-react';
+import soundManager from '@/lib/sound-manager';
 
 interface NothingToSeeHereProps {
   onSoundSelect?: (url: string, name: string) => void;
@@ -10,9 +17,16 @@ interface NothingToSeeHereProps {
 type Sound = {
   name: string;
   url: string;
+  isTest?: boolean;
 };
 
 const sounds: Sound[] = [
+  // Volume test sound - placed at the top for easy access
+  {
+    name: '🔊 Volume Test',
+    url: '/recent-pop.wav',
+    isTest: true,
+  },
   {
     name: 'Ten Seconds',
     url: 'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/tenseconds.mp3',
@@ -157,6 +171,27 @@ const sounds: Sound[] = [
     name: 'Boom',
     url: 'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/boom.mp3',
   },
+  // Pirate theme sounds (exclusive to secret room)
+  {
+    name: '🏴‍☠️ Pirate Move',
+    url: '/sounds/pirate/Move.mp3',
+  },
+  {
+    name: '🏴‍☠️ Pirate Capture',
+    url: '/sounds/pirate/Capture.mp3',
+  },
+  {
+    name: '🏴‍☠️ Pirate Check',
+    url: '/sounds/pirate/Check.mp3',
+  },
+  {
+    name: '🏴‍☠️ Pirate Victory',
+    url: '/sounds/pirate/Victory.mp3',
+  },
+  {
+    name: '🏴‍☠️ Pirate Challenge',
+    url: '/sounds/pirate/NewChallenge.mp3',
+  },
 ];
 
 export default function NothingToSeeHere({
@@ -164,6 +199,9 @@ export default function NothingToSeeHere({
 }: NothingToSeeHereProps) {
   const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({});
   const [currentPage, setCurrentPage] = useState(0);
+  const [currentVolume, setCurrentVolume] = useState(100);
+  const [isMuted, setIsMuted] = useState(false);
+
   const soundsPerPage = 12;
   const totalPages = Math.ceil(sounds.length / soundsPerPage);
 
@@ -172,11 +210,36 @@ export default function NothingToSeeHere({
     (currentPage + 1) * soundsPerPage
   );
 
+  useEffect(() => {
+    // Update volume display when component mounts
+    const volume = soundManager.getVolume();
+    setCurrentVolume(Math.round(volume * 100));
+    setIsMuted(!soundManager.isEnabled());
+
+    // Update on storage changes (when volume is changed elsewhere)
+    const handleStorageChange = () => {
+      const savedVolume = localStorage.getItem('soundVolume');
+      const savedEnabled = localStorage.getItem('soundEnabled');
+
+      if (savedVolume) {
+        setCurrentVolume(Math.round(parseFloat(savedVolume) * 100));
+      }
+      if (savedEnabled) {
+        setIsMuted(savedEnabled === 'false');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const playSound = (sound: Sound) => {
     const el = audioRefs.current[sound.name];
     if (el) {
+      // Apply current volume from soundManager
+      el.volume = soundManager.getVolume();
       el.currentTime = 0;
-      el.play();
+      el.play().catch(() => {});
     }
   };
 
@@ -195,38 +258,66 @@ export default function NothingToSeeHere({
   };
 
   return (
-    <div className='space-y-6'>
-      <div className='grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3'>
+    <div className='space-y-4'>
+      {/* Volume display header */}
+      <div className='flex items-center justify-between p-3 bg-gray-800 rounded-lg'>
+        <div className='flex items-center gap-3'>
+          <div className='flex items-center gap-2'>
+            {isMuted ? (
+              <VolumeX className='h-5 w-5 text-red-500' />
+            ) : (
+              <Volume2 className='h-5 w-5 text-green-500' />
+            )}
+            <span className='text-sm font-medium text-gray-300'>
+              Current Volume: {isMuted ? 'Muted' : `${currentVolume}%`}
+            </span>
+          </div>
+        </div>
+        <div className='text-xs text-gray-500'>
+          Test sounds to verify volume control
+        </div>
+      </div>
+
+      {/* Sound grid - smaller cards */}
+      <div className='grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2'>
         {currentSounds.map(sound => (
           <article
             key={sound.name}
-            className='relative p-3 bg-gray-900 rounded-lg shadow-md text-white hover:shadow-lg transition-shadow'
+            className={`relative p-2 rounded-md shadow-sm text-white hover:shadow-md transition-shadow ${
+              sound.isTest
+                ? 'bg-gradient-to-br from-blue-900 to-blue-800 ring-2 ring-blue-500'
+                : 'bg-gray-800'
+            }`}
           >
             {/* Test audio icon in top-left corner */}
             <button
               type='button'
               aria-label={`Preview ${sound.name}`}
               onClick={() => playSound(sound)}
-              className='absolute top-2 left-2 p-1 rounded bg-gray-800 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500'
+              className='absolute top-1 left-1 p-0.5 rounded bg-gray-700 hover:bg-gray-600 transition-colors'
             >
-              <Volume2 className='h-3 w-3 text-gray-400 hover:text-white' />
+              {sound.isTest ? (
+                <TestTube className='h-2.5 w-2.5 text-blue-400' />
+              ) : (
+                <Volume2 className='h-2.5 w-2.5 text-gray-400' />
+              )}
             </button>
 
-            {/* Sound name centered */}
-            <div className='flex flex-col items-center pt-5'>
+            {/* Sound name and use button */}
+            <div className='flex flex-col items-center pt-4'>
               <span
-                className='text-xs font-medium mb-2 text-center line-clamp-2'
+                className='text-[10px] font-medium mb-1 text-center line-clamp-2 h-6'
                 title={sound.name}
               >
                 {sound.name}
               </span>
 
-              {/* Single prominent Use button */}
+              {/* Use button */}
               <button
                 type='button'
                 aria-label={`Use ${sound.name}`}
                 onClick={() => handleSoundSelect(sound)}
-                className='w-full px-2 py-1.5 text-xs rounded bg-red-600 text-white font-medium hover:bg-red-700 transform hover:scale-105 transition-all focus:outline-none focus:ring-2 focus:ring-red-500'
+                className='w-full px-1 py-0.5 text-[10px] rounded bg-red-600 text-white font-medium hover:bg-red-700 transition-colors'
               >
                 Use
               </button>
@@ -249,22 +340,22 @@ export default function NothingToSeeHere({
         <div className='flex items-center justify-center gap-4'>
           <button
             onClick={prevPage}
-            className='p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500'
+            className='p-1.5 rounded-md bg-gray-700 hover:bg-gray-600 transition-colors'
             aria-label='Previous page'
           >
-            <ChevronLeft className='h-5 w-5' />
+            <ChevronLeft className='h-4 w-4' />
           </button>
 
-          <span className='text-sm text-gray-400'>
+          <span className='text-xs text-gray-400'>
             Page {currentPage + 1} of {totalPages}
           </span>
 
           <button
             onClick={nextPage}
-            className='p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500'
+            className='p-1.5 rounded-md bg-gray-700 hover:bg-gray-600 transition-colors'
             aria-label='Next page'
           >
-            <ChevronRight className='h-5 w-5' />
+            <ChevronRight className='h-4 w-4' />
           </button>
         </div>
       )}

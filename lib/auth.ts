@@ -15,6 +15,10 @@ interface LichessProfile {
   email?: string;
 }
 
+// TODO(human): Update the authOptions below to use Env class methods
+// Replace process.env.NEXTAUTH_SECRET with appropriate Env method
+// Replace process.env.LICHESS_CLIENT_ID with Env.getAuthConfig().lichessClientId
+// Replace process.env.GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET with Env.getAuthConfig() values
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
   session: {
@@ -76,10 +80,11 @@ export const authOptions = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async signIn({ user, account, profile }: any) {
       try {
-        // Sync user to PostgreSQL on sign in
+        // Sync user to PostgreSQL on sign in for OAuth providers
         if (account?.provider === 'google' && profile) {
           const dbUser = await upsertUserFromOAuth({
-            googleId: profile.sub,
+            providerId: profile.sub,
+            provider: 'google',
             email: profile.email,
             name: profile.name,
             image: profile.picture,
@@ -90,6 +95,27 @@ export const authOptions = {
           if (!loginCheck.allowed) {
             // Return false with reason (NextAuth will redirect to error page)
             // Sanitize the error message to remove newlines and special characters
+            const sanitizedReason = (loginCheck.reason || 'Access denied')
+              .replace(/[\n\r]/g, ' ')
+              .replace(/[^\w\s\-.:]/g, '')
+              .substring(0, 100);
+            throw new Error(sanitizedReason);
+          }
+        } else if (account?.provider === 'lichess' && user) {
+          // Sync Lichess user to database
+          const lichessProfile = profile as LichessProfile;
+          const dbUser = await upsertUserFromOAuth({
+            providerId: lichessProfile.id,
+            provider: 'lichess',
+            email:
+              lichessProfile.email || `${lichessProfile.username}@lichess.org`,
+            name: lichessProfile.username,
+            image: null,
+          });
+
+          // Check if user is allowed to login
+          const loginCheck = await canUserLogin(dbUser.id);
+          if (!loginCheck.allowed) {
             const sanitizedReason = (loginCheck.reason || 'Access denied')
               .replace(/[\n\r]/g, ' ')
               .replace(/[^\w\s\-.:]/g, '')
@@ -125,7 +151,17 @@ export const authOptions = {
           // Handle Lichess profile
           if (account.provider === 'lichess' && profile) {
             const lichessProfile = profile as LichessProfile;
-            token.username = lichessProfile.username;
+            // Get the database user to use our ID and username
+            const email =
+              lichessProfile.email || `${lichessProfile.username}@lichess.org`;
+            const dbUser = await getUserByEmail(email);
+            if (dbUser) {
+              token.dbUserId = dbUser.id; // Our PostgreSQL UUID
+              token.username = dbUser.username; // Our sanitized username
+              token.role = dbUser.role; // User role for permissions
+            } else {
+              token.username = lichessProfile.username;
+            }
             token.providerId = lichessProfile.id;
             token.provider = 'lichess';
           }

@@ -208,3 +208,10 @@ module.exports = {
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 - [Playwright](https://playwright.dev/)
+
+- While still requiring some tweaks, consolidation, etc. This is the situation we need to think of when it comes to the sound effects locally available on the server:\
+
+/sounds/
+Silence.mp3 futuristic/ nes/ pirate/ standard/
+Silence.ogg instrument/ other/ robot/ woodland/
+default/ lisp/ piano/ sfx/
