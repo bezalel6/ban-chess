@@ -1,7 +1,8 @@
-import { Trophy, Clock, TrendingUp, Shield, User, ChevronRight } from 'lucide-react';
+import { Trophy, Clock, TrendingUp, Shield, User, ChevronRight, AlertCircle } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import type { AuthSession } from '@/types/auth';
+import Link from 'next/link';
 
 interface GameRecord {
   id: string;
@@ -12,8 +13,54 @@ interface GameRecord {
   date: string;
 }
 
+interface UserStats {
+  rating: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  winRate: number;
+  currentStreak: number;
+}
+
 interface UserProfilePageProps {
   params: Promise<{ username: string }>;
+}
+
+async function fetchUserStats(username: string): Promise<UserStats | null> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/users/${username}/stats`, {
+      next: { revalidate: 60 }, // Cache for 1 minute
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch user stats:', error);
+    return null;
+  }
+}
+
+async function fetchRecentGames(username: string): Promise<{ games: GameRecord[] } | null> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/users/${username}/games?limit=5`, {
+      next: { revalidate: 60 }, // Cache for 1 minute
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch recent games:', error);
+    return null;
+  }
 }
 
 export default async function UserProfilePage({ params }: UserProfilePageProps) {
@@ -31,12 +78,12 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
           <p className="text-foreground-muted mb-6">
             Guest accounts don&apos;t have profiles. Sign in with Lichess or Google to track your games and stats!
           </p>
-          <a
+          <Link
             href="/auth/signin"
             className="inline-block px-6 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600 transition-colors"
           >
             Sign In
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -46,44 +93,34 @@ export default async function UserProfilePage({ params }: UserProfilePageProps) 
   const isGuest = user?.provider === 'guest';
   const isOwnProfile = user?.username === username && !isGuest;
   
-  // Mock data - in production this would come from an API
-  const stats = {
-    rating: 1524,
-    gamesPlayed: 127,
-    wins: 68,
-    losses: 45,
-    draws: 14,
-    winRate: Math.round((68 / 127) * 100),
-    currentStreak: 3,
-  };
+  // Fetch real data from API
+  const [stats, gamesData] = await Promise.all([
+    fetchUserStats(username),
+    fetchRecentGames(username),
+  ]);
 
-  // Mock data - in production this would come from an API
-  const recentGames: GameRecord[] = [
-    {
-      id: '1',
-      opponent: 'DragonMaster',
-      result: 'win',
-      playerColor: 'white',
-      duration: '15:23',
-      date: '2 hours ago',
-    },
-    {
-      id: '2',
-      opponent: 'ChessWizard99',
-      result: 'loss',
-      playerColor: 'black',
-      duration: '08:45',
-      date: '5 hours ago',
-    },
-    {
-      id: '3',
-      opponent: 'TacticalGenius',
-      result: 'draw',
-      playerColor: 'white',
-      duration: '22:10',
-      date: 'Yesterday',
-    },
-  ];
+  // Handle error state
+  if (!stats) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-background-secondary rounded-lg p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-4">User Not Found</h1>
+          <p className="text-foreground-muted mb-6">
+            The user &quot;{username}&quot; doesn&apos;t exist or hasn&apos;t played any games yet.
+          </p>
+          <Link
+            href="/"
+            className="inline-block px-6 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600 transition-colors"
+          >
+            Go Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const recentGames = gamesData?.games || [];
 
   const getResultColor = (result: string) => {
     switch (result) {

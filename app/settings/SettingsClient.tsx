@@ -3,7 +3,12 @@
 import { User, Volume2, Play } from "lucide-react";
 import type { AuthSession } from "@/types/auth";
 import { useState, useEffect } from "react";
-import soundManager, { eventTypes, eventMetadata, availableSounds, type EventType } from "@/lib/sound-manager";
+import soundManager, {
+  eventTypes,
+  eventMetadata,
+  availableSounds,
+  type EventType,
+} from "@/lib/sound-manager";
 
 interface SettingsClientProps {
   session: AuthSession;
@@ -12,11 +17,13 @@ interface SettingsClientProps {
 export default function SettingsClient({ session }: SettingsClientProps) {
   const { user } = session;
   const isGuest = user.provider === "guest";
-  
+
   // Sound settings state
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
   const [volume, setVolume] = useState(soundManager.getVolume());
-  const [eventSoundMap, setEventSoundMap] = useState(soundManager.getEventSoundMap());
+  const [eventSoundMap, setEventSoundMap] = useState(
+    soundManager.getEventSoundMap()
+  );
 
   // Load initial preferences
   useEffect(() => {
@@ -36,7 +43,10 @@ export default function SettingsClient({ session }: SettingsClientProps) {
     soundManager.setEnabled(newEnabled);
   };
 
-  const handleEventSoundChange = (eventType: EventType, soundFile: string | null) => {
+  const handleEventSoundChange = (
+    eventType: EventType,
+    soundFile: string | null
+  ) => {
     soundManager.setEventSound(eventType, soundFile);
     setEventSoundMap(soundManager.getEventSoundMap());
   };
@@ -85,13 +95,13 @@ export default function SettingsClient({ session }: SettingsClientProps) {
         </div>
       </div>
 
-      {/* Sound Settings Section */}
+      {/* Sound Settings */}
       <div className="bg-background-secondary rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Volume2 className="h-5 w-5 text-lichess-orange-500" />
           Sound Settings
         </h2>
-        
+
         <div className="space-y-6">
           {/* Master Sound Toggle */}
           <div className="flex items-center justify-between">
@@ -104,12 +114,12 @@ export default function SettingsClient({ session }: SettingsClientProps) {
             <button
               onClick={handleSoundToggle}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                soundEnabled ? 'bg-lichess-orange-500' : 'bg-gray-600'
+                soundEnabled ? "bg-lichess-orange-500" : "bg-gray-600"
               }`}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  soundEnabled ? 'translate-x-6' : 'translate-x-1'
+                  soundEnabled ? "translate-x-6" : "translate-x-1"
                 }`}
               />
             </button>
@@ -133,7 +143,9 @@ export default function SettingsClient({ session }: SettingsClientProps) {
               className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 background: soundEnabled
-                  ? `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${volume * 100}%, rgb(55 65 81) ${volume * 100}%, rgb(55 65 81) 100%)`
+                  ? `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${
+                      volume * 100
+                    }%, rgb(55 65 81) ${volume * 100}%, rgb(55 65 81) 100%)`
                   : undefined,
               }}
             />
@@ -165,7 +177,8 @@ export default function SettingsClient({ session }: SettingsClientProps) {
                     <select
                       value={eventSoundMap[eventType] || ""}
                       onChange={(e) => {
-                        const value = e.target.value === "" ? null : e.target.value;
+                        const value =
+                          e.target.value === "" ? null : e.target.value;
                         handleEventSoundChange(eventType, value);
                       }}
                       disabled={!soundEnabled}

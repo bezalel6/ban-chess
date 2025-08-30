@@ -5,13 +5,13 @@ import type { AuthSession } from "@/types/auth";
 import SettingsClient from "./SettingsClient";
 
 export default async function SettingsPage() {
-  const session = await getServerSession(authOptions) as AuthSession | null;
-  
+  const session = (await getServerSession(authOptions)) as AuthSession | null;
+
   // Redirect if not authenticated
   if (!session) {
     redirect("/auth/signin");
   }
-  
+
   // Render the client component with the session
   return <SettingsClient session={session} />;
 }

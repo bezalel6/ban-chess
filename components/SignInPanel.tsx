@@ -3,18 +3,22 @@
 import { signIn, useSession } from "next-auth/react";
 import { useState } from "react";
 import Image from "next/image";
+import { withAuth } from "./auth/withAuth";
 
 interface SignInPanelProps {
   compact?: boolean;
   onSignIn?: () => void;
 }
 
-export default function SignInPanel({ compact = false, onSignIn }: SignInPanelProps) {
+export default function SignInPanel({
+  compact = false,
+  onSignIn,
+}: SignInPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { data: session } = useSession();
-  
+
   // Check if user is a guest (provider is 'guest')
-  const isGuest = session?.user?.provider === 'guest';
+  const isGuest = session?.user?.provider === "guest";
 
   const handleLichessSignIn = () => {
     signIn("lichess", { callbackUrl: "/" });
@@ -118,14 +122,15 @@ export default function SignInPanel({ compact = false, onSignIn }: SignInPanelPr
       {isGuest && (
         <div className="bg-lichess-orange-500/10 border border-lichess-orange-500/30 rounded-lg p-4 text-center">
           <p className="text-sm text-foreground mb-2">
-            You&apos;re currently playing as <strong>{session?.user?.username}</strong>
+            You&apos;re currently playing as{" "}
+            <strong>{session?.user?.username}</strong>
           </p>
           <p className="text-xs text-muted-foreground">
             Create an account to save your games and track your progress!
           </p>
         </div>
       )}
-      
+
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={handleLichessSignIn}
@@ -181,7 +186,9 @@ export default function SignInPanel({ compact = false, onSignIn }: SignInPanelPr
               <div className="w-full border-t border-border"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-3 text-muted-foreground">Or continue without account</span>
+              <span className="bg-background px-3 text-muted-foreground">
+                Or continue without account
+              </span>
             </div>
           </div>
 

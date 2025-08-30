@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { BanChess } from 'ban-chess.ts';
 import type { SimpleGameState, Move, Ban, SerializedAction } from '@/lib/game-types';
 import ImportExportPanel from '@/components/analysis/ImportExportPanel';
-import MovesList from '@/components/analysis/MovesList';
+import GameStatePanel from '@/components/analysis/GameStatePanel';
 import NavigationControls from '@/components/analysis/NavigationControls';
 
 // Dynamic import for the board to avoid SSR issues
@@ -194,12 +194,6 @@ export default function AnalysisPage() {
   }, [currentGame, currentMoveIndex, gameHistory, moves, applyAction]);
 
   // Navigation functions
-  const goToMove = useCallback((index: number) => {
-    if (index >= 0 && index < gameHistory.length) {
-      setCurrentMoveIndex(index);
-    }
-  }, [gameHistory.length]);
-
   const goToStart = useCallback(() => {
     setCurrentMoveIndex(0);
   }, []);
@@ -310,51 +304,60 @@ export default function AnalysisPage() {
   }, [goBack, goForward, goToStart, goToEnd]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 lg:mb-8">
-          Game Analysis
-        </h1>
-        
-        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-          {/* Left Sidebar - Import/Export */}
-          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
+    <div className="min-h-screen bg-background flex flex-col">
+      <h1 className="text-2xl sm:text-3xl font-bold text-foreground py-4 text-center">
+        Game Analysis
+      </h1>
+      
+      {/* Center everything - the whole unit moves together */}
+      <div className="flex-1 flex items-center justify-center p-4">
+        {/* This container holds board + sidebars as one unit */}
+        <div className="flex gap-4 items-start">
+          
+          {/* Left Sidebar - attached to board's left edge */}
+          <aside className="w-[350px] flex-shrink-0 overflow-y-auto max-h-[800px]">
             <ImportExportPanel 
               onImport={handleImport}
               onExport={handleExport}
               currentNotation={moves.join(' ')}
             />
-          </div>
+          </aside>
           
-          {/* Center - Board and Controls */}
-          <div className="flex-1 min-w-0 flex flex-col items-center gap-4">
-            <div className="w-full max-w-2xl">
-              <ResizableBoard
-                gameState={currentGameState}
-                onMove={handleMove}
-                onBan={handleBan}
-                playerColor="white"
+          {/* Board - the center anchor */}
+          <div className="flex flex-col items-center">
+            <ResizableBoard
+              gameState={currentGameState}
+              onMove={handleMove}
+              onBan={handleBan}
+              playerColor="white"
+            />
+            
+            {/* Navigation below board */}
+            <div className="mt-4">
+              <NavigationControls
+                onStart={goToStart}
+                onBack={goBack}
+                onForward={goForward}
+                onEnd={goToEnd}
+                canGoBack={currentMoveIndex > 0}
+                canGoForward={currentMoveIndex < gameHistory.length - 1}
               />
             </div>
-            
-            <NavigationControls
-              onStart={goToStart}
-              onBack={goBack}
-              onForward={goForward}
-              onEnd={goToEnd}
-              canGoBack={currentMoveIndex > 0}
-              canGoForward={currentMoveIndex < gameHistory.length - 1}
-            />
           </div>
           
-          {/* Right Sidebar - Moves List */}
-          <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
-            <MovesList
-              moves={moves}
-              currentMoveIndex={currentMoveIndex}
-              onMoveClick={goToMove}
+          {/* Right Sidebar - attached to board's right edge */}
+          <aside className="w-[350px] flex-shrink-0 overflow-y-auto max-h-[800px]">
+            <GameStatePanel
+              currentPlayer={currentGameState.playerColor}
+              nextAction={currentGameState.nextAction}
+              gameOver={currentGameState.gameOver}
+              inCheck={currentGameState.inCheck}
+              winner={currentGameState.winner}
+              gameOverReason={currentGameState.gameOverReason}
+              moveCount={moves.length}
             />
-          </div>
+          </aside>
+          
         </div>
       </div>
     </div>
