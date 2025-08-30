@@ -12,8 +12,10 @@ const pool = new Pool({
   max: dbConfig.maxConnections,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: dbConfig.connectionTimeout,
-  // Add SSL configuration for production environments
-  ssl: dbConfig.ssl ? { rejectUnauthorized: false } : undefined,
+  // SSL configuration - disabled for Coolify's internal PostgreSQL
+  // Coolify uses internal Docker networking without SSL
+  // Re-enable SSL if using external database services
+  ssl: false,
   // Add connection retry logic
   allowExitOnIdle: false,
 });

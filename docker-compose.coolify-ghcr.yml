@@ -35,6 +35,9 @@ services:
       - '3001:3001'
     environment:
       - NODE_ENV=production
+      # TODO(human): Replace with your Coolify Redis service name
+      # Check Coolify dashboard for the actual Redis container/service name
+      # Format: redis://[service-name]:6379 or redis://:password@[service-name]:6379
       - REDIS_URL=${REDIS_URL}  # Use Coolify's managed Redis
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-https://chess.rndev.site}
