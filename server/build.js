@@ -13,7 +13,7 @@ async function build() {
       sourcemap: true,
       format: 'cjs',
       tsconfig: './tsconfig.json',
-    }););
+    });
 
     console.log('✅ WebSocket server built successfully');
   } catch (error) {
