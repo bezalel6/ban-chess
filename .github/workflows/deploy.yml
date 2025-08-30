@@ -69,11 +69,29 @@ jobs:
 
       - name: Trigger Coolify Deployment
         run: |
-          curl -X POST ${{ secrets.COOLIFY_WEBHOOK_URL }} \
+          echo "Triggering Coolify deployment webhook..."
+          response=$(curl -X POST ${{ secrets.COOLIFY_WEBHOOK_URL }} \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_DEPLOY_TOKEN }}" \
             -d '{
               "image": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}",
               "branch": "${{ github.ref_name }}",
               "commit": "${{ github.sha }}"
-            }'
+            }' \
+            --max-time 30 \
+            --connect-timeout 10 \
+            -w "\n%{http_code}" \
+            -s \
+            -o /dev/null || echo "timeout")
+          
+          if [ "$response" = "timeout" ]; then
+            echo "⚠️ Webhook timed out after 30 seconds - deployment may still be processing"
+            echo "Check Coolify dashboard for deployment status"
+            exit 0
+          elif [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
+            echo "✅ Webhook triggered successfully (HTTP $response)"
+          else
+            echo "❌ Webhook failed with HTTP $response"
+            echo "Check webhook URL and authentication token"
+            exit 1
+          fi
