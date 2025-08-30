@@ -69,63 +69,85 @@ export const authOptions = {
   callbacks: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async signIn({ user, account, profile }: any) {
-      // Sync user to PostgreSQL on sign in
-      if (account?.provider === 'google' && profile) {
-        const dbUser = await upsertUserFromOAuth({
-          googleId: profile.sub,
-          email: profile.email,
-          name: profile.name,
-          image: profile.picture,
-        });
-        
-        // Check if user is allowed to login
-        const loginCheck = await canUserLogin(dbUser.id);
-        if (!loginCheck.allowed) {
-          // Return false with reason (NextAuth will redirect to error page)
-          throw new Error(loginCheck.reason || 'Access denied');
+      try {
+        // Sync user to PostgreSQL on sign in
+        if (account?.provider === 'google' && profile) {
+          const dbUser = await upsertUserFromOAuth({
+            googleId: profile.sub,
+            email: profile.email,
+            name: profile.name,
+            image: profile.picture,
+          });
+          
+          // Check if user is allowed to login
+          const loginCheck = await canUserLogin(dbUser.id);
+          if (!loginCheck.allowed) {
+            // Return false with reason (NextAuth will redirect to error page)
+            // Sanitize the error message to remove newlines and special characters
+            const sanitizedReason = (loginCheck.reason || 'Access denied')
+              .replace(/[\n\r]/g, ' ')
+              .replace(/[^\w\s\-.:]/g, '')
+              .substring(0, 100);
+            throw new Error(sanitizedReason);
+          }
+        } else if (account?.provider === 'guest') {
+          // Create guest user with unique username
+          const guestUsername = await generateUniqueUsername(user.name || 'Guest');
+          user.name = guestUsername; // Update the guest name to be unique
         }
-      } else if (account?.provider === 'guest') {
-        // Create guest user with unique username
-        const guestUsername = await generateUniqueUsername(user.name || 'Guest');
-        user.name = guestUsername; // Update the guest name to be unique
+        
+        return true; // Allow sign in
+      } catch (error) {
+        console.error('[Auth] Sign in error:', error);
+        // Sanitize error message for headers
+        const message = error instanceof Error ? error.message : 'Authentication failed';
+        const sanitized = message
+          .replace(/[\n\r]/g, ' ')
+          .replace(/[^\w\s\-.:]/g, '')
+          .substring(0, 100);
+        throw new Error(sanitized);
       }
-      
-      return true; // Allow sign in
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async jwt({ token, account, profile, user }: any) {
-      // On first login, account will be present
-      if (account) {
-        // Handle Lichess profile
-        if (account.provider === 'lichess' && profile) {
-          const lichessProfile = profile as LichessProfile;
-          token.username = lichessProfile.username;
-          token.providerId = lichessProfile.id;
-          token.provider = 'lichess';
-        }
-        // Handle Google profile
-        else if (account.provider === 'google' && profile) {
-          // Get the database user to use our ID and username
-          const dbUser = await getUserByEmail(profile.email);
-          if (dbUser) {
-            token.dbUserId = dbUser.id; // Our PostgreSQL UUID
-            token.username = dbUser.username; // Our sanitized username
-            token.role = dbUser.role; // User role for permissions
-          } else {
-            token.username = profile.name || profile.email?.split('@')[0] || 'User';
+      try {
+        // On first login, account will be present
+        if (account) {
+          // Handle Lichess profile
+          if (account.provider === 'lichess' && profile) {
+            const lichessProfile = profile as LichessProfile;
+            token.username = lichessProfile.username;
+            token.providerId = lichessProfile.id;
+            token.provider = 'lichess';
           }
-          token.providerId = profile.sub;
-          token.provider = 'google';
+          // Handle Google profile
+          else if (account.provider === 'google' && profile) {
+            // Get the database user to use our ID and username
+            const dbUser = await getUserByEmail(profile.email);
+            if (dbUser) {
+              token.dbUserId = dbUser.id; // Our PostgreSQL UUID
+              token.username = dbUser.username; // Our sanitized username
+              token.role = dbUser.role; // User role for permissions
+            } else {
+              token.username = profile.name || profile.email?.split('@')[0] || 'User';
+            }
+            token.providerId = profile.sub;
+            token.provider = 'google';
+          }
+          // Handle Guest login (CredentialsProvider)
+          else if (account.provider === 'guest' && user) {
+            token.username = user.name;
+            token.providerId = user.id;
+            token.provider = 'guest';
+            token.role = 'guest';
+          }
         }
-        // Handle Guest login (CredentialsProvider)
-        else if (account.provider === 'guest' && user) {
-          token.username = user.name;
-          token.providerId = user.id;
-          token.provider = 'guest';
-          token.role = 'guest';
-        }
+        return token;
+      } catch (error) {
+        console.error('[Auth] JWT callback error:', error);
+        // Return the token as-is if there's an error to allow the session to continue
+        return token;
       }
-      return token;
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async session({ session, token }: any) {

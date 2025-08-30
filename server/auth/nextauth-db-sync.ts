@@ -30,7 +30,7 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
 
   try {
     // Check if user exists by email first (primary identifier)
-    let existingUser = null;
+    let existingUser;
     
     if (oauthUser.email) {
       existingUser = await db.query.users.findFirst({

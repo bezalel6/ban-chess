@@ -1,4 +1,4 @@
-import Filter from 'bad-words';
+import { Filter } from 'bad-words';
 import { db, users } from '../db';
 import { sql } from 'drizzle-orm';
 
@@ -46,22 +46,36 @@ export function sanitizeUsername(username: string): string {
 
 /**
  * Check if username contains profanity or reserved words
+ * SECURITY: This function must not leak information about what patterns are blocked
  */
 export function containsProfanity(username: string): boolean {
   const lower = username.toLowerCase();
   
   // Check reserved names
   if (RESERVED_USERNAMES.has(lower)) {
+    console.log(`[Security] Blocked reserved username attempt: ${username.substring(0, 3)}***`);
     return true;
   }
   
-  // Check for reserved patterns
+  // Check for reserved patterns (admin impersonation attempts)
   if (lower.includes('admin') || lower.includes('mod') || lower.includes('staff')) {
+    console.log(`[Security] Blocked admin impersonation attempt: ${username.substring(0, 3)}***`);
+    return true;
+  }
+  
+  // Check for system/bot patterns
+  if (lower.includes('system') || lower.includes('bot') || lower.includes('official')) {
+    console.log(`[Security] Blocked system impersonation attempt: ${username.substring(0, 3)}***`);
     return true;
   }
   
   // Check profanity filter
-  return filter.isProfane(username);
+  if (filter.isProfane(username)) {
+    console.log(`[Security] Blocked inappropriate username: ${username.substring(0, 3)}***`);
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -88,11 +102,13 @@ export async function generateUniqueUsername(baseUsername: string): Promise<stri
   
   while (exists) {
     // Case-insensitive username check using LOWER()
-    const existing = await db.query.users.findFirst({
-      where: sql`LOWER(${users.username}) = LOWER(${finalUsername})`,
-    });
+    const existing = await db
+      .select()
+      .from(users)
+      .where(sql`LOWER(${users.username}) = LOWER(${finalUsername})`)
+      .limit(1);
     
-    if (!existing) {
+    if (!existing || existing.length === 0) {
       exists = false;
     } else {
       // Append number and try again
@@ -113,8 +129,14 @@ export async function generateUniqueUsername(baseUsername: string): Promise<stri
 /**
  * Validate username for manual registration
  * Returns error message if invalid, null if valid
+ * 
+ * SECURITY: All error messages are intentionally generic to prevent
+ * users from discovering our filtering patterns or reserved words
  */
 export function validateUsername(username: string): string | null {
+  // Generic message for all validation failures to prevent exploitation
+  const GENERIC_ERROR = 'Username is not available. Please choose a different username.';
+  
   if (!username || username.length < 3) {
     return 'Username must be at least 3 characters';
   }
@@ -127,8 +149,10 @@ export function validateUsername(username: string): string | null {
     return 'Username can only contain letters, numbers, underscores, and hyphens';
   }
   
+  // Don't reveal why the username was rejected - could be profanity,
+  // reserved word, admin pattern, etc. Use generic message.
   if (containsProfanity(username)) {
-    return 'Username contains inappropriate content or reserved words';
+    return GENERIC_ERROR;
   }
   
   return null;
