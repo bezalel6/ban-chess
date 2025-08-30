@@ -13,27 +13,14 @@ const menuSections: MobileMenuSection[] = [
   {
     title: 'Play',
     items: [
-      { label: 'Quick pairing', href: '/play/quick', description: 'Find an opponent instantly' },
-      { label: 'Play with a friend', href: '/play/friend', description: 'Challenge someone you know' },
-      { label: 'Play the computer', href: '/play/computer', description: 'Practice against AI' },
-      { label: 'Tournaments', href: '/tournaments', description: 'Compete in organized events' },
-    ]
-  },
-  {
-    title: 'Learn',
-    items: [
-      { label: 'Chess basics', href: '/learn/basics', description: 'Learn how to play chess' },
-      { label: 'Ban Chess rules', href: '/learn/ban-chess', description: 'Understand the variant' },
-      { label: 'Practice', href: '/practice', description: 'Improve your skills' },
-      { label: 'Puzzles', href: '/puzzles', description: 'Solve tactical problems' },
+      { label: 'Play Solo', href: '/play/local', description: 'Practice against yourself' },
+      { label: 'Find Opponent', href: '/play/online', description: 'Play against another player' },
     ]
   },
   {
     title: 'Tools',
     items: [
       { label: 'Analysis board', href: '/analysis', description: 'Analyze positions and games' },
-      { label: 'Board editor', href: '/editor', description: 'Set up custom positions' },
-      { label: 'Import game', href: '/import', description: 'Import PGN or FEN' },
     ]
   }
 ];
