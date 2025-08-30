@@ -67,14 +67,14 @@ export default function HomePage() {
             <button
               onClick={playLocal}
               disabled={!connected}
-              className="px-6 py-4 bg-gradient-to-b from-background-secondary to-background-tertiary border-2 border-border rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-secondary py-4 text-lg"
             >
               Play Solo (Practice)
             </button>
             <button
               onClick={playOnline}
               disabled={!connected}
-              className="px-6 py-4 bg-gradient-to-b from-primary to-primary/80 text-primary-foreground rounded-lg shadow-2xl hover:shadow-primary/40 transform hover:-translate-y-1 active:translate-y-0 active:shadow-lg transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary py-4 text-lg"
             >
               Find Opponent
             </button>

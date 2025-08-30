@@ -1,93 +1,88 @@
-version: '3.8'
-
 services:
-  coolify-agent:
-    image: coollabsio/coolify-agent:latest
-    container_name: coolify-build-agent
+  coolify-db:
+    image: postgres:15-alpine
+    container_name: coolify-db
     restart: unless-stopped
     environment:
-      # Agent Configuration
-      - COOLIFY_MODE=build
-      - COOLIFY_AGENT_TYPE=build-server
+      POSTGRES_USER: coolify
+      POSTGRES_PASSWORD: coolifypassword
+      POSTGRES_DB: coolify
+    volumes:
+      - coolify-db:/var/lib/postgresql/data
+    networks:
+      - coolify-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coolify"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  coolify-redis:
+    image: redis:alpine
+    container_name: coolify-redis
+    restart: unless-stopped
+    networks:
+      - coolify-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  coolify:
+    image: ghcr.io/coollabsio/coolify:latest
+    container_name: coolify
+    restart: unless-stopped
+    depends_on:
+      coolify-db:
+        condition: service_healthy
+      coolify-redis:
+        condition: service_healthy
+    environment:
+      # Application
+      APP_ENV: production
+      APP_KEY: base64:J4QVGsRJssVFfGD/HQwFEJk3mSEPLs2QaIPwCPrhVhQ=
+      APP_DEBUG: false
+      APP_URL: http://localhost:8000
+      APP_PORT: 8000
       
-      # Optional: Set if you have Coolify URL and token
-      # - COOLIFY_URL=https://your-coolify-instance.com
-      # - COOLIFY_TOKEN=your-api-token
+      # Database
+      DB_CONNECTION: pgsql
+      DB_HOST: coolify-db
+      DB_PORT: 5432
+      DB_DATABASE: coolify
+      DB_USERNAME: coolify
+      DB_PASSWORD: coolifypassword
       
-      # Docker Configuration
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      # Redis
+      REDIS_HOST: coolify-redis
+      REDIS_PORT: 6379
+      QUEUE_CONNECTION: redis
+      CACHE_DRIVER: redis
+      SESSION_DRIVER: redis
       
-      # Resource Limits
-      - MAX_CONCURRENT_BUILDS=2
-      - BUILD_TIMEOUT=3600
+      # Docker
+      DOCKER_HOST: unix:///var/run/docker.sock
       
-      # Logging
-      - LOG_LEVEL=info
+      # Coolify specific
+      COOLIFY_INSTANCE_ID: local
+      COOLIFY_DEFAULT_LOCALE: en
+      HORIZON_ENABLED: true
+      SCHEDULER_ENABLED: true
       
     volumes:
-      # Docker socket for building images
       - /var/run/docker.sock:/var/run/docker.sock
-      
-      # Persistent data storage
-      - ./data:/data
-      
-      # Build cache
-      - ./cache:/cache
-      
-      # Temporary build directory
-      - ./tmp:/tmp
-      
+      - ./data:/var/www/html/storage/app/public
+      - ./ssh-keys:/var/www/html/storage/app/ssh-keys
     ports:
-      # Agent API port
-      - "8000:8000"
-      
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-      
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '4.0'
-          memory: 8G
-        reservations:
-          cpus: '1.0'
-          memory: 2G
-          
+      - "8000:80"
     networks:
       - coolify-network
-    
-    # Add extra hosts for local development
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-      
-  # Optional: Monitoring with Prometheus node exporter
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: coolify-monitoring
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
-    networks:
-      - coolify-network
-    profiles:
-      - monitoring
 
 networks:
   coolify-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.25.0.0/16
 
 volumes:
-  data:
-    driver: local
-  cache:
-    driver: local
-  tmp:
+  coolify-db:
     driver: local

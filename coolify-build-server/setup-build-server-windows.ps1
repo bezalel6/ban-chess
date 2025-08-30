@@ -179,25 +179,36 @@ function Install-CoolifyAgent {
     catch {
         Write-Host "[!] Could not download Coolify agent. Will use Docker container instead." -ForegroundColor Yellow
         
-        # Run Coolify agent as Docker container
-        docker pull coollabsio/coolify-agent:latest
+        # Run Coolify as Docker container
+        docker pull ghcr.io/coollabsio/coolify:latest
         
-        # Create docker-compose file for agent
-        $dockerCompose = @"
-version: '3.8'
+        # Copy the docker-compose.yml from the coolify-build-server directory
+        $scriptDir = Split-Path -Parent $PSCommandPath
+        $dockerComposeSource = Join-Path $scriptDir "docker-compose.yml"
+        
+        if (Test-Path $dockerComposeSource) {
+            Copy-Item $dockerComposeSource "$coolifyDir\docker-compose.yml" -Force
+            Write-Host "[✓] Using docker-compose.yml from project" -ForegroundColor Green
+        } else {
+            # Create docker-compose file inline if not found
+            $dockerCompose = @"
 services:
-  coolify-agent:
-    image: coollabsio/coolify-agent:latest
+  coolify:
+    image: ghcr.io/coollabsio/coolify:latest
+    container_name: coolify
     restart: unless-stopped
     environment:
-      - COOLIFY_MODE=build
-      - COOLIFY_URL=$CoolifyUrl
-      - COOLIFY_TOKEN=$CoolifyToken
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - APP_ENV=production
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=sqlite
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - C:\coolify\data:/data
+      - ./data:/data
+      - ./cache:/cache
+      - ./tmp:/tmp
     ports:
-      - "8000:8000"
+      - "8000:80"
     networks:
       - coolify
       
@@ -205,14 +216,15 @@ networks:
   coolify:
     driver: bridge
 "@
-        $dockerCompose | Set-Content "$coolifyDir\docker-compose.yml"
+            $dockerCompose | Set-Content "$coolifyDir\docker-compose.yml"
+        }
         
-        # Start the agent
+        # Start Coolify
         Push-Location $coolifyDir
         docker-compose up -d
         Pop-Location
         
-        Write-Host "[✓] Coolify agent running as Docker container" -ForegroundColor Green
+        Write-Host "[✓] Coolify running as Docker container" -ForegroundColor Green
     }
 }
 
@@ -224,7 +236,7 @@ function Create-WindowsService {
     $taskExists = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     
     if (!$taskExists) {
-        $action = New-ScheduledTaskAction -Execute "docker" -Argument "start coolify-agent"
+        $action = New-ScheduledTaskAction -Execute "docker" -Argument "start coolify"
         $trigger = New-ScheduledTaskTrigger -AtStartup
         $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
         $settings = New-ScheduledTaskSettingsSet -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 3
@@ -278,11 +290,11 @@ function Get-ConnectionInfo {
     Write-Host "5. Add the SSH public key shown above"
     Write-Host "6. Test the connection"
     Write-Host ""
-    Write-Host "To check agent status:" -ForegroundColor Cyan
+    Write-Host "To check Coolify status:" -ForegroundColor Cyan
     Write-Host "  docker ps -a | Select-String coolify"
     Write-Host ""
-    Write-Host "To view agent logs:" -ForegroundColor Cyan
-    Write-Host "  docker logs coolify-agent -f"
+    Write-Host "To view Coolify logs:" -ForegroundColor Cyan
+    Write-Host "  docker logs coolify -f"
     Write-Host ""
 }
 
