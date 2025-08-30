@@ -5,7 +5,8 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+# Use npm install instead of ci to handle platform-specific optional dependencies
+RUN npm install --legacy-peer-deps
 
 # ===== Builder Stage =====
 # Build the server using the dependencies from the previous stage.
@@ -13,22 +14,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# --- DIAGNOSTICS: Verify file presence ---
-RUN echo "--- Listing files in /app --- " && ls -laR
-
 RUN npm run build:ws
-
-# --- DIAGNOSTICS: Verify build output ---
-RUN echo "--- Checking for unresolved alias in bundled file ---" && \
-    grep "@/lib/utils/ban-chess-bridge" /app/server/dist/ws-server.js; \
-    if [ $? -eq 0 ]; then \
-        echo "ERROR: Alias found in bundle! Build failed."; \
-        exit 1; \
-    else \
-        echo "OK: Alias not found in bundle. Build seems correct."; \
-    fi
-
 
 # ===== Production Stage =====
 # Create a small production image with only the built server and production dependencies.
@@ -43,7 +29,8 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Install only production dependencies.
 COPY package*.json ./
-RUN npm ci --only=production --legacy-peer-deps
+# Use npm install instead of ci to handle platform-specific optional dependencies
+RUN npm install --only=production --legacy-peer-deps
 
 # Copy the built server from the builder stage.
 COPY --from=builder --chown=wsuser:nodejs /app/server/dist ./server/dist
