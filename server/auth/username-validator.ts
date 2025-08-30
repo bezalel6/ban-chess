@@ -1,6 +1,7 @@
 import { Filter } from 'bad-words';
 import { db, users } from '../db';
 import { sql } from 'drizzle-orm';
+import { generateChessGuestName } from '../../lib/chess-guest-names';
 
 // Initialize profanity filter with custom additions
 const filter = new Filter();
@@ -132,30 +133,9 @@ export async function generateUniqueUsername(
   // Sanitize first
   let username = sanitizeUsername(baseUsername);
 
-  // If it contains profanity, replace with generated name
+  // If it contains profanity, replace with chess-themed generated name
   if (containsProfanity(username)) {
-    const adjectives = [
-      'Swift',
-      'Bold',
-      'Wise',
-      'Noble',
-      'Brave',
-      'Quick',
-      'Sharp',
-      'Keen',
-    ];
-    const nouns = [
-      'Knight',
-      'Bishop',
-      'Rook',
-      'Pawn',
-      'Player',
-      'Master',
-      'Scholar',
-    ];
-    const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-    username = `${randomAdj}${randomNoun}${Math.floor(Math.random() * 1000)}`;
+    username = generateChessGuestName();
   }
 
   // Check if username exists

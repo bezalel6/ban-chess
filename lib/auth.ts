@@ -7,6 +7,7 @@ import {
   canUserLogin,
 } from '../server/auth/nextauth-db-sync';
 import { generateUniqueUsername } from '../server/auth/username-validator';
+import { generateChessGuestName } from './chess-guest-names';
 
 interface LichessProfile {
   id: string;
@@ -28,7 +29,8 @@ export const authOptions = {
       async authorize() {
         // Always succeed for guest login - generate unique guest ID
         const guestId = `guest_${Math.random().toString(36).substring(2, 10)}`;
-        const guestName = `Guest_${guestId.substring(6)}`;
+        // Use chess-themed name generator for fun guest names
+        const guestName = generateChessGuestName();
 
         return {
           id: guestId,
