@@ -1,22 +1,47 @@
-# WebSocket Server Dockerfile
+# WebSocket Server Dockerfile - Optimized for Caching
 
-FROM node:20-alpine
+# ===== Dependencies Stage =====
+# Install all dependencies, including devDependencies, to build the server.
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+# Use npm install instead of ci to handle platform-specific optional dependencies
+RUN npm install --legacy-peer-deps
 
+# ===== Builder Stage =====
+# Build the server using the dependencies from the previous stage.
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build:ws
+
+# ===== Production Stage =====
+# Create a small production image with only the built server and production dependencies.
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Copy application dependency manifests
+ENV NODE_ENV=production
+
+# Create a non-root user for security.
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S wsuser -u 1001
+
+# Install only production dependencies.
 COPY package*.json ./
+# Use npm install instead of ci to handle platform-specific optional dependencies
+RUN npm install --only=production --legacy-peer-deps
 
-# Install dependencies
-# Using npm install to handle platform-specific optional dependencies
-RUN rm -f package-lock.json && npm install --legacy-peer-deps
+# Copy the built server from the builder stage.
+COPY --from=builder --chown=wsuser:nodejs /app/server/dist ./server/dist
 
-# Copy the rest of the application files
-COPY . .
+USER wsuser
 
-# Expose the port the app runs on
 EXPOSE 3001
 
-# Run the WebSocket server with tsx
-CMD ["tsx", "--tsconfig", "tsconfig.json", "server/ws-server.ts"]
+# Health check for WebSocket server
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3002/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})" || exit 1
 
+# Run the built WebSocket server
+CMD ["node", "server/dist/ws-server.js"]
