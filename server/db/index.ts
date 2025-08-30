@@ -5,11 +5,20 @@ import 'dotenv/config';
 
 // Create a connection pool for better performance
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/chess2ban',
+  connectionString: process.env.DATABASE_URL,
   max: 20, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
+  // Add SSL configuration for production environments
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
 });
+
+// Validate database URL is present
+if (!process.env.DATABASE_URL) {
+  console.error('[PostgreSQL] ❌ DATABASE_URL environment variable is not set');
+  console.error('[PostgreSQL] Please set DATABASE_URL in your .env.local file');
+  console.error('[PostgreSQL] Example: DATABASE_URL=postgresql://username:password@localhost:5432/chess2ban');
+}
 
 // Create drizzle instance
 export const db = drizzle(pool, { schema });

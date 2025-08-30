@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+dist
+build
+out
+
+# Environment files
+.env*
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+# Coverage reports
+coverage
+
+# Test reports
+playwright-report
+test-results
+
+# Temporary files
+*.tmp
+*.temp
+
+# Claude docs (if any)
+.claude
+
+# Server build
+server/dist
+
+# Deployment temporary
+.deploy-temp
+
+# Package lock files (formatting not needed)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.d.ts
+!types/*.d.ts

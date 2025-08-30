@@ -1,18 +1,18 @@
 import { Howl } from "howler";
 import type { LucideIcon } from "lucide-react";
 import {
-  Mail,
-  Play,
-  Ban,
-  Move,
-  Users,
-  Swords,
-  Castle,
   AlertTriangle,
+  Ban,
+  Castle,
+  Clock,
   Crown,
   Handshake,
-  Clock,
+  Mail,
+  Move,
+  Play,
+  Swords,
   Trophy,
+  Users,
 } from "lucide-react";
 
 // Define all possible event types in the game
@@ -34,7 +34,10 @@ export const eventTypes = [
 export type EventType = (typeof eventTypes)[number];
 
 // Event metadata including display names and icons
-export const eventMetadata: Record<EventType, { name: string; icon: LucideIcon }> = {
+export const eventMetadata: Record<
+  EventType,
+  { name: string; icon: LucideIcon }
+> = {
   "game-invite": { name: "Game Invite", icon: Mail },
   "game-start": { name: "Game Start", icon: Play },
   "ban": { name: "Ban", icon: Ban },
@@ -115,7 +118,10 @@ class SoundManager {
       const savedEventMap = localStorage.getItem("soundEventMap");
 
       if (savedEnabled !== null) {
-        this.enabled = savedEnabled === "true";
+        // this.enabled = savedEnabled === "true";
+
+        this.enabled = true;
+        savedEnabled === "true";
       }
 
       if (savedVolume !== null) {
@@ -159,7 +165,7 @@ class SoundManager {
   // Set which sound file to use for a specific event
   setEventSound(eventType: EventType, soundFile: string | null) {
     this.eventSoundMap[eventType] = soundFile;
-    
+
     // If it's a new sound file we haven't loaded yet, load it
     if (soundFile && !this.sounds.has(soundFile)) {
       this.sounds.set(
@@ -171,7 +177,7 @@ class SoundManager {
         }),
       );
     }
-    
+
     this.savePreferences();
   }
 

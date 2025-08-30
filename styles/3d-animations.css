@@ -1,0 +1,176 @@
+/* 3D Chess Board Animations */
+
+/* 3D Transform Base */
+.chess-3d {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+/* Piece lift animation on drag */
+@keyframes piece-lift {
+  0% {
+    transform: translateZ(0) scale(1);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+  100% {
+    transform: translateZ(20px) scale(1.1);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+  }
+}
+
+/* Piece drop animation */
+@keyframes piece-drop {
+  0% {
+    transform: translateZ(20px) scale(1.1);
+  }
+  50% {
+    transform: translateZ(0) scale(1.05);
+  }
+  75% {
+    transform: translateZ(2px) scale(1.02);
+  }
+  100% {
+    transform: translateZ(0) scale(1);
+  }
+}
+
+/* Board tilt on hover */
+.board-3d-tilt {
+  transition: transform 0.3s ease;
+}
+
+.board-3d-tilt:hover {
+  transform: rotateX(2deg) rotateY(-2deg);
+}
+
+/* Capture animation */
+@keyframes capture-piece {
+  0% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(360deg);
+  }
+}
+
+/* Check pulse animation */
+@keyframes check-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+  }
+}
+
+/* Victory celebration */
+@keyframes victory-bounce {
+  0%, 100% {
+    transform: translateY(0) rotate(0);
+  }
+  25% {
+    transform: translateY(-10px) rotate(-5deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+}
+
+/* Square highlight animation */
+@keyframes square-highlight {
+  0% {
+    background-color: rgba(255, 255, 0, 0);
+  }
+  50% {
+    background-color: rgba(255, 255, 0, 0.5);
+  }
+  100% {
+    background-color: rgba(255, 255, 0, 0);
+  }
+}
+
+/* Smooth piece movement */
+.piece-move-transition {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Board reflection effect */
+.board-reflection::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Promotion animation */
+@keyframes promotion-transform {
+  0% {
+    transform: scale(1) rotateY(0);
+  }
+  50% {
+    transform: scale(1.2) rotateY(180deg);
+  }
+  100% {
+    transform: scale(1) rotateY(360deg);
+  }
+}
+
+/* Time warning pulse */
+@keyframes time-warning {
+  0%, 100% {
+    border-color: rgba(255, 0, 0, 0.5);
+  }
+  50% {
+    border-color: rgba(255, 0, 0, 1);
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  }
+}
+
+/* Utility classes */
+.animate-piece-lift {
+  animation: piece-lift 0.2s ease-out forwards;
+}
+
+.animate-piece-drop {
+  animation: piece-drop 0.3s ease-out forwards;
+}
+
+.animate-capture {
+  animation: capture-piece 0.4s ease-out forwards;
+}
+
+.animate-check-pulse {
+  animation: check-pulse 1s infinite;
+}
+
+.animate-victory {
+  animation: victory-bounce 0.5s ease-out;
+}
+
+.animate-square-highlight {
+  animation: square-highlight 0.6s ease-out;
+}
+
+.animate-promotion {
+  animation: promotion-transform 0.6s ease-out;
+}
+
+.animate-time-warning {
+  animation: time-warning 1s infinite;
+}

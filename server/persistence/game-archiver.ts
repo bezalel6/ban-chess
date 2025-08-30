@@ -56,13 +56,18 @@ export class GameArchiver {
         
         if (type === 'b') {
           // Ban action
-          game.ban(uci);
-          bannedMoves.push(uci);
-          banCount++;
+          const [from, to] = [uci.slice(0, 2), uci.slice(2, 4)];
+          const banResult = game.play({ ban: { from, to } });
+          if (banResult.success) {
+            bannedMoves.push(uci);
+            banCount++;
+          }
         } else if (type === 'm') {
           // Move action
-          const moveResult = game.move(uci);
-          if (moveResult) {
+          const [from, to] = [uci.slice(0, 2), uci.slice(2, 4)];
+          const promotion = uci[4] as 'q' | 'r' | 'b' | 'n' | undefined;
+          const moveResult = game.play({ move: { from, to, promotion } });
+          if (moveResult.success) {
             moveCount++;
             const moveNumber = Math.ceil(moveCount / 2);
             const color = moveCount % 2 === 1 ? 'white' : 'black';
@@ -72,8 +77,8 @@ export class GameArchiver {
               gameId,
               moveNumber,
               color,
-              notation: moveResult.san,
-              uci: moveResult.from + moveResult.to + (moveResult.promotion || ''),
+              notation: moveResult.san || uci,
+              uci: from + to + (promotion || ''),
               fenAfter: game.fen(),
               isBan: false,
               createdAt: new Date(),
@@ -82,7 +87,7 @@ export class GameArchiver {
             moves.push({
               moveNumber,
               color,
-              notation: moveResult.san,
+              notation: moveResult.san || uci,
               uci: uci,
               fenAfter: game.fen(),
               isBan: false,

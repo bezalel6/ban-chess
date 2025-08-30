@@ -1,33 +1,52 @@
 // Simplified types that rely on FEN as the source of truth
 // Now with Ban Chess Notation (BCN) support for serialization
 
+import type { Brand } from "@/lib/utils";
+import type { FEN, Square } from "@/lib/utils/types";
+
 export interface Move {
-  from: string;
-  to: string;
+  from: Square | string;
+  to: Square | string;
   promotion?: 'q' | 'r' | 'b' | 'n';
 }
 
 export interface Ban {
-  from: string;
-  to: string;
+  from: Square | string;
+  to: Square | string;
 }
 
-// History entry from ban-chess.ts library
-export interface HistoryEntry {
-  turnNumber: number;
-  player: 'white' | 'black';
-  actionType: 'ban' | 'move';
-  action: Ban | Move;
-  san?: string;
-  fen: string;
-  bannedMove?: Ban;
-}
+// Type-safe history entry with discriminated union
+export type HistoryEntry = 
+  | {
+      turnNumber: number;
+      player: 'white' | 'black';
+      actionType: 'move';
+      action: Move;
+      san?: string;
+      fen: FEN | string;
+      timestamp: number;
+    }
+  | {
+      turnNumber: number;
+      player: 'white' | 'black';
+      actionType: 'ban';
+      action: Ban;
+      bannedMove: Ban;
+      fen: FEN | string;
+      timestamp: number;
+    };
 
 export type Action = { move: Move } | { ban: Ban };
 
-// Ban Chess Notation (BCN) - Compact serialization format
-// Examples: "b:e2e4" (ban), "m:d2d4" (move), "m:e7e8q" (promotion)
-export type SerializedAction = string;
+// Ban Chess Notation (BCN) - Branded type for safety
+export type SerializedAction = Brand<string, 'BCN'>;
+
+// Helper to create BCN strings safely
+export function createBCN(type: 'move' | 'ban', from: string, to: string, promotion?: string): SerializedAction {
+  const prefix = type === 'move' ? 'm:' : 'b:';
+  const notation = `${prefix}${from}${to}${promotion || ''}`;
+  return notation as SerializedAction;
+}
 
 // Sync state for network transmission and game reconstruction
 export interface SyncState {
@@ -79,8 +98,10 @@ export interface SimpleGameState {
   nextAction?: 'move' | 'ban';  // What action is next
   gameOver?: boolean;
   result?: string;
+  winner?: 'white' | 'black' | 'draw';  // Winner when game is over
+  gameOverReason?: string;  // Reason for game ending (checkmate, stalemate, etc.)
   inCheck?: boolean;  // Whether the current position has a check
-  history?: HistoryEntry[] | string[]; // Move history - can be strings or HistoryEntry objects from ban-chess.ts
+  history?: HistoryEntry[]; // Type-safe move history with discriminated unions
   timeControl?: TimeControl;  // Time control settings
   clocks?: {
     white: PlayerClock;
@@ -91,7 +112,7 @@ export interface SimpleGameState {
 
 // Server messages - simplified
 export type SimpleServerMsg = 
-  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; history?: HistoryEntry[] | string[]; lastMove?: HistoryEntry; actionHistory?: SerializedAction[]; syncState?: SyncState; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number; events?: GameEvent[] }
+  | { type: 'state'; fen: string; gameId: string; players: { white?: string; black?: string }; isSoloGame?: boolean; legalActions?: string[]; nextAction?: 'move' | 'ban'; playerColor?: 'white' | 'black'; gameOver?: boolean; result?: string; inCheck?: boolean; history?: HistoryEntry[]; lastMove?: HistoryEntry; actionHistory?: SerializedAction[]; syncState?: SyncState; timeControl?: TimeControl; clocks?: { white: PlayerClock; black: PlayerClock }; startTime?: number; events?: GameEvent[] }
   | { type: 'joined'; gameId: string; color: 'white' | 'black'; players: { white?: string; black?: string }; isSoloGame?: boolean; timeControl?: TimeControl }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }

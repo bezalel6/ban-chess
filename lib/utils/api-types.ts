@@ -366,3 +366,8 @@ export function isApiError(response: ApiResponse): response is ApiErrorResponse 
 export function isApiSuccess<T>(response: ApiResponse<T>): response is ApiSuccessResponse<T> {
   return response.success === true;
 }
+
+/**
+ * Alias for createApiError for consistency
+ */
+export const createErrorResponse = createApiError;
