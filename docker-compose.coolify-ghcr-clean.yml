@@ -63,6 +63,9 @@ services:
     volumes:
       # Use a named volume to avoid permission issues
       - redis-data:/data
+    # Don't inherit REDIS_URL from parent environment
+    environment:
+      - REDIS_URL=
     healthcheck:
       # Option 1: No password
       test: ['CMD', 'redis-cli', 'ping']
@@ -80,3 +83,5 @@ networks:
 volumes:
   redis-data:
     driver: local
+    # Force recreate the volume to clear old auth settings
+    name: redis-data-${DEPLOYMENT_ID:-default}

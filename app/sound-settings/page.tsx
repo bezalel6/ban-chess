@@ -1,6 +1,6 @@
 'use client';
 
-import SoundEventMapper from '@/components/audio/SoundEventMapper';
+import SoundEventMapperWithSecret from '@/components/audio/SoundEventMapperWithSecret';
 import ThemeBrowser from '@/components/audio/ThemeBrowser';
 import { Volume2, ArrowLeft, VolumeX, Info } from 'lucide-react';
 import Link from 'next/link';
@@ -179,7 +179,7 @@ export default function SoundSettingsPage() {
               Fine-tune individual sounds for specific game events. Mix and
               match sounds from different themes.
             </p>
-            <SoundEventMapper />
+            <SoundEventMapperWithSecret />
           </div>
         </div>
 

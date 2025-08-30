@@ -1,4 +1,4 @@
-// Sound theme definitions and mappings
+// Sound theme definitions and mappings (following lichess.org)
 export const soundThemes = [
   'standard',
   'futuristic',
@@ -70,14 +70,14 @@ export const themeMetadata: Record<
     color: 'bg-indigo-600',
   },
   pirate: {
-    name: 'Chess.com',
-    description: 'Sounds from chess.com',
-    color: 'bg-green-600',
+    name: 'Pirate',
+    description: 'Ahoy! Pirate-themed sounds',
+    color: 'bg-yellow-600',
     unlockable: true,
   },
 };
 
-// Map our event types to theme sound files
+// Map our event types to lichess sound files
 export const eventToSoundFile: Record<string, string> = {
   'game-invite': 'NewChallenge',
   'game-start': 'GenericNotify',
@@ -93,7 +93,7 @@ export const eventToSoundFile: Record<string, string> = {
   'game-end': 'Victory',
 };
 
-// Get full URL to a sound file from chess.com
+// Get full path to a local sound file (lichess sounds)
 export function getSoundPath(
   theme: SoundTheme,
   event: string,
@@ -102,37 +102,51 @@ export function getSoundPath(
   const soundFile = eventToSoundFile[event];
   if (!soundFile) return null;
 
-  // Map our themes to chess.com themes
-  const chessComThemeMap: Record<SoundTheme, string> = {
-    standard: 'default',
-    futuristic: 'futuristic',
-    piano: 'piano',
-    robot: 'robot',
-    sfx: 'sfx',
-    nes: 'nes',
-    lisp: 'lisp',
-    woodland: 'woodland',
-    instrument: 'instrument',
-    pirate: 'default', // Use default for chess.com sounds
-  };
+  // For instrument theme, use special instrument sounds
+  if (theme === 'instrument') {
+    // Map specific events to instrument notes
+    const instrumentMap: Record<string, string> = {
+      Move: '/sounds/instrument/celesta/c003',
+      Capture: '/sounds/instrument/celesta/c007',
+      Check: '/sounds/instrument/celesta/c015',
+      Victory: '/sounds/instrument/swells/swell1',
+      Defeat: '/sounds/instrument/swells/swell3',
+      NewChallenge: '/sounds/instrument/celesta/c001',
+      GenericNotify: '/sounds/instrument/celesta/c001',
+      Explosion: '/sounds/instrument/swells/swell2',
+      LowTime: '/sounds/instrument/celesta/c020',
+    };
+    const instrumentFile = instrumentMap[soundFile];
+    if (instrumentFile) {
+      return `${instrumentFile}.${format}`;
+    }
+    // Fallback to standard if no mapping
+    theme = 'standard';
+  }
 
-  const chessComTheme = chessComThemeMap[theme];
+  // Special path for pirate theme (simplified sounds)
+  if (theme === 'pirate') {
+    const pirateFile = `/sounds/pirate/${soundFile}.mp3`;
+    // Check if this file exists in pirate folder, otherwise fallback
+    const pirateFiles = [
+      'Capture',
+      'Check',
+      'Explosion',
+      'GenericNotify',
+      'LowTime',
+      'Move',
+      'NewChallenge',
+      'Victory',
+    ];
+    if (pirateFiles.includes(soundFile)) {
+      return pirateFile;
+    }
+    // Fallback to standard if file doesn't exist
+    theme = 'standard';
+  }
 
-  // Map our generic sound names to chess.com specific files
-  const chessComSoundMap: Record<string, string> = {
-    NewChallenge: 'notify',
-    GenericNotify: 'notify',
-    Explosion: 'boom',
-    Move: 'move-self',
-    Capture: 'capture',
-    Check: 'move-check',
-    LowTime: 'tenseconds',
-    Victory: 'game-end',
-  };
-
-  const chessComFile = chessComSoundMap[soundFile] || soundFile.toLowerCase();
-
-  return `https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/${chessComTheme}/${chessComFile}.${format}`;
+  // Standard path for lichess themes
+  return `/sounds/${theme}/${soundFile}.${format}`;
 }
 
 // Get all sounds for a theme

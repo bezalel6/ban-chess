@@ -54,44 +54,35 @@ export const eventMetadata: Record<
   'game-end': { name: 'Game End', icon: Trophy },
 };
 
-// Available sound files that can be mapped to events
+// Available sound files that can be mapped to events (using lichess sounds)
 export const availableSounds = [
-  { file: '/sounds/move.wav', name: 'Move' },
-  { file: '/sounds/capture.wav', name: 'Capture' },
-  { file: '/sounds/castle.wav', name: 'Castle' },
-  { file: '/sounds/check.wav', name: 'Check' },
-  { file: '/sounds/promote.wav', name: 'Promote' },
-  { file: '/sounds/opponent-move.wav', name: 'Opponent Move' },
-  { file: '/sounds/game-start.wav', name: 'Game Start' },
-  { file: '/sounds/game-end.wav', name: 'Game End' },
-  { file: '/sounds/ban.wav', name: 'Ban' },
+  { file: '/sounds/standard/Move.mp3', name: 'Move' },
+  { file: '/sounds/standard/Capture.mp3', name: 'Capture' },
+  { file: '/sounds/standard/Check.mp3', name: 'Check' },
+  { file: '/sounds/standard/Checkmate.mp3', name: 'Checkmate' },
+  { file: '/sounds/standard/Victory.mp3', name: 'Victory' },
+  { file: '/sounds/standard/Defeat.mp3', name: 'Defeat' },
+  { file: '/sounds/standard/Draw.mp3', name: 'Draw' },
+  { file: '/sounds/standard/GenericNotify.mp3', name: 'Notify' },
+  { file: '/sounds/standard/Explosion.mp3', name: 'Explosion' },
+  { file: '/sounds/standard/LowTime.mp3', name: 'Low Time' },
   { file: null, name: 'No Sound' },
 ] as const;
 
-// Default sound file for each event type - using chess.com URLs
+// Default sound file for each event type - using local lichess sounds
 const defaultEventSoundMap: Record<EventType, string | null> = {
-  'game-invite':
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/notify.mp3',
-  'game-start':
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-start.mp3',
-  ban: 'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/boom.mp3',
-  move: 'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3',
-  'opponent-move':
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-opponent.mp3',
-  capture:
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3',
-  castle:
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/castle.mp3',
-  check:
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3',
-  promote:
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/promote.mp3',
-  'draw-offer':
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/draw-offer.mp3',
-  'time-warning':
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/tenseconds.mp3',
-  'game-end':
-    'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-end.mp3',
+  'game-invite': '/sounds/standard/NewChallenge.mp3',
+  'game-start': '/sounds/standard/GenericNotify.mp3',
+  ban: '/sounds/standard/Explosion.mp3',
+  move: '/sounds/standard/Move.mp3',
+  'opponent-move': '/sounds/standard/Move.mp3',
+  capture: '/sounds/standard/Capture.mp3',
+  castle: '/sounds/standard/Move.mp3',
+  check: '/sounds/standard/Check.mp3',
+  promote: '/sounds/standard/GenericNotify.mp3',
+  'draw-offer': '/sounds/standard/GenericNotify.mp3',
+  'time-warning': '/sounds/standard/LowTime.mp3',
+  'game-end': '/sounds/standard/Victory.mp3',
 };
 
 class SoundManager {
@@ -108,7 +99,7 @@ class SoundManager {
   }
 
   private initializeSounds() {
-    // Preload default chess.com sounds
+    // Preload default lichess sounds
     Object.values(defaultEventSoundMap).forEach(soundUrl => {
       if (soundUrl) {
         this.sounds.set(
@@ -117,7 +108,7 @@ class SoundManager {
             src: [soundUrl],
             volume: this.volume,
             preload: true,
-            html5: true, // Use HTML5 audio for cross-origin requests
+            html5: false, // Use Web Audio API for local files
           })
         );
       }
@@ -206,15 +197,14 @@ class SoundManager {
 
         this.sounds.set(soundFile, howlLike as unknown as Howl);
       } else {
-        // Regular files and chess.com URLs use Howl
-        const isChessComUrl = soundFile.includes('chesscomfiles.com');
+        // Regular local files use Howl with Web Audio API
         this.sounds.set(
           soundFile,
           new Howl({
             src: [soundFile],
             volume: this.volume,
             preload: true,
-            html5: isChessComUrl, // Use HTML5 for chess.com URLs
+            html5: false, // Use Web Audio API for local files
           })
         );
       }
@@ -290,30 +280,28 @@ class SoundManager {
     this.setEnabled(!this.enabled);
   }
 
-  // Load a preset sound configuration
+  // Load a preset sound configuration (using local lichess sounds)
   loadPreset(preset: 'classic' | 'modern' | 'minimal') {
-    const baseUrl =
-      'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/';
     const presets: Record<string, Partial<Record<EventType, string | null>>> = {
       classic: {
-        'game-start': `${baseUrl}default/game-start.mp3`,
-        move: `${baseUrl}default/move-self.mp3`,
-        capture: `${baseUrl}default/capture.mp3`,
-        castle: `${baseUrl}default/castle.mp3`,
-        check: `${baseUrl}default/move-check.mp3`,
-        'game-end': `${baseUrl}default/game-end.mp3`,
+        'game-start': '/sounds/standard/GenericNotify.mp3',
+        move: '/sounds/standard/Move.mp3',
+        capture: '/sounds/standard/Capture.mp3',
+        castle: '/sounds/standard/Move.mp3',
+        check: '/sounds/standard/Check.mp3',
+        'game-end': '/sounds/standard/Victory.mp3',
       },
       modern: {
-        'game-start': `${baseUrl}futuristic/game-start.mp3`,
-        move: `${baseUrl}futuristic/move-self.mp3`,
-        capture: `${baseUrl}futuristic/capture.mp3`,
-        check: `${baseUrl}futuristic/move-check.mp3`,
-        'game-end': `${baseUrl}futuristic/game-end.mp3`,
+        'game-start': '/sounds/futuristic/GenericNotify.mp3',
+        move: '/sounds/futuristic/Move.mp3',
+        capture: '/sounds/futuristic/Capture.mp3',
+        check: '/sounds/futuristic/Check.mp3',
+        'game-end': '/sounds/futuristic/Victory.mp3',
       },
       minimal: {
-        move: `${baseUrl}sfx/move-self.mp3`,
-        capture: `${baseUrl}sfx/capture.mp3`,
-        check: `${baseUrl}sfx/move-check.mp3`,
+        move: '/sounds/sfx/Move.mp3',
+        capture: '/sounds/sfx/Capture.mp3',
+        check: '/sounds/sfx/Check.mp3',
       },
     };
 
@@ -347,58 +335,40 @@ class SoundManager {
   }
 
   applyTheme(theme: string) {
-    // Map themes to chess.com sound themes
-    const chessComThemeMap: Record<string, string> = {
-      standard: 'default',
-      futuristic: 'futuristic',
-      piano: 'piano',
-      robot: 'robot',
-      sfx: 'sfx',
-      nes: 'nes',
-      lisp: 'lisp',
-      woodland: 'woodland',
-      instrument: 'instrument',
-      pirate: 'default', // Use default for pirate theme (or any custom theme)
-    };
+    // Import the getSoundPath function to get proper paths
+    import('@/lib/sound-themes').then(
+      ({ getSoundPath, eventToSoundFile, soundThemes }) => {
+        // Validate theme
+        const validTheme = soundThemes.includes(
+          theme as (typeof soundThemes)[number]
+        )
+          ? (theme as (typeof soundThemes)[number])
+          : 'standard';
 
-    const chessComTheme = chessComThemeMap[theme] || 'default';
-    const baseUrl = `https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/${chessComTheme}/`;
+        // Map our events to lichess sound files
+        for (const [event] of Object.entries(eventToSoundFile)) {
+          const soundUrl = getSoundPath(validTheme, event, 'mp3');
+          if (soundUrl) {
+            this.eventSoundMap[event as EventType] = soundUrl;
 
-    // Map our events to chess.com sound files
-    const eventToFile: Record<string, string> = {
-      'game-invite': 'notify',
-      'game-start': 'game-start',
-      ban: 'boom', // Use boom sound for ban
-      move: 'move-self',
-      'opponent-move': 'move-opponent',
-      capture: 'capture',
-      castle: 'castle',
-      check: 'move-check',
-      promote: 'promote',
-      'draw-offer': 'draw-offer',
-      'time-warning': 'tenseconds',
-      'game-end': 'game-end',
-    };
+            // Preload the sound
+            if (!this.sounds.has(soundUrl)) {
+              this.sounds.set(
+                soundUrl,
+                new Howl({
+                  src: [soundUrl],
+                  volume: this.volume,
+                  preload: true,
+                  html5: false, // Use Web Audio API for local files
+                })
+              );
+            }
+          }
+        }
 
-    for (const [event, file] of Object.entries(eventToFile)) {
-      const soundUrl = `${baseUrl}${file}.mp3`;
-      this.eventSoundMap[event as EventType] = soundUrl;
-
-      // Preload the sound from chess.com
-      if (!this.sounds.has(soundUrl)) {
-        this.sounds.set(
-          soundUrl,
-          new Howl({
-            src: [soundUrl],
-            volume: this.volume,
-            preload: true,
-            html5: true, // Use HTML5 audio for cross-origin requests
-          })
-        );
+        this.savePreferences();
       }
-    }
-
-    this.savePreferences();
+    );
   }
 
   private saveToLocalStorage() {
