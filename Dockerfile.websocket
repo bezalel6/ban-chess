@@ -1,66 +1,45 @@
 # WebSocket Server Dockerfile - Optimized for Caching
 
 # ===== Dependencies Stage =====
+# Install all dependencies, including devDependencies, to build the server.
 FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Copy ONLY package files first (most stable layer)
 COPY package*.json ./
-
-# Install production dependencies
-# This layer caches until package.json changes
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
 # ===== Builder Stage =====
+# Build the server using the dependencies from the previous stage.
 FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Install tsx globally first (stable layer)
-RUN npm install -g tsx
-
-# Copy TypeScript config (changes less frequently)
-COPY tsconfig.json ./
-
-# Copy type definitions (changes less frequently)
-COPY types ./types
-
-# Copy shared game types (changes occasionally)
-COPY lib/game-types.ts ./lib/
-
-# Copy server code last (changes most frequently)
-COPY server ./server
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build:ws
 
 # ===== Production Stage =====
+# Create a small production image with only the built server and production dependencies.
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Create non-root user (stable layer)
+# Create a non-root user for security.
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S wsuser -u 1001
 
-# Install tsx in production stage
-RUN npm install -g tsx
+# Install only production dependencies.
+COPY package*.json ./
+RUN npm ci --only=production --legacy-peer-deps
 
-# Copy dependencies from deps stage
-COPY --from=deps --chown=wsuser:nodejs /app/node_modules ./node_modules
-COPY --from=deps --chown=wsuser:nodejs /app/package*.json ./
-
-# Copy application code from builder stage
-COPY --from=builder --chown=wsuser:nodejs /app/tsconfig.json ./
-COPY --from=builder --chown=wsuser:nodejs /app/types ./types
-COPY --from=builder --chown=wsuser:nodejs /app/lib ./lib
-COPY --from=builder --chown=wsuser:nodejs /app/server ./server
+# Copy the built server from the builder stage.
+COPY --from=builder --chown=wsuser:nodejs /app/server/dist ./server/dist
 
 USER wsuser
 
 EXPOSE 3001
 
 # Health check for WebSocket server
-# Note: The WebSocket server itself is on 3001, health check endpoint on 3002
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3002/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})" || exit 1
 
-# Run WebSocket server
-CMD ["tsx", "--tsconfig", "tsconfig.json", "server/ws-server.ts"]
+# Run the built WebSocket server
+CMD ["node", "server/dist/ws-server.js"]
