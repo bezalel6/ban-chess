@@ -1,7 +1,7 @@
 import { redis, getGameState, getActionHistory, getGameEvents } from '../redis';
 import { bufferedPersistence } from './buffered-persistence';
 import { BanChess } from 'ban-chess.ts';
-import { toSquare, toBanChessSquare } from '@/lib/utils/ban-chess-bridge';
+import { toSquare, toBanChessSquare } from '../../lib/utils/ban-chess-bridge';
 
 /**
  * Game Archiver Service
