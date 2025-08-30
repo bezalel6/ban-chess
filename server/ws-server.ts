@@ -22,6 +22,8 @@ import {
   addGameEvent,
   getRecentGameEvents
 } from './redis';
+import { bufferedPersistence } from './persistence/buffered-persistence';
+import { gameArchiver } from './persistence/game-archiver';
 
 interface Player {
   userId: string;
@@ -190,6 +192,9 @@ async function handleTimeout(gameId: string, winner: 'white' | 'black') {
   gameState.pgn = game.pgn(); // Store final PGN
   await saveGameState(gameId, gameState);
   
+  // Archive completed game to PostgreSQL
+  gameArchiver.queueForArchival(gameId);
+  
   // Send timeout message via pub/sub for all servers
   const timeoutMsg: SimpleServerMsg = {
     type: 'timeout',
@@ -307,6 +312,9 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     gameState.gameOver = true;
     gameState.result = result;
     await saveGameState(gameId, gameState);
+    
+    // Archive completed game to PostgreSQL
+    gameArchiver.queueForArchival(gameId);
   }
   
   // Get legal moves/bans from the game
@@ -453,6 +461,9 @@ async function broadcastGameState(gameId: string) {
     gameState.result = result;
     gameState.pgn = game.pgn(); // Store final PGN
     await saveGameState(gameId, gameState);
+    
+    // Archive completed game to PostgreSQL
+    gameArchiver.queueForArchival(gameId);
   }
   
   // Get legal moves/bans from the game
@@ -588,6 +599,21 @@ async function matchPlayers() {
     timeControl,
     startTime: Date.now()
   });
+  
+  // Create game in PostgreSQL
+  await bufferedPersistence.createGame({
+    id: gameId,
+    whitePlayerId: player1.userId,
+    blackPlayerId: player2.userId,
+    isSoloGame: false,
+    timeControl
+  });
+  
+  // Ensure users exist in PostgreSQL
+  await Promise.all([
+    bufferedPersistence.upsertUser(player1.userId, player1.username),
+    bufferedPersistence.upsertUser(player2.userId, player2.username)
+  ]);
   
   // Create time manager (local to this server for now)
   const timeManager = new TimeManager(
@@ -887,6 +913,18 @@ wss.on('connection', (ws: WebSocket, request) => {
             startTime: Date.now()
           });
           
+          // Create game in PostgreSQL
+          await bufferedPersistence.createGame({
+            id: gameId,
+            whitePlayerId: currentPlayer.userId,
+            blackPlayerId: currentPlayer.userId,
+            isSoloGame: true,
+            timeControl
+          });
+          
+          // Ensure user exists in PostgreSQL
+          await bufferedPersistence.upsertUser(currentPlayer.userId, currentPlayer.username);
+          
           // Create time manager
           if (timeControl) {
             const timeManager = new TimeManager(
@@ -970,6 +1008,24 @@ wss.on('connection', (ws: WebSocket, request) => {
             // Use BanChess serialization to store the action
             const serializedAction = BanChess.serializeAction(action as Parameters<typeof BanChess.serializeAction>[0]);
             await addActionToHistory(gameId, serializedAction);
+            
+            // Buffer move to PostgreSQL for batch insert
+            if (action.type === 'move' && action.uci) {
+              const moveCount = (gameState.moveCount || 0) + 1;
+              const moveNumber = Math.ceil(moveCount / 2);
+              const color = moveCount % 2 === 1 ? 'white' : 'black';
+              
+              await bufferedPersistence.bufferMove({
+                gameId,
+                moveNumber,
+                color,
+                notation: result.san || action.uci,
+                uci: action.uci,
+                fenAfter: game.fen(),
+                isBan: false,
+                createdAt: new Date(),
+              });
+            }
             
             // Update game state in Redis with PGN for complete game reconstruction
             gameState.fen = game.fen();
@@ -1217,6 +1273,9 @@ const shutdown = async (signal: string) => {
   // Destroy all time managers
   timeManagers.forEach((tm) => tm.destroy());
   timeManagers.clear();
+  
+  // Flush all persistence buffers and shutdown
+  await bufferedPersistence.shutdown();
   
   // Close WebSocket server
   wss.close(() => {
