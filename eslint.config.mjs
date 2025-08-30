@@ -33,17 +33,20 @@ const config = [
     },
     plugins: {
       '@typescript-eslint': typescript,
-      'react': react,
+      react: react,
       'react-hooks': reactHooks,
-      'prettier': prettier,
+      prettier: prettier,
     },
     rules: {
       'no-unused-vars': 'off', // Turn off base rule as it doesn't understand TypeScript
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['warn', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_'
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       'no-console': 'off', // Allow console logs for debugging
@@ -51,7 +54,11 @@ const config = [
       // Prettier integration
       'prettier/prettier': 'error',
       // Quote rules (enforced by Prettier, but good to be explicit)
-      'quotes': ['error', 'single', { avoidEscape: true, allowTemplateLiterals: true }],
+      quotes: [
+        'error',
+        'single',
+        { avoidEscape: true, allowTemplateLiterals: true },
+      ],
       // JSX quote rules
       'jsx-quotes': ['error', 'prefer-single'],
     },
@@ -79,7 +86,16 @@ const config = [
     },
   },
   {
-    ignores: ['.next/**', 'node_modules/**', '.git/**', 'playwright-report/**', 'test-results/**', '.claude/**', 'server/dist/**', '.deploy-temp/**'],
+    ignores: [
+      '.next/**',
+      'node_modules/**',
+      '.git/**',
+      'playwright-report/**',
+      'test-results/**',
+      '.claude/**',
+      'server/dist/**',
+      '.deploy-temp/**',
+    ],
   },
 ];
 
