@@ -12,7 +12,8 @@ async function build() {
       minify: false, // Keep readable for debugging
       sourcemap: true,
       format: 'cjs',
-    });
+      tsconfig: './tsconfig.json',
+    }););
 
     console.log('✅ WebSocket server built successfully');
   } catch (error) {
