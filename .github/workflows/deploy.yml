@@ -80,12 +80,12 @@ jobs:
             }' \
             --max-time 30 \
             --connect-timeout 10 \
-            -w "\n%{http_code}" \
+            -w "%{http_code}" \
             -s \
-            -o /dev/null || echo "timeout")
+            -o /dev/null || echo "000")
 
-          if [ "$response" = "timeout" ]; then
-            echo "⚠️ Webhook timed out after 30 seconds - deployment may still be processing"
+          if [ "$response" = "000" ]; then
+            echo "⚠️ Webhook timed out or failed to connect - deployment may still be processing"
             echo "Check Coolify dashboard for deployment status"
             exit 0
           elif [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
