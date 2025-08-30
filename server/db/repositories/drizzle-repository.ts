@@ -7,9 +7,11 @@ import { db } from '@/server/db';
 import { users, games, moves, gameEvents } from '@/server/db/schema';
 import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 import { eq, and, gte, sql, desc } from 'drizzle-orm';
-import type { Result } from '@/lib/utils';
-import { createBrand } from '@/lib/utils';
-import type { UserId } from '@/lib/utils';
+import type { Result } from '@/lib/utils/types';
+import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
+import { createBrand } from '@/lib/utils/types';
+import type { UserId } from '@/lib/utils/types';
+import type { DatabaseError } from '@/lib/utils/database-types';
 
 // Let Drizzle infer the types - no duplication!
 export type User = InferSelectModel<typeof users>;
@@ -22,7 +24,7 @@ export type GameEvent = InferSelectModel<typeof gameEvents>;
 export type NewGameEvent = InferInsertModel<typeof gameEvents>;
 
 // Type alias for Result pattern with database operations
-type DbResult<T> = Result<T, Error>;
+type DbResult<T> = Result<T, DatabaseError>;
 
 /**
  * User repository - thin wrapper around Drizzle with business logic
@@ -40,12 +42,15 @@ export const userRepo = {
         .where(eq(users.username, username))
         .limit(1);
 
-      return { ok: true, value: user };
+      return createSuccess(user);
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 
@@ -63,10 +68,13 @@ export const userRepo = {
 
       return { ok: true, value: result };
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 
@@ -112,10 +120,13 @@ export const userRepo = {
 
       return { ok: true, value: updated };
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 
@@ -160,10 +171,13 @@ export const gameRepo = {
 
       return { ok: true, value: game };
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 
@@ -185,10 +199,13 @@ export const gameRepo = {
 
       return { ok: true, value: result };
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 
@@ -220,10 +237,13 @@ export const gameRepo = {
 
       return { ok: true, value: updated };
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 };
@@ -241,10 +261,13 @@ export const moveRepo = {
 
       return { ok: true, value: created };
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 
@@ -261,10 +284,13 @@ export const moveRepo = {
 
       return { ok: true, value: result };
     } catch (error) {
-      return {
-        ok: false,
-        error: error instanceof Error ? error : new Error('Database error'),
+      const dbError: DatabaseError = {
+        code: 'DATABASE_ERROR',
+        message: error instanceof Error ? error.message : 'Database error',
+        detail: error instanceof Error ? error.stack : undefined,
+        table: 'users',
       };
+      return createFailure(dbError);
     }
   },
 };

@@ -58,7 +58,8 @@ export class GameArchiver {
 
         if (type === 'b') {
           // Ban action
-          const [from, to] = [uci.slice(0, 2), uci.slice(2, 4)];
+          const from = uci.slice(0, 2) as unknown;
+          const to = uci.slice(2, 4) as unknown;
           const banResult = game.play({ ban: { from, to } });
           if (banResult.success) {
             bannedMoves.push(uci);
@@ -66,7 +67,8 @@ export class GameArchiver {
           }
         } else if (type === 'm') {
           // Move action
-          const [from, to] = [uci.slice(0, 2), uci.slice(2, 4)];
+          const from = uci.slice(0, 2) as unknown;
+          const to = uci.slice(2, 4) as unknown;
           const promotion = uci[4] as 'q' | 'r' | 'b' | 'n' | undefined;
           const moveResult = game.play({ move: { from, to, promotion } });
           if (moveResult.success) {
@@ -104,7 +106,7 @@ export class GameArchiver {
         await bufferedPersistence.bufferEvent({
           gameId,
           eventType: event.type,
-          eventData: event as Record<string, unknown>,
+          eventData: event as unknown as Record<string, unknown>,
           timestamp: new Date(event.timestamp || Date.now()),
         });
       }

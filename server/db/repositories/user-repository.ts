@@ -5,7 +5,9 @@
 import { BaseRepository } from './base-repository';
 import { users } from '@/server/db/schema';
 import { db } from '@/server/db';
-import type { DbResult } from '@/lib/utils/database-types';
+import type { DatabaseError } from '@/lib/utils/database-types';
+import type { Result } from '@/lib/utils/types';
+import { createSuccess, createFailure } from '@/lib/utils/result-helpers';
 import { eq, and, gte, sql } from 'drizzle-orm';
 
 export interface UserModel {
@@ -62,7 +64,9 @@ export class UserRepository extends BaseRepository<
   /**
    * Find a user by username
    */
-  async findByUsername(username: string): Promise<DbResult<UserModel | null>> {
+  async findByUsername(
+    username: string
+  ): Promise<Result<UserModel | null, DatabaseError>> {
     try {
       const result = await db
         .select()
@@ -70,22 +74,18 @@ export class UserRepository extends BaseRepository<
         .where(eq(users.username, username))
         .limit(1);
 
-      return {
-        ok: true,
-        value: result[0] as UserModel | null,
-      };
+      return createSuccess(result[0] as UserModel | null);
     } catch (error) {
-      return {
-        ok: false,
-        error: this.createDbError('findByUsername', error),
-      };
+      return createFailure(this.createDbError('findByUsername', error));
     }
   }
 
   /**
    * Find a user by email
    */
-  async findByEmail(email: string): Promise<DbResult<UserModel | null>> {
+  async findByEmail(
+    email: string
+  ): Promise<Result<UserModel | null, DatabaseError>> {
     try {
       const result = await db
         .select()
@@ -93,22 +93,18 @@ export class UserRepository extends BaseRepository<
         .where(eq(users.email, email))
         .limit(1);
 
-      return {
-        ok: true,
-        value: result[0] as UserModel | null,
-      };
+      return createSuccess(result[0] as UserModel | null);
     } catch (error) {
-      return {
-        ok: false,
-        error: this.createDbError('findByEmail', error),
-      };
+      return createFailure(this.createDbError('findByEmail', error));
     }
   }
 
   /**
    * Get top rated players
    */
-  async getLeaderboard(limit = 10): Promise<DbResult<UserModel[]>> {
+  async getLeaderboard(
+    limit = 10
+  ): Promise<Result<UserModel[], DatabaseError>> {
     try {
       const result = await db
         .select()
@@ -122,15 +118,9 @@ export class UserRepository extends BaseRepository<
         .orderBy(sql`${users.rating} DESC`)
         .limit(limit);
 
-      return {
-        ok: true,
-        value: result as UserModel[],
-      };
+      return createSuccess(result as UserModel[]);
     } catch (error) {
-      return {
-        ok: false,
-        error: this.createDbError('getLeaderboard', error),
-      };
+      return createFailure(this.createDbError('getLeaderboard', error));
     }
   }
 
@@ -141,19 +131,21 @@ export class UserRepository extends BaseRepository<
     userId: string,
     result: 'win' | 'loss' | 'draw',
     ratingChange: number
-  ): Promise<DbResult<UserModel>> {
+  ): Promise<Result<UserModel, DatabaseError>> {
     try {
       // Get current user stats
       const userResult = await this.findById(userId);
-      if (!userResult.ok) return userResult;
-      if (!userResult.value) {
-        return {
-          ok: false,
-          error: new Error(`User ${userId} not found`),
-        };
+      if (!userResult.success) return userResult;
+      if (!userResult.data) {
+        return createFailure(
+          this.createDbError(
+            'updateGameStats',
+            new Error(`User ${userId} not found`)
+          )
+        );
       }
 
-      const user = userResult.value;
+      const user = userResult.data;
       const updates: UpdateUserData = {
         gamesPlayed: user.gamesPlayed + 1,
         rating: Math.max(0, user.rating + ratingChange), // Rating can't go below 0
@@ -171,33 +163,30 @@ export class UserRepository extends BaseRepository<
 
       return this.update(userId, updates);
     } catch (error) {
-      return {
-        ok: false,
-        error: this.createDbError('updateGameStats', error),
-      };
+      return createFailure(this.createDbError('updateGameStats', error));
     }
   }
 
   /**
    * Check if a user is banned
    */
-  async isBanned(userId: string): Promise<DbResult<boolean>> {
+  async isBanned(userId: string): Promise<Result<boolean, DatabaseError>> {
     const userResult = await this.findById(userId);
-    if (!userResult.ok) return userResult;
-    if (!userResult.value) {
-      return { ok: true, value: false };
+    if (!userResult.success) return userResult;
+    if (!userResult.data) {
+      return createSuccess(false);
     }
 
-    const user = userResult.value;
+    const user = userResult.data;
     if (!user.isActive) {
-      return { ok: true, value: true };
+      return createSuccess(true);
     }
 
     if (user.bannedUntil && user.bannedUntil > new Date()) {
-      return { ok: true, value: true };
+      return createSuccess(true);
     }
 
-    return { ok: true, value: false };
+    return createSuccess(false);
   }
 
   /**
@@ -207,7 +196,7 @@ export class UserRepository extends BaseRepository<
     userId: string,
     reason: string,
     until?: Date
-  ): Promise<DbResult<UserModel>> {
+  ): Promise<Result<UserModel, DatabaseError>> {
     return this.update(userId, {
       isActive: !until, // Permanent ban if no end date
       bannedUntil: until,
@@ -218,7 +207,7 @@ export class UserRepository extends BaseRepository<
   /**
    * Unban a user
    */
-  async unbanUser(userId: string): Promise<DbResult<UserModel>> {
+  async unbanUser(userId: string): Promise<Result<UserModel, DatabaseError>> {
     return this.update(userId, {
       isActive: true,
       bannedUntil: null,

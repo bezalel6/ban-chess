@@ -6,6 +6,9 @@ import type {
   HistoryEntry,
   TimeControl,
   GameEvent,
+  Move,
+  Ban,
+  SerializedAction,
 } from '../lib/game-types';
 import { v4 as uuidv4 } from 'uuid';
 import { TimeManager } from './time-manager';
@@ -430,10 +433,17 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   if (actionHistory.length > 0) {
     const reconstructedGame = BanChess.replayFromActions(actionHistory);
     // Convert ban-chess.ts HistoryEntry to our HistoryEntry type
-    history = reconstructedGame.history().map(entry => ({
-      ...entry,
-      bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
-    }));
+    history = reconstructedGame.history().map((entry, index) => ({
+      turnNumber: Math.floor(index / 2) + 1,
+      player: index % 2 === 0 ? 'white' : 'black',
+      actionType: entry.bannedMove ? 'ban' : 'move',
+      action: entry.bannedMove
+        ? entry.bannedMove
+        : ({ from: 'a1', to: 'a2' } as unknown),
+      ...(entry.bannedMove && { bannedMove: entry.bannedMove }),
+      fen: entry.fen,
+      timestamp: Date.now(),
+    })) as HistoryEntry[];
   }
 
   // Get recent game events
@@ -611,16 +621,28 @@ async function broadcastGameState(gameId: string) {
         ? deserializedAction.ban
         : deserializedAction.move;
 
-    lastMove = {
-      fen: game.fen(),
-      turnNumber: Math.floor(storedActions.length / 2) + 1,
-      player: storedActions.length % 2 === 0 ? 'black' : 'white',
-      actionType: lastActionSerialized.startsWith('b:') ? 'ban' : 'move',
-      action: actionObj,
-      // Optional fields from ban-chess.ts HistoryEntry
-      san: undefined,
-      bannedMove: undefined,
-    };
+    const isBan = lastActionSerialized.startsWith('b:');
+    if (isBan) {
+      lastMove = {
+        turnNumber: Math.floor(storedActions.length / 2) + 1,
+        player: storedActions.length % 2 === 0 ? 'black' : 'white',
+        actionType: 'ban',
+        action: actionObj as Ban,
+        bannedMove: actionObj as Ban,
+        fen: game.fen(),
+        timestamp: Date.now(),
+      };
+    } else {
+      lastMove = {
+        turnNumber: Math.floor(storedActions.length / 2) + 1,
+        player: storedActions.length % 2 === 0 ? 'black' : 'white',
+        actionType: 'move',
+        action: actionObj as Move,
+        san: undefined,
+        fen: game.fen(),
+        timestamp: Date.now(),
+      };
+    }
   }
 
   const stateMsg: SimpleServerMsg = {
@@ -635,13 +657,13 @@ async function broadcastGameState(gameId: string) {
     // Send only the last move for incremental updates (frontend will append to history)
     lastMove,
     // Include action history for game reconstruction (in BCN format)
-    actionHistory: storedActions,
+    actionHistory: storedActions as SerializedAction[],
     // Include sync state for quick game state loading
     syncState: {
       fen: game.fen(),
       lastAction:
         storedActions.length > 0
-          ? storedActions[storedActions.length - 1]
+          ? (storedActions[storedActions.length - 1] as SerializedAction)
           : undefined,
       moveNumber: Math.floor(storedActions.length / 2) + 1,
     },
@@ -1205,7 +1227,7 @@ wss.on('connection', (ws: WebSocket, request) => {
             await addActionToHistory(gameId, serializedAction);
 
             // Buffer move to PostgreSQL for batch insert
-            if (action.type === 'move' && action.uci) {
+            if ('move' in action && action.move) {
               const moveCount = (gameState.moveCount || 0) + 1;
               const moveNumber = Math.ceil(moveCount / 2);
               const color = moveCount % 2 === 1 ? 'white' : 'black';
@@ -1214,8 +1236,10 @@ wss.on('connection', (ws: WebSocket, request) => {
                 gameId,
                 moveNumber,
                 color,
-                notation: result.san || action.uci,
-                uci: action.uci,
+                notation:
+                  result.san ||
+                  `${action.move.from}${action.move.to}${action.move.promotion || ''}`,
+                uci: `${action.move.from}${action.move.to}${action.move.promotion || ''}`,
                 fenAfter: game.fen(),
                 isBan: false,
                 createdAt: new Date(),
