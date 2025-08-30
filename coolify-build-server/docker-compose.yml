@@ -103,6 +103,7 @@ services:
       VITE_PUSHER_HOST: localhost
       VITE_PUSHER_PORT: 6001
       VITE_PUSHER_SCHEME: http
+      PUSHER_HOST_FOR_CLIENTS: localhost
       
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
