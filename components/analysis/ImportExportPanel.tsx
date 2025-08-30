@@ -73,7 +73,7 @@ export default function ImportExportPanel({
   }, [exportText, onExport]);
 
   return (
-    <div className="bg-background-secondary rounded-xl p-4 sm:p-6 shadow-lg w-full">
+    <div className="w-full">
       <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6">
         Import / Export Game
       </h2>

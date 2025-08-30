@@ -27,7 +27,7 @@ export default function NavigationControls({
   canGoForward,
 }: NavigationControlsProps) {
   return (
-    <div className="bg-background-secondary rounded-xl p-4 shadow-lg">
+    <div className="">
       <div className="flex items-center justify-center gap-2">
         {/* Go to start */}
         <button
