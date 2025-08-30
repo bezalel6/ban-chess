@@ -13,7 +13,22 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# --- DIAGNOSTICS: Verify file presence ---
+RUN echo "--- Listing files in /app --- " && ls -laR
+
 RUN npm run build:ws
+
+# --- DIAGNOSTICS: Verify build output ---
+RUN echo "--- Checking for unresolved alias in bundled file ---" && \
+    grep "@/lib/utils/ban-chess-bridge" /app/server/dist/ws-server.js; \
+    if [ $? -eq 0 ]; then \
+        echo "ERROR: Alias found in bundle! Build failed."; \
+        exit 1; \
+    else \
+        echo "OK: Alias not found in bundle. Build seems correct."; \
+    fi
+
 
 # ===== Production Stage =====
 # Create a small production image with only the built server and production dependencies.
