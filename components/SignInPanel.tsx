@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useState } from "react";
 import Image from "next/image";
 
@@ -11,6 +11,10 @@ interface SignInPanelProps {
 
 export default function SignInPanel({ compact = false, onSignIn }: SignInPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { data: session } = useSession();
+  
+  // Check if user is a guest (provider is 'guest')
+  const isGuest = session?.user?.provider === 'guest';
 
   const handleLichessSignIn = () => {
     signIn("lichess", { callbackUrl: "/" });
@@ -89,19 +93,21 @@ export default function SignInPanel({ compact = false, onSignIn }: SignInPanelPr
           <span className="font-medium text-sm">Google</span>
         </button>
 
-        <button
-          onClick={handleGuestSignIn}
-          className="flex items-center gap-2 px-4 py-2 bg-background-secondary text-foreground rounded-lg hover:bg-background-tertiary transition-all duration-200 border border-border hover:border-lichess-orange-500/30 shadow-sm hover:shadow-md"
-        >
-          <Image
-            src="/icons/pawn.webp"
-            alt="Pawn"
-            width={20}
-            height={20}
-            className="object-contain opacity-80"
-          />
-          <span className="font-medium text-sm">Play as Guest</span>
-        </button>
+        {!isGuest && (
+          <button
+            onClick={handleGuestSignIn}
+            className="flex items-center gap-2 px-4 py-2 bg-background-secondary text-foreground rounded-lg hover:bg-background-tertiary transition-all duration-200 border border-border hover:border-lichess-orange-500/30 shadow-sm hover:shadow-md"
+          >
+            <Image
+              src="/icons/pawn.webp"
+              alt="Pawn"
+              width={20}
+              height={20}
+              className="object-contain opacity-80"
+            />
+            <span className="font-medium text-sm">Play as Guest</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -109,6 +115,17 @@ export default function SignInPanel({ compact = false, onSignIn }: SignInPanelPr
   // Full layout (same as signin page)
   return (
     <div className="space-y-6">
+      {isGuest && (
+        <div className="bg-lichess-orange-500/10 border border-lichess-orange-500/30 rounded-lg p-4 text-center">
+          <p className="text-sm text-foreground mb-2">
+            You&apos;re currently playing as <strong>{session?.user?.username}</strong>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Create an account to save your games and track your progress!
+          </p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={handleLichessSignIn}
@@ -157,28 +174,32 @@ export default function SignInPanel({ compact = false, onSignIn }: SignInPanelPr
         </button>
       </div>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border"></div>
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-3 text-muted-foreground">Or continue without account</span>
-        </div>
-      </div>
+      {!isGuest && (
+        <>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-3 text-muted-foreground">Or continue without account</span>
+            </div>
+          </div>
 
-      <button
-        onClick={handleGuestSignIn}
-        className="w-full flex items-center justify-center gap-4 py-6 px-6 bg-background-secondary text-foreground rounded-2xl hover:bg-background-tertiary transition-all duration-200 font-medium text-lg border-2 border-border hover:border-lichess-orange-500/30 shadow-sm hover:shadow-lg group"
-      >
-        <Image
-          src="/icons/pawn.webp"
-          alt="Pawn"
-          width={40}
-          height={40}
-          className="object-contain opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all"
-        />
-        <span>Play as Guest</span>
-      </button>
+          <button
+            onClick={handleGuestSignIn}
+            className="w-full flex items-center justify-center gap-4 py-6 px-6 bg-background-secondary text-foreground rounded-2xl hover:bg-background-tertiary transition-all duration-200 font-medium text-lg border-2 border-border hover:border-lichess-orange-500/30 shadow-sm hover:shadow-lg group"
+          >
+            <Image
+              src="/icons/pawn.webp"
+              alt="Pawn"
+              width={40}
+              height={40}
+              className="object-contain opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all"
+            />
+            <span>Play as Guest</span>
+          </button>
+        </>
+      )}
     </div>
   );
 }
