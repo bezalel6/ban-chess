@@ -1,0 +1,72 @@
+# Coolify Docker Compose using GitHub Container Registry
+# This version pulls pre-built images from GitHub Packages instead of building
+version: '3.8'
+
+services:
+  # Next.js Application (from GitHub Container Registry)
+  app:
+    image: ghcr.io/bezalel6/2ban-2chess:latest
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws-chess.rndev.site}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://chess.rndev.site}
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://chess.rndev.site}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    depends_on:
+      - websocket
+    networks:
+      - coolify
+    labels:
+      - coolify.managed=true
+      - coolify.port=3000
+      - coolify.domain=chess.rndev.site
+    restart: unless-stopped
+
+  # WebSocket Server (still build from source for now)
+  # You could create a separate image for this if needed
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://chess.rndev.site}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    depends_on:
+      - redis
+    networks:
+      - coolify
+    labels:
+      - coolify.managed=true
+      - coolify.port=3001
+      - coolify.domain=ws-chess.rndev.site
+    restart: unless-stopped
+
+  # Redis for WebSocket state
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    networks:
+      - coolify
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  redis-data:
