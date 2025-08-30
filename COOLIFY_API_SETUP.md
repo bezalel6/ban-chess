@@ -18,6 +18,7 @@ This guide explains how to set up automatic redeployments using the Coolify API.
 Choose one of these methods:
 
 #### Option A: Set on Your Local Machine (Windows PowerShell)
+
 ```powershell
 # Set permanently for current user
 [System.Environment]::SetEnvironmentVariable("COOLIFY_API_TOKEN", "your-token-here", "User")
@@ -29,6 +30,7 @@ $env:COOLIFY_URL = "https://coolify.yourdomain.com"
 ```
 
 #### Option B: Pass as Parameters
+
 ```powershell
 .\deploy-to-coolify-integrated.ps1 `
     -CoolifyApiToken "your-token-here" `
@@ -36,13 +38,16 @@ $env:COOLIFY_URL = "https://coolify.yourdomain.com"
 ```
 
 #### Option C: Create a .env File (Git-ignored)
+
 Create `.env.deploy.local` in project root:
+
 ```env
 COOLIFY_API_TOKEN=your-token-here
 COOLIFY_URL=https://coolify.yourdomain.com
 ```
 
 Then load it before running:
+
 ```powershell
 # Load environment variables
 Get-Content .env.deploy.local | ForEach-Object {
@@ -58,6 +63,7 @@ Get-Content .env.deploy.local | ForEach-Object {
 ## Verify Your Setup
 
 Run the deployment script with the `-Help` flag to see all options:
+
 ```powershell
 .\deploy-to-coolify-integrated.ps1 -Help
 ```
@@ -65,20 +71,24 @@ Run the deployment script with the `-Help` flag to see all options:
 ## API Endpoints Used
 
 The script uses the following Coolify API endpoint:
+
 - **POST** `/api/v1/applications/{appId}/restart` - Triggers application redeploy
 
 ## Troubleshooting
 
 ### API Token Not Working
+
 - Ensure the token has "Deploy Application" permission
 - Check that the token hasn't expired
 - Verify the Coolify URL is correct (no trailing slash)
 
 ### Application Not Found (404)
+
 - Verify the App ID in the script matches your Coolify app
 - Find the correct ID in your Coolify dashboard URL when viewing the app
 
 ### Connection Failed
+
 - Check if your Coolify instance is accessible from your network
 - Verify HTTPS certificate if using self-signed certs
 - Check firewall rules
@@ -94,6 +104,7 @@ The script uses the following Coolify API endpoint:
 ## Manual Fallback
 
 If API deployment fails, the script will provide manual instructions:
+
 1. Go to your Coolify dashboard
 2. Navigate to your application
 3. Click the "Redeploy" button
@@ -101,5 +112,6 @@ If API deployment fails, the script will provide manual instructions:
 ## Support
 
 For Coolify API documentation, visit:
+
 - [Coolify Documentation](https://coolify.io/docs)
 - [Coolify API Reference](https://coolify.io/docs/api)

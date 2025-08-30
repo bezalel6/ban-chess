@@ -3,9 +3,20 @@
  */
 
 import type { ReactNode, CSSProperties } from 'react';
-import type { SimpleGameState, Ban, HistoryEntry, TimeControl, PlayerClock, GameEvent } from '@/lib/game-types';
+import type {
+  SimpleGameState,
+  Ban,
+  HistoryEntry,
+  TimeControl,
+  PlayerClock,
+  GameEvent,
+} from '@/lib/game-types';
 import type { FEN, Square, ChessMove, PGN } from '@/lib/utils/types';
-import type { ChessBoardProps as BaseChessBoardProps, ChessMoveHandler, ChessTimerProps } from '@/lib/utils/react-types';
+import type {
+  ChessBoardProps as BaseChessBoardProps,
+  ChessMoveHandler,
+  ChessTimerProps,
+} from '@/lib/utils/react-types';
 
 /**
  * Enhanced ChessBoard component props with full type safety
@@ -140,7 +151,8 @@ export interface GameSidebarProps {
 /**
  * Analysis board props
  */
-export interface AnalysisBoardProps extends Omit<ChessBoardProps, 'onMove' | 'onBan'> {
+export interface AnalysisBoardProps
+  extends Omit<ChessBoardProps, 'onMove' | 'onBan'> {
   pgn?: PGN | string;
   fen?: FEN | string;
   onPositionChange?: (fen: FEN | string) => void;

@@ -13,7 +13,12 @@ interface GameSidebarProps {
   playerColor?: 'white' | 'black';
 }
 
-export default function GameSidebar({ gameState, gameEvents = [], onGiveTime, playerColor }: GameSidebarProps) {
+export default function GameSidebar({
+  gameState,
+  gameEvents = [],
+  onGiveTime,
+  playerColor,
+}: GameSidebarProps) {
   const { turn } = parseFEN(gameState.fen);
   const nextAction = getNextAction(gameState.fen);
   const whoBans = getWhoBans(gameState.fen);
@@ -47,40 +52,60 @@ export default function GameSidebar({ gameState, gameEvents = [], onGiveTime, pl
   const isBottomActive = playerIsWhite ? isWhiteActive : isBlackActive;
 
   // Get clocks for each player
-  const topClock = playerIsWhite ? gameState.clocks?.black : gameState.clocks?.white;
-  const bottomClock = playerIsWhite ? gameState.clocks?.white : gameState.clocks?.black;
-  
+  const topClock = playerIsWhite
+    ? gameState.clocks?.black
+    : gameState.clocks?.white;
+  const bottomClock = playerIsWhite
+    ? gameState.clocks?.white
+    : gameState.clocks?.black;
+
   // Determine if player can give time (only to opponent, only if they're playing, never in solo games)
-  const canGiveTimeToTop = !gameState.isSoloGame && (playerColor === 'white' && !playerIsWhite || playerColor === 'black' && playerIsWhite);
-  const canGiveTimeToBottom = !gameState.isSoloGame && (playerColor === 'white' && playerIsWhite || playerColor === 'black' && !playerIsWhite);
+  const canGiveTimeToTop =
+    !gameState.isSoloGame &&
+    ((playerColor === 'white' && !playerIsWhite) ||
+      (playerColor === 'black' && playerIsWhite));
+  const canGiveTimeToBottom =
+    !gameState.isSoloGame &&
+    ((playerColor === 'white' && playerIsWhite) ||
+      (playerColor === 'black' && !playerIsWhite));
 
   return (
-    <div className="bg-background-secondary rounded-lg p-4 flex flex-col shadow-lg h-fit">
-      <PlayerInfo 
-        username={topPlayer} 
-        isTurn={isTopActive} 
+    <div className='bg-background-secondary rounded-lg p-4 flex flex-col shadow-lg h-fit'>
+      <PlayerInfo
+        username={topPlayer}
+        isTurn={isTopActive}
         clock={topClock}
         isClockActive={isTopActive}
-        canGiveTime={canGiveTimeToTop && !!onGiveTime && !!gameState.timeControl && !gameState.gameOver}
+        canGiveTime={
+          canGiveTimeToTop &&
+          !!onGiveTime &&
+          !!gameState.timeControl &&
+          !gameState.gameOver
+        }
         onGiveTime={onGiveTime}
       />
-      <div className="my-2 border-t border-border"></div>
+      <div className='my-2 border-t border-border'></div>
       {/* Fixed height for 4 rows of moves (approximately 120px) */}
-      <div className="h-[120px] overflow-hidden">
+      <div className='h-[120px] overflow-hidden'>
         <MoveList history={gameState.history || []} />
       </div>
-      <div className="my-2 border-t border-border"></div>
+      <div className='my-2 border-t border-border'></div>
       {/* Event log section */}
-      <div className="h-[150px] overflow-hidden mb-2">
+      <div className='h-[150px] overflow-hidden mb-2'>
         <GameEventLog events={gameEvents} />
       </div>
-      <div className="my-2 border-t border-border"></div>
-      <PlayerInfo 
-        username={bottomPlayer} 
-        isTurn={isBottomActive} 
+      <div className='my-2 border-t border-border'></div>
+      <PlayerInfo
+        username={bottomPlayer}
+        isTurn={isBottomActive}
         clock={bottomClock}
         isClockActive={isBottomActive}
-        canGiveTime={canGiveTimeToBottom && !!onGiveTime && !!gameState.timeControl && !gameState.gameOver}
+        canGiveTime={
+          canGiveTimeToBottom &&
+          !!onGiveTime &&
+          !!gameState.timeControl &&
+          !gameState.gameOver
+        }
         onGiveTime={onGiveTime}
       />
     </div>

@@ -15,11 +15,13 @@ export default function PlayLocalPage() {
   }, [connected, createSoloGame]);
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="text-center">
-        <div className="loading-spinner mb-4"></div>
-        <h2 className="text-2xl font-bold mb-2">Creating Solo Game</h2>
-        <p className="text-foreground-muted">Setting up your practice game...</p>
+    <div className='flex items-center justify-center min-h-[60vh]'>
+      <div className='text-center'>
+        <div className='loading-spinner mb-4'></div>
+        <h2 className='text-2xl font-bold mb-2'>Creating Solo Game</h2>
+        <p className='text-foreground-muted'>
+          Setting up your practice game...
+        </p>
       </div>
     </div>
   );

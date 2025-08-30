@@ -31,7 +31,7 @@ export const BasicProtectedPage = withAuth(ProtectedPage);
 // ============================================
 function GuestFriendlyPage({ session }: ProtectedPageProps) {
   const isGuest = session.user.provider === 'guest';
-  
+
   return (
     <div>
       <h1>Welcome, {session.user.username}!</h1>
@@ -44,8 +44,8 @@ function GuestFriendlyPage({ session }: ProtectedPageProps) {
   );
 }
 
-export const GuestAccessiblePage = withAuth(GuestFriendlyPage, { 
-  allowGuest: true 
+export const GuestAccessiblePage = withAuth(GuestFriendlyPage, {
+  allowGuest: true,
 });
 
 // ============================================
@@ -64,7 +64,7 @@ function GoogleOnlyPage({ session }: ProtectedPageProps) {
 
 export const GoogleExclusivePage = withAuth(GoogleOnlyPage, {
   requiredProviders: ['google'],
-  redirectTo: '/auth/provider-required'
+  redirectTo: '/auth/provider-required',
 });
 
 // ============================================
@@ -82,12 +82,12 @@ function AdminPage({ session }: ProtectedPageProps) {
 }
 
 export const AdminOnlyPage = withAuth(AdminPage, {
-  authorize: async (session) => {
+  authorize: async session => {
     // Example: Check if user is in admin list
     const adminUsernames = ['admin', 'superuser'];
     return adminUsernames.includes(session.user.username);
   },
-  redirectTo: '/unauthorized'
+  redirectTo: '/unauthorized',
 });
 
 // ============================================
@@ -114,11 +114,11 @@ function UpgradePrompt() {
 }
 
 export const PremiumPage = withAuth(PremiumContent, {
-  authorize: async (session) => {
+  authorize: async session => {
     // Check if user has premium access (example logic)
     return session.user.provider !== 'guest';
   },
-  fallback: UpgradePrompt
+  fallback: UpgradePrompt,
 });
 
 // ============================================
@@ -163,7 +163,9 @@ function SocialUsersPage({ session }: ProtectedPageProps) {
   return (
     <div>
       <h1>Social Network Users</h1>
-      <p>Welcome {session.user.username} from {session.user.provider}!</p>
+      <p>
+        Welcome {session.user.username} from {session.user.provider}!
+      </p>
       <p>This page is for users authenticated via social providers.</p>
     </div>
   );
@@ -176,5 +178,5 @@ export const SocialOnlyPage = withAuth(SocialUsersPage, {
       <h1>Social Login Required</h1>
       <p>Please sign in with Google or Lichess to access this content.</p>
     </div>
-  )
+  ),
 });

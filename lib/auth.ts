@@ -1,8 +1,12 @@
-import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
-import type { AuthProvider } from "../types/auth";
-import { upsertUserFromOAuth, getUserByEmail, canUserLogin } from "../server/auth/nextauth-db-sync";
-import { generateUniqueUsername } from "../server/auth/username-validator";
+import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import type { AuthProvider } from '../types/auth';
+import {
+  upsertUserFromOAuth,
+  getUserByEmail,
+  canUserLogin,
+} from '../server/auth/nextauth-db-sync';
+import { generateUniqueUsername } from '../server/auth/username-validator';
 
 interface LichessProfile {
   id: string;
@@ -13,19 +17,19 @@ interface LichessProfile {
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
   session: {
-    strategy: "jwt" as const,
+    strategy: 'jwt' as const,
   },
   providers: [
     // Guest login provider
     CredentialsProvider({
-      id: "guest",
-      name: "Guest",
+      id: 'guest',
+      name: 'Guest',
       credentials: {},
       async authorize() {
         // Always succeed for guest login - generate unique guest ID
         const guestId = `guest_${Math.random().toString(36).substring(2, 10)}`;
         const guestName = `Guest_${guestId.substring(6)}`;
-        
+
         return {
           id: guestId,
           name: guestName,
@@ -34,23 +38,23 @@ export const authOptions = {
       },
     }),
     {
-      id: "lichess",
-      name: "Lichess",
-      type: "oauth" as const,
+      id: 'lichess',
+      name: 'Lichess',
+      type: 'oauth' as const,
       authorization: {
-        url: "https://lichess.org/oauth",
+        url: 'https://lichess.org/oauth',
         params: {
-          scope: "preference:read",
+          scope: 'preference:read',
         },
       },
-      token: "https://lichess.org/api/token",
-      userinfo: "https://lichess.org/api/account",
-      clientId: process.env.LICHESS_CLIENT_ID || "2ban-2chess-local-dev",
-      clientSecret: "", // Lichess doesn't require a secret for public clients
+      token: 'https://lichess.org/api/token',
+      userinfo: 'https://lichess.org/api/account',
+      clientId: process.env.LICHESS_CLIENT_ID || '2ban-2chess-local-dev',
+      clientSecret: '', // Lichess doesn't require a secret for public clients
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      checks: ["pkce" as any, "state" as any],
+      checks: ['pkce' as any, 'state' as any],
       client: {
-        token_endpoint_auth_method: "none" as const,
+        token_endpoint_auth_method: 'none' as const,
       },
       profile(profile: LichessProfile) {
         return {
@@ -78,7 +82,7 @@ export const authOptions = {
             name: profile.name,
             image: profile.picture,
           });
-          
+
           // Check if user is allowed to login
           const loginCheck = await canUserLogin(dbUser.id);
           if (!loginCheck.allowed) {
@@ -92,15 +96,18 @@ export const authOptions = {
           }
         } else if (account?.provider === 'guest') {
           // Create guest user with unique username
-          const guestUsername = await generateUniqueUsername(user.name || 'Guest');
+          const guestUsername = await generateUniqueUsername(
+            user.name || 'Guest'
+          );
           user.name = guestUsername; // Update the guest name to be unique
         }
-        
+
         return true; // Allow sign in
       } catch (error) {
         console.error('[Auth] Sign in error:', error);
         // Sanitize error message for headers
-        const message = error instanceof Error ? error.message : 'Authentication failed';
+        const message =
+          error instanceof Error ? error.message : 'Authentication failed';
         const sanitized = message
           .replace(/[\n\r]/g, ' ')
           .replace(/[^\w\s\-.:]/g, '')
@@ -129,7 +136,8 @@ export const authOptions = {
               token.username = dbUser.username; // Our sanitized username
               token.role = dbUser.role; // User role for permissions
             } else {
-              token.username = profile.name || profile.email?.split('@')[0] || 'User';
+              token.username =
+                profile.name || profile.email?.split('@')[0] || 'User';
             }
             token.providerId = profile.sub;
             token.provider = 'google';
@@ -156,13 +164,13 @@ export const authOptions = {
         session.user.providerId = token.providerId as string;
         session.user.provider = token.provider as AuthProvider;
         session.user.dbUserId = token.dbUserId as string; // Our PostgreSQL ID
-        session.user.role = token.role as string || 'player'; // User role
+        session.user.role = (token.role as string) || 'player'; // User role
       }
       return session;
     },
   },
   pages: {
-    signIn: "/auth/signin",
-    error: "/auth/error",
+    signIn: '/auth/signin',
+    error: '/auth/error',
   },
 };

@@ -105,7 +105,8 @@ export type RequireKeys<T, K extends keyof T> = T & Required<Pick<T, K>>;
  * @template T - The base type
  * @template K - Keys to make optional
  */
-export type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type OptionalKeys<T, K extends keyof T> = Omit<T, K> &
+  Partial<Pick<T, K>>;
 
 /**
  * Extract non-nullable properties from a type
@@ -154,19 +155,34 @@ export type NonEmptyArray<T> = [T, ...T[]];
  * Get the first element type of a tuple
  * @template T - The tuple type
  */
-export type Head<T extends readonly unknown[]> = T extends readonly [infer H, ...unknown[]] ? H : never;
+export type Head<T extends readonly unknown[]> = T extends readonly [
+  infer H,
+  ...unknown[],
+]
+  ? H
+  : never;
 
 /**
  * Get all but the first element of a tuple
  * @template T - The tuple type
  */
-export type Tail<T extends readonly unknown[]> = T extends readonly [unknown, ...infer Rest] ? Rest : [];
+export type Tail<T extends readonly unknown[]> = T extends readonly [
+  unknown,
+  ...infer Rest,
+]
+  ? Rest
+  : [];
 
 /**
  * Get the last element type of a tuple
  * @template T - The tuple type
  */
-export type Last<T extends readonly unknown[]> = T extends readonly [...unknown[], infer L] ? L : never;
+export type Last<T extends readonly unknown[]> = T extends readonly [
+  ...unknown[],
+  infer L,
+]
+  ? L
+  : never;
 
 /**
  * Get the length of a tuple as a literal type
@@ -182,13 +198,21 @@ export type Length<T extends readonly unknown[]> = T['length'];
  * Extract function parameters as a tuple
  * @template T - The function type
  */
-export type Parameters<T extends (...args: never[]) => unknown> = T extends (...args: infer P) => unknown ? P : never;
+export type Parameters<T extends (...args: never[]) => unknown> = T extends (
+  ...args: infer P
+) => unknown
+  ? P
+  : never;
 
 /**
  * Extract function return type
  * @template T - The function type
  */
-export type ReturnType<T extends (...args: never[]) => unknown> = T extends (...args: never[]) => infer R ? R : unknown;
+export type ReturnType<T extends (...args: never[]) => unknown> = T extends (
+  ...args: never[]
+) => infer R
+  ? R
+  : unknown;
 
 /**
  * Extract the awaited type from a Promise
@@ -208,16 +232,16 @@ export type Fn<P extends readonly unknown[], R> = (...args: P) => R;
  * @template P - Parameters tuple
  * @template R - Return type
  */
-export type AsyncFn<P extends readonly unknown[], R> = (...args: P) => Promise<R>;
+export type AsyncFn<P extends readonly unknown[], R> = (
+  ...args: P
+) => Promise<R>;
 
 /**
  * Make a function's parameters optional
  * @template T - The function type
  */
-export type OptionalParams<T extends (...args: never[]) => unknown> = 
-  T extends (...args: infer P) => infer R 
-    ? (...args: Partial<P>) => R 
-    : never;
+export type OptionalParams<T extends (...args: never[]) => unknown> =
+  T extends (...args: infer P) => infer R ? (...args: Partial<P>) => R : never;
 
 // ========================================
 // KEY-VALUE AND OBJECT UTILITIES
@@ -285,7 +309,10 @@ export type If<C extends boolean, T, F> = C extends true ? T : F;
  * @template X - First type
  * @template Y - Second type
  */
-export type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? true : false;
+export type Equals<X, Y> =
+  (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2
+    ? true
+    : false;
 
 /**
  * Check if a type extends another
@@ -304,7 +331,7 @@ export type NotNullish<T> = T extends null | undefined ? never : T;
  * Check if a type is any
  * @template T - The type to check
  */
-export type IsAny<T> = 0 extends (1 & T) ? true : false;
+export type IsAny<T> = 0 extends 1 & T ? true : false;
 
 /**
  * Check if a type is never
@@ -316,7 +343,8 @@ export type IsNever<T> = [T] extends [never] ? true : false;
  * Check if a type is unknown
  * @template T - The type to check
  */
-export type IsUnknown<T> = IsAny<T> extends true ? false : unknown extends T ? true : false;
+export type IsUnknown<T> =
+  IsAny<T> extends true ? false : unknown extends T ? true : false;
 
 // ========================================
 // JSON AND SERIALIZATION TYPES
@@ -351,14 +379,14 @@ export interface JsonArray extends Array<JsonValue> {}
 export type JsonSerializable<T> = T extends JsonPrimitive
   ? T
   : T extends Date
-  ? string
-  : T extends RegExp
-  ? string
-  : T extends Function
-  ? never
-  : T extends object
-  ? { [K in keyof T]: JsonSerializable<T[K]> }
-  : never;
+    ? string
+    : T extends RegExp
+      ? string
+      : T extends Function
+        ? never
+        : T extends object
+          ? { [K in keyof T]: JsonSerializable<T[K]> }
+          : never;
 
 // ========================================
 // BRANDED TYPES FOR TYPE SAFETY

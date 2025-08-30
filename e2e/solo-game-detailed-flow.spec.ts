@@ -10,31 +10,43 @@ async function handleAuthentication(page: Page): Promise<void> {
   console.log('Starting authentication process');
 
   // Reset URL and clear any existing state
-  await page.goto('http://localhost:3000', { waitUntil: 'load', timeout: 30000 });
+  await page.goto('http://localhost:3000', {
+    waitUntil: 'load',
+    timeout: 30000,
+  });
 
   // Complex authentication strategy with multiple fallback mechanisms
   const authStrategies: Array<(page: Page) => Promise<boolean>> = [
     async (currentPage: Page) => {
       console.log('Attempting strategy 1: Sign in link');
       try {
-        const signInLink = currentPage.locator('a').filter({ hasText: /Sign in/ }).first();
-        
+        const signInLink = currentPage
+          .locator('a')
+          .filter({ hasText: /Sign in/ })
+          .first();
+
         if (await signInLink.isVisible({ timeout: 5000 })) {
           await signInLink.click({ force: true });
-          
+
           // Wait for username input with generous timeout
-          const usernameInput = await currentPage.waitForSelector('input[type="text"]', { timeout: 10000 });
-          
+          const usernameInput = await currentPage.waitForSelector(
+            'input[type="text"]',
+            { timeout: 10000 }
+          );
+
           const uniqueUsername = `GameTest_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           await usernameInput.fill(uniqueUsername);
-          
-          const submitButton = await currentPage.waitForSelector('button[type="submit"], button:has-text("Play")', { timeout: 5000 });
+
+          const submitButton = await currentPage.waitForSelector(
+            'button[type="submit"], button:has-text("Play")',
+            { timeout: 5000 }
+          );
           await submitButton.click({ force: true });
-          
+
           // Wait for navigation, but be flexible
           await currentPage.waitForURL('**/', { timeout: 10000 });
           await currentPage.waitForLoadState('networkidle');
-          
+
           return true;
         }
       } catch (error) {
@@ -45,15 +57,19 @@ async function handleAuthentication(page: Page): Promise<void> {
     async (currentPage: Page) => {
       console.log('Attempting strategy 2: Direct username input');
       try {
-        const usernameInput = currentPage.locator('input[type="text"]:visible').first();
-        
+        const usernameInput = currentPage
+          .locator('input[type="text"]:visible')
+          .first();
+
         if (await usernameInput.isVisible({ timeout: 10000 })) {
           const uniqueUsername = `SoloTest_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-          
+
           await usernameInput.fill(uniqueUsername);
-          const playButton = currentPage.locator('button:has-text("Play")').first();
+          const playButton = currentPage
+            .locator('button:has-text("Play")')
+            .first();
           await playButton.click({ force: true });
-          
+
           await currentPage.waitForTimeout(3000);
           return true;
         }
@@ -75,7 +91,7 @@ async function handleAuthentication(page: Page): Promise<void> {
           }
           return false;
         });
-        
+
         // Wait for potential game startup
         await currentPage.waitForTimeout(5000);
         return true;
@@ -83,7 +99,7 @@ async function handleAuthentication(page: Page): Promise<void> {
         console.log('Strategy 3 failed:', error);
       }
       return false;
-    }
+    },
   ];
 
   // Try authentication strategies with logging
@@ -104,11 +120,11 @@ async function handleAuthentication(page: Page): Promise<void> {
 test.describe('Solo Game Detailed Flow', () => {
   test.beforeEach(async ({ page }) => {
     test.setTimeout(150000); // 2.5 minutes timeout
-    
+
     try {
-      await page.goto('http://localhost:3000', { 
+      await page.goto('http://localhost:3000', {
         waitUntil: 'networkidle',
-        timeout: 60000 
+        timeout: 60000,
       });
 
       await handleAuthentication(page);
@@ -116,7 +132,12 @@ test.describe('Solo Game Detailed Flow', () => {
       // Log page content for debugging
       await page.evaluate(() => {
         console.log('Document body text:', document.body.textContent);
-        console.log('All buttons:', Array.from(document.querySelectorAll('button')).map(b => b.textContent));
+        console.log(
+          'All buttons:',
+          Array.from(document.querySelectorAll('button')).map(
+            b => b.textContent
+          )
+        );
       });
 
       // Wait for game mode buttons to be available
@@ -128,7 +149,7 @@ test.describe('Solo Game Detailed Flow', () => {
         'button:has-text("play solo")',
         'button[data-testid="play-solo"]',
         'button.play-solo',
-        'button'
+        'button',
       ];
 
       let buttonFound = false;
@@ -159,7 +180,10 @@ test.describe('Solo Game Detailed Flow', () => {
     }
   });
 
-  test('Detailed Solo Game Flow without Refreshes', async ({ page, context }) => {
+  test('Detailed Solo Game Flow without Refreshes', async ({
+    page,
+    context,
+  }) => {
     try {
       // Debug: Take initial screenshot
       await page.screenshot({ path: 'test-results/initial-page.png' });
@@ -181,7 +205,9 @@ test.describe('Solo Game Detailed Flow', () => {
           if (wsManager && wsManager.createSoloGame) {
             wsManager.createSoloGame();
           } else {
-            console.error('Could not find WebSocket manager to create solo game');
+            console.error(
+              'Could not find WebSocket manager to create solo game'
+            );
           }
         } catch (error) {
           console.error('Error in programmatic game start:', error);
@@ -189,32 +215,32 @@ test.describe('Solo Game Detailed Flow', () => {
       });
 
       // Wait for game page with much longer timeout and verbose logging
-      const gamePageUrl = await page.waitForURL(
-        '**/game/**', 
-        { 
-          timeout: 60000,
-          waitUntil: 'networkidle'
-        }
-      );
+      const gamePageUrl = await page.waitForURL('**/game/**', {
+        timeout: 60000,
+        waitUntil: 'networkidle',
+      });
 
       // Additional verification
       const pageUrl = await page.url();
       console.log('Current page URL:', pageUrl);
 
       // Wait for board to be visible
-      await page.waitForSelector('.cg-wrap, .chess-board-container', { timeout: 30000 });
+      await page.waitForSelector('.cg-wrap, .chess-board-container', {
+        timeout: 30000,
+      });
 
       // Take a screenshot of the game page
       await page.screenshot({ path: 'test-results/game-page.png' });
 
       // Log initial game state
       const initialStatusElement = page.locator('.text-lg.font-semibold');
-      const initialStatus = await initialStatusElement.textContent() ?? 'No status found';
+      const initialStatus =
+        (await initialStatusElement.textContent()) ?? 'No status found';
       console.log('🎲 Initial Game State:', initialStatus);
 
       // Additional instrumentation
       await context.tracing.stop({
-        path: 'test-results/trace.zip'
+        path: 'test-results/trace.zip',
       });
 
       // Minimal assertions to allow investigation
@@ -223,13 +249,13 @@ test.describe('Solo Game Detailed Flow', () => {
       expect(await page.locator('.cg-board').isVisible()).toBe(true);
     } catch (error) {
       console.error('Test execution error:', error);
-      
+
       // Take a final screenshot before throwing
       await page.screenshot({ path: 'test-results/error-screenshot.png' });
-      
+
       // Stop tracing and save trace file
       await context.tracing.stop({
-        path: 'test-results/error-trace.zip'
+        path: 'test-results/error-trace.zip',
       });
 
       throw error;

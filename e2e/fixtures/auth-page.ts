@@ -42,7 +42,10 @@ export class AuthPage {
 
   async getUsername() {
     // Get the username from the "Playing as" display
-    const usernameElement = await this.page.locator('span:has-text("Playing as")').locator('..').locator('span.text-white');
+    const usernameElement = await this.page
+      .locator('span:has-text("Playing as")')
+      .locator('..')
+      .locator('span.text-white');
     return await usernameElement.textContent();
   }
 
@@ -53,21 +56,21 @@ export class AuthPage {
       wins: 0,
       losses: 0,
       draws: 0,
-      rating: 1000
+      rating: 1000,
     };
-    
+
     if (statsText) {
       const winsMatch = statsText.match(/wins:\s*(\d+)/i);
       const lossesMatch = statsText.match(/losses:\s*(\d+)/i);
       const drawsMatch = statsText.match(/draws:\s*(\d+)/i);
       const ratingMatch = statsText.match(/rating:\s*(\d+)/i);
-      
+
       if (winsMatch) stats.wins = parseInt(winsMatch[1]);
       if (lossesMatch) stats.losses = parseInt(lossesMatch[1]);
       if (drawsMatch) stats.draws = parseInt(drawsMatch[1]);
       if (ratingMatch) stats.rating = parseInt(ratingMatch[1]);
     }
-    
+
     return stats;
   }
 

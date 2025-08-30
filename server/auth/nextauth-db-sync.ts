@@ -31,7 +31,7 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
   try {
     // Check if user exists by email first (primary identifier)
     let existingUser;
-    
+
     if (oauthUser.email) {
       existingUser = await db.query.users.findFirst({
         where: eq(users.email, oauthUser.email),
@@ -40,10 +40,11 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
 
     if (existingUser) {
       // Update last seen
-      await db.update(users)
+      await db
+        .update(users)
         .set({ lastSeenAt: new Date() })
         .where(eq(users.id, existingUser.id));
-      
+
       return {
         id: existingUser.id,
         username: existingUser.username,
@@ -52,9 +53,10 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
     }
 
     // Create new user
-    const baseUsername = oauthUser.name || oauthUser.email?.split('@')[0] || 'User';
+    const baseUsername =
+      oauthUser.name || oauthUser.email?.split('@')[0] || 'User';
     const uniqueUsername = await generateUniqueUsername(baseUsername);
-    
+
     const newUserId = uuidv4();
     const newUser = {
       id: newUserId,
@@ -65,9 +67,11 @@ export async function upsertUserFromOAuth(oauthUser: OAuthUser): Promise<{
     };
 
     await db.insert(users).values(newUser);
-    
-    console.log(`[Auth] Created new user: ${uniqueUsername} (${oauthUser.email})`);
-    
+
+    console.log(
+      `[Auth] Created new user: ${uniqueUsername} (${oauthUser.email})`
+    );
+
     return {
       id: newUserId,
       username: uniqueUsername,
@@ -127,9 +131,9 @@ export async function canUserLogin(userId: string): Promise<{
 
   if (user.bannedUntil && user.bannedUntil > new Date()) {
     const banEndDate = user.bannedUntil.toLocaleDateString();
-    return { 
-      allowed: false, 
-      reason: `Account is suspended until ${banEndDate}${user.banReason ? ': ' + user.banReason : ''}` 
+    return {
+      allowed: false,
+      reason: `Account is suspended until ${banEndDate}${user.banReason ? ': ' + user.banReason : ''}`,
     };
   }
 

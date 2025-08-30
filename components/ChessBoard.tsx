@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import "@bezalel6/react-chessground/dist/react-chessground.css";
-import Chessground from "@bezalel6/react-chessground";
-import { useState, memo } from "react";
+import '@bezalel6/react-chessground/dist/react-chessground.css';
+import Chessground from '@bezalel6/react-chessground';
+import { useState, memo } from 'react';
 import type {
   ReactChessGroundProps,
   Key,
   Dests,
-} from "@bezalel6/react-chessground";
-import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
-import { parseFEN, getCurrentBan } from "@/lib/game-types";
+} from '@bezalel6/react-chessground';
+import type { SimpleGameState, Move, Ban } from '@/lib/game-types';
+import { parseFEN, getCurrentBan } from '@/lib/game-types';
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
-  playerColor?: "white" | "black";
+  playerColor?: 'white' | 'black';
 }
 
 // Helper function to get piece at a square from FEN position
@@ -23,7 +23,7 @@ function getPieceAt(fen: string, square: string): string | null {
   const file = square.charCodeAt(0) - 97; // a=0, b=1, etc.
   const rank = 8 - parseInt(square[1]); // 8=0, 7=1, etc.
 
-  const rows = fen.split("/");
+  const rows = fen.split('/');
   const row = rows[rank];
 
   let col = 0;
@@ -44,7 +44,7 @@ const ChessBoard = memo(function ChessBoard({
   gameState,
   onMove,
   onBan,
-  playerColor = "white",
+  playerColor = 'white',
 }: ChessBoardProps) {
   const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
@@ -53,9 +53,9 @@ const ChessBoard = memo(function ChessBoard({
   // Safety check: If gameState is invalid, return a placeholder
   if (!gameState || !gameState.fen) {
     return (
-      <div className="chess-board-outer">
-        <div className="chess-board-inner flex items-center justify-center">
-          <div className="loading-spinner" />
+      <div className='chess-board-outer'>
+        <div className='chess-board-inner flex items-center justify-center'>
+          <div className='loading-spinner' />
         </div>
       </div>
     );
@@ -63,7 +63,7 @@ const ChessBoard = memo(function ChessBoard({
 
   const fenData = parseFEN(gameState.fen);
   const currentBan = getCurrentBan(gameState.fen);
-  const nextAction = gameState.nextAction || "move";
+  const nextAction = gameState.nextAction || 'move';
 
   // Use the inCheck field from game state (sent by server)
   const isInCheck = gameState.inCheck || false;
@@ -100,13 +100,13 @@ const ChessBoard = memo(function ChessBoard({
   // will ensure that only the correct pieces can actually be moved.
   // For multiplayer: Use the player's color if it's their turn.
   const movableColor = gameState.isSoloGame
-    ? "both"
+    ? 'both'
     : canMove && fenData.turn === playerColor
-    ? playerColor
-    : undefined;
+      ? playerColor
+      : undefined;
 
   // Debug logging
-  console.log("[ChessBoard] State:", {
+  console.log('[ChessBoard] State:', {
     turn: fenData.turn,
     nextAction,
     orientation,
@@ -122,14 +122,14 @@ const ChessBoard = memo(function ChessBoard({
 
   // Extra debug for ban display
   if (currentBan) {
-    console.log("[ChessBoard] BAN SHOULD BE VISIBLE:", currentBan);
+    console.log('[ChessBoard] BAN SHOULD BE VISIBLE:', currentBan);
   } else {
-    console.log("[ChessBoard] No ban to display");
+    console.log('[ChessBoard] No ban to display');
   }
 
   // More stable board key - only remount when position actually changes
   const boardKey = `${fenData.position}-${fenData.turn}-${
-    gameState.gameOver ? "over" : "active"
+    gameState.gameOver ? 'over' : 'active'
   }`;
 
   const config: ReactChessGroundProps = {
@@ -153,15 +153,15 @@ const ChessBoard = memo(function ChessBoard({
       showDests: true,
       events: {
         after: (orig: string, dest: string) => {
-          if (nextAction === "ban") {
+          if (nextAction === 'ban') {
             onBan({ from: orig, to: dest });
           } else {
             // Check if this is a pawn promotion
             const piece = getPieceAt(fenData.position, orig);
-            const isPromotion = piece === "P" || piece === "p";
+            const isPromotion = piece === 'P' || piece === 'p';
             const destRank = dest[1];
 
-            if (isPromotion && (destRank === "8" || destRank === "1")) {
+            if (isPromotion && (destRank === '8' || destRank === '1')) {
               // Store the move and show promotion dialog
               _setPromotionMove({ from: orig, to: dest });
             } else {
@@ -189,18 +189,18 @@ const ChessBoard = memo(function ChessBoard({
             {
               orig: currentBan.from as Key,
               dest: currentBan.to as Key,
-              brush: "red",
+              brush: 'red',
             },
           ]
         : [],
     },
   };
   console.log(config.fen);
-  console.log("[ChessBoard] Check state:", isInCheck);
+  console.log('[ChessBoard] Check state:', isInCheck);
 
   return (
-    <div className="chess-board-outer">
-      <div className="chess-board-inner">
+    <div className='chess-board-outer'>
+      <div className='chess-board-inner'>
         <Chessground key={boardKey} {...config} />
       </div>
     </div>

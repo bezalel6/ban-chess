@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   /* Lichess-inspired Brand Colors */
@@ -13,7 +13,7 @@
   --color-background: #161512;
   --color-background-secondary: #2b2925;
   --color-background-tertiary: #3d3a33;
-  
+
   /* Foreground System */
   --color-foreground: #f8fafc;
   --color-foreground-muted: #a8a29e;
@@ -59,12 +59,24 @@
 }
 
 /* Reset margin for common block elements, but preserve default padding */
-body, h1, h2, h3, h4, h5, h6, p, ol, ul {
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ol,
+ul {
   margin: 0;
 }
 
 /* Preserve default padding for form elements and buttons */
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font-family: inherit;
   font-size: inherit;
 }
@@ -74,8 +86,8 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-    Cantarell, "Helvetica Neue", sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Helvetica Neue', sans-serif;
 }
 
 body {
@@ -98,7 +110,7 @@ a {
   button {
     @apply cursor-pointer;
   }
-  
+
   /* Primary button style - high visibility */
   .btn-primary {
     @apply px-6 py-3 bg-lichess-orange-500 text-white font-semibold rounded-lg 
@@ -111,7 +123,7 @@ a {
            transition-all duration-200
            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
   }
-  
+
   /* Secondary button style - clear but less prominent */
   .btn-secondary {
     @apply px-6 py-3 bg-background-secondary text-foreground font-semibold rounded-lg
@@ -124,7 +136,7 @@ a {
            transition-all duration-200
            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0;
   }
-  
+
   /* Ghost button style - minimal but visible */
   .btn-ghost {
     @apply px-4 py-2 text-foreground font-medium rounded-lg
@@ -135,12 +147,12 @@ a {
            transition-all duration-200
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  
+
   /* Preserve cursor-not-allowed for disabled buttons */
   button:disabled {
     @apply cursor-not-allowed;
   }
-  
+
   .container-custom {
     @apply max-w-6xl mx-auto px-5;
   }
@@ -162,13 +174,21 @@ a {
   }
 
   /* Typography Scale */
-  .text-hero { @apply text-4xl font-bold leading-tight; }
-  .text-page-title { @apply text-3xl font-bold leading-tight; }
-  .text-section { @apply text-2xl font-bold leading-tight; }
-  .text-card-title { @apply text-xl font-semibold leading-tight; }
+  .text-hero {
+    @apply text-4xl font-bold leading-tight;
+  }
+  .text-page-title {
+    @apply text-3xl font-bold leading-tight;
+  }
+  .text-section {
+    @apply text-2xl font-bold leading-tight;
+  }
+  .text-card-title {
+    @apply text-xl font-semibold leading-tight;
+  }
 
   /* Volume slider custom styling */
-  input[type="range"]::-webkit-slider-thumb {
+  input[type='range']::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 16px;
@@ -178,7 +198,7 @@ a {
     cursor: pointer;
   }
 
-  input[type="range"]::-moz-range-thumb {
+  input[type='range']::-moz-range-thumb {
     width: 16px;
     height: 16px;
     background: #4ade80;
@@ -199,7 +219,7 @@ a {
     backface-visibility: hidden;
     will-change: auto;
   }
-  
+
   /* Inner container - this is what chessground sees */
   .chess-board-inner {
     width: 100%;
@@ -209,7 +229,7 @@ a {
     transform: translateZ(0);
     backface-visibility: hidden;
   }
-  
+
   /* Ensure chessground fills the inner container */
   .chess-board-inner .cg-wrap {
     width: 100% !important;
@@ -221,7 +241,7 @@ a {
     /* Prevent sub-pixel positioning */
     transform-origin: 0 0;
   }
-  
+
   /* Fuse cg-container and cg-board together */
   .chess-board-inner .cg-wrap .cg-container,
   .chess-board-inner .cg-wrap cg-container {
@@ -254,8 +274,9 @@ a {
   .resizable-board-container {
     @apply relative;
     /* Smooth transition like Lichess - only when not actively resizing */
-    transition: width 0.12s cubic-bezier(0.4, 0, 0.2, 1),
-                height 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      width 0.12s cubic-bezier(0.4, 0, 0.2, 1),
+      height 0.12s cubic-bezier(0.4, 0, 0.2, 1);
     /* Hardware acceleration for the resize container */
     transform: translateZ(0);
     backface-visibility: hidden;
@@ -293,16 +314,16 @@ a {
     /* Increase touch target for mobile */
     z-index: 10;
   }
-  
+
   /* Visual feedback during hover and resize */
   .resize-handle:hover {
     opacity: 0.8 !important;
   }
-  
+
   .resizable-board-container.resizing .resize-handle {
     opacity: 1 !important;
   }
-  
+
   /* Prevent board interaction during resize */
   .resizable-board-container.resizing .chess-board-outer {
     pointer-events: none;
@@ -314,7 +335,7 @@ a {
     transform: translateZ(0);
     backface-visibility: hidden;
   }
-  
+
   /* Fix piece centering within squares - prevents drift during resize */
   /* Force chessground to use percentage-based positioning */
   .chess-board-inner .cg-wrap .cg-board {
@@ -337,38 +358,38 @@ a {
     pointer-events: auto;
     box-sizing: border-box !important;
   }
-  
+
   /* Override chessground's piece positioning to prevent drift */
   .chess-board-inner .cg-wrap .cg-board piece {
     /* Use CSS grid positioning for accurate centering */
-    width: 12.5% !important;  /* 100% / 8 squares */
+    width: 12.5% !important; /* 100% / 8 squares */
     height: 12.5% !important; /* 100% / 8 squares */
   }
-  
+
   /* Fix piece positioning using transform for centering */
   .chess-board-inner .cg-wrap .cg-board piece:not(.dragging) {
     /* Center pieces within their squares using transform */
     transform-origin: center center !important;
   }
-  
+
   /* Ensure pieces stay centered during board resize */
   .resizable-board-container.resizing .cg-board piece:not(.dragging) {
     /* Temporarily disable transitions during resize to prevent drift */
     transition: none !important;
   }
-  
+
   /* Re-enable smooth transitions after resize */
   .resizable-board-container:not(.resizing) .cg-board piece {
     transition: transform 0.2s !important;
   }
-  
+
   /* Keep drag behavior smooth and responsive */
   .chess-board-inner .cg-wrap .cg-board piece.dragging {
     cursor: grabbing !important;
     z-index: 15 !important;
     transition: none !important;
   }
-  
+
   /* Ensure ghost pieces (for premoves) also stay centered */
   .chess-board-inner .cg-wrap .cg-board piece.ghost {
     opacity: 0.3 !important;

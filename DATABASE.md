@@ -1,6 +1,7 @@
 # Database Quick Start
 
 ## 1. Install Prerequisites
+
 - PostgreSQL 14+
 - Redis 6+
 
@@ -24,6 +25,7 @@ npm run db:seed
 ## 3. Default Admin Accounts
 
 After seeding, you'll have:
+
 - **Super Admin**: `admin` / `admin@2banchess.local`
 - **Moderator**: `moderator` / `mod@2banchess.local`
 
@@ -46,6 +48,7 @@ Multiplayer: Redis + PostgreSQL
 ## 5. Admin Features
 
 The seeded database includes:
+
 - User role system (player, moderator, admin, super_admin)
 - Ban/suspension tracking
 - Admin action audit log

@@ -17,19 +17,21 @@ export function getWebSocketUrl(): string {
   // Client-side: determine based on current page protocol
   const isHttps = window.location.protocol === 'https:';
   const host = window.location.hostname;
-  
+
   // If we have an explicit environment variable, use it
   // But ensure it matches the page's security context
   if (process.env.NEXT_PUBLIC_WEBSOCKET_URL) {
     const envUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL;
     const isEnvSecure = envUrl.startsWith('wss://');
-    
+
     // If page is HTTPS but WebSocket URL is not secure, upgrade it
     if (isHttps && !isEnvSecure) {
-      console.warn('Page served over HTTPS but WebSocket URL is not secure. Upgrading to WSS...');
+      console.warn(
+        'Page served over HTTPS but WebSocket URL is not secure. Upgrading to WSS...'
+      );
       return envUrl.replace('ws://', 'wss://');
     }
-    
+
     return envUrl;
   }
 

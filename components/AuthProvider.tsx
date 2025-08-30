@@ -18,22 +18,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Inner component that uses useSession
 function AuthContextProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
-  
+
   // Cast to our extended user type
-  const extendedUser = session?.user as { 
-    providerId?: string; 
-    username?: string;
-    provider?: AuthProviderType;
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
-  } | undefined;
-  
-  const user = extendedUser?.providerId && extendedUser?.username && extendedUser?.provider ? {
-    userId: extendedUser.providerId,
-    username: extendedUser.username,
-    provider: extendedUser.provider
-  } : null;
+  const extendedUser = session?.user as
+    | {
+        providerId?: string;
+        username?: string;
+        provider?: AuthProviderType;
+        name?: string | null;
+        email?: string | null;
+        image?: string | null;
+      }
+    | undefined;
+
+  const user =
+    extendedUser?.providerId && extendedUser?.username && extendedUser?.provider
+      ? {
+          userId: extendedUser.providerId,
+          username: extendedUser.username,
+          provider: extendedUser.provider,
+        }
+      : null;
 
   return (
     <AuthContext.Provider value={{ user, loading: status === 'loading' }}>
@@ -46,9 +51,7 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
-      <AuthContextProvider>
-        {children}
-      </AuthContextProvider>
+      <AuthContextProvider>{children}</AuthContextProvider>
     </SessionProvider>
   );
 }

@@ -41,7 +41,7 @@ async function seed() {
       if (!existing) {
         await db.insert(users).values(admin);
         console.log(`✅ Created ${admin.role}: ${admin.username}`);
-        
+
         // Log the admin credentials for initial setup
         if (admin.username === 'admin') {
           console.log(`
@@ -58,7 +58,9 @@ async function seed() {
           `);
         }
       } else {
-        console.log(`⏭️  ${admin.role} '${admin.username}' already exists, skipping...`);
+        console.log(
+          `⏭️  ${admin.role} '${admin.username}' already exists, skipping...`
+        );
       }
     }
 
@@ -136,7 +138,6 @@ async function seed() {
 ║  3. Configure additional settings via admin panel           ║
 ╚════════════════════════════════════════════════════════════╝
     `);
-
   } catch (error) {
     console.error('❌ Seed failed:', error);
     process.exit(1);

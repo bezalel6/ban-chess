@@ -12,7 +12,8 @@ const onRenderCallback: ProfilerOnRenderCallback = (
 ) => {
   // Log performance metrics to console in development
   if (process.env.NODE_ENV === 'development') {
-    if (actualDuration > 16) { // Log if render takes more than 16ms (60fps threshold)
+    if (actualDuration > 16) {
+      // Log if render takes more than 16ms (60fps threshold)
       console.warn(`⚠️ Slow render detected in ${id}:`, {
         phase,
         actualDuration: `${actualDuration.toFixed(2)}ms`,
@@ -20,16 +21,16 @@ const onRenderCallback: ProfilerOnRenderCallback = (
         timestamp: new Date(commitTime).toISOString(),
       });
     }
-    
+
     // Log to window for Chrome DevTools Performance tab integration
-    if (typeof window !== 'undefined' && (window as unknown as { performance?: Performance }).performance) {
-      const perf = (window as unknown as { performance: Performance }).performance;
+    if (
+      typeof window !== 'undefined' &&
+      (window as unknown as { performance?: Performance }).performance
+    ) {
+      const perf = (window as unknown as { performance: Performance })
+        .performance;
       perf.mark(`${id}-${phase}-end`);
-      perf.measure(
-        `${id}-${phase}`,
-        undefined,
-        `${id}-${phase}-end`
-      );
+      perf.measure(`${id}-${phase}`, undefined, `${id}-${phase}-end`);
     }
   }
 };
@@ -39,7 +40,10 @@ interface ProfilerWrapperProps {
   children: ReactNode;
 }
 
-export default function ProfilerWrapper({ id, children }: ProfilerWrapperProps) {
+export default function ProfilerWrapper({
+  id,
+  children,
+}: ProfilerWrapperProps) {
   if (process.env.NODE_ENV === 'production') {
     return <>{children}</>;
   }

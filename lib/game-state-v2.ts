@@ -3,9 +3,10 @@
 // The client just renders and forwards user input
 
 export interface BoardDisplay {
-  fen: string;                      // Current board position
-  orientation: 'white' | 'black';   // Which way to show the board
-  highlightedSquares?: Array<{      // Squares to highlight
+  fen: string; // Current board position
+  orientation: 'white' | 'black'; // Which way to show the board
+  highlightedSquares?: Array<{
+    // Squares to highlight
     square: string;
     color: 'red' | 'yellow' | 'green';
     type: 'ban' | 'check' | 'lastMove';
@@ -13,23 +14,23 @@ export interface BoardDisplay {
 }
 
 export interface InteractionState {
-  enabled: boolean;                  // Can the player interact?
+  enabled: boolean; // Can the player interact?
   allowedMoves?: Record<string, string[]>; // from -> [to] squares
-  actionType: 'move' | 'ban';       // What happens when clicked
+  actionType: 'move' | 'ban'; // What happens when clicked
 }
 
 export interface UILabels {
-  currentTurnLabel: string;          // "White's Turn" / "Black's Turn"
-  actionLabel: string;               // "Ban a White move" / "Make your move"
-  playerRole: string;                // "Playing as White" / "Playing as Black"
-  gameStatus?: string;               // "Check!" / "Checkmate!" / etc.
+  currentTurnLabel: string; // "White's Turn" / "Black's Turn"
+  actionLabel: string; // "Ban a White move" / "Make your move"
+  playerRole: string; // "Playing as White" / "Playing as Black"
+  gameStatus?: string; // "Check!" / "Checkmate!" / etc.
 }
 
 export interface GameMeta {
   gameId: string;
   isSoloGame: boolean;
-  players: { 
-    white?: string; 
+  players: {
+    white?: string;
     black?: string;
   };
 }
@@ -43,7 +44,7 @@ export interface GameStateV2 {
 }
 
 // Messages from server to client
-export type ServerMessageV2 = 
+export type ServerMessageV2 =
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'game-state'; state: GameStateV2 }
   | { type: 'game-created'; gameId: string }
@@ -57,13 +58,15 @@ export type ClientMessageV2 =
   | { type: 'action'; gameId: string; from: string; to: string };
 
 // Helper to convert allowed moves to chessground format
-export function movesToDests(allowedMoves?: Record<string, string[]>): Map<string, string[]> {
+export function movesToDests(
+  allowedMoves?: Record<string, string[]>
+): Map<string, string[]> {
   const dests = new Map<string, string[]>();
   if (!allowedMoves) return dests;
-  
+
   Object.entries(allowedMoves).forEach(([from, tos]) => {
     dests.set(from, tos);
   });
-  
+
   return dests;
 }

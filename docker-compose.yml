@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:3001}
@@ -27,7 +27,7 @@ services:
       context: .
       dockerfile: Dockerfile.websocket
     ports:
-      - "3001:3001"
+      - '3001:3001'
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - WS_PORT=3001
@@ -47,13 +47,13 @@ services:
     # Explicitly disable authentication
     command: redis-server --appendonly yes --protected-mode no --requirepass ""
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis-data:/data
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5

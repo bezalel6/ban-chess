@@ -36,7 +36,11 @@ export type TransactionCallback<T> = () => Promise<T>;
 /**
  * Database connection status
  */
-export type DbConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
+export type DbConnectionStatus =
+  | 'connected'
+  | 'connecting'
+  | 'disconnected'
+  | 'error';
 
 // ========================================
 // QUERY BUILDER TYPES
@@ -157,8 +161,11 @@ export interface BaseRepository<T, TCreate = Partial<T>, TUpdate = Partial<T>> {
  * @template TCreate - The create input type
  * @template TUpdate - The update input type
  */
-export interface SoftDeleteRepository<T, TCreate = Partial<T>, TUpdate = Partial<T>> 
-  extends BaseRepository<T, TCreate, TUpdate> {
+export interface SoftDeleteRepository<
+  T,
+  TCreate = Partial<T>,
+  TUpdate = Partial<T>,
+> extends BaseRepository<T, TCreate, TUpdate> {
   softDelete(id: string): DbResult<boolean>;
   restore(id: string): DbResult<boolean>;
   findWithDeleted(options?: QueryOptions<T>): DbResult<T[]>;
@@ -357,7 +364,7 @@ export function isDatabaseError(error: unknown): error is DatabaseError {
  * @returns Formatted database error
  */
 export function createDatabaseError(
-  error: unknown, 
+  error: unknown,
   context?: Partial<DatabaseError>
 ): DatabaseError {
   const baseError: DatabaseError = {
@@ -398,7 +405,7 @@ export function createPaginatedResult<T>(
   limit: number
 ): PaginatedResult<T> {
   const totalPages = Math.ceil(total / limit);
-  
+
   return {
     data,
     total,

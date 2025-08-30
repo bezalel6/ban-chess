@@ -10,14 +10,19 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
   // Add SSL configuration for production environments
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+  ssl:
+    process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : undefined,
 });
 
 // Validate database URL is present
 if (!process.env.DATABASE_URL) {
   console.error('[PostgreSQL] ❌ DATABASE_URL environment variable is not set');
   console.error('[PostgreSQL] Please set DATABASE_URL in your .env.local file');
-  console.error('[PostgreSQL] Example: DATABASE_URL=postgresql://username:password@localhost:5432/chess2ban');
+  console.error(
+    '[PostgreSQL] Example: DATABASE_URL=postgresql://username:password@localhost:5432/chess2ban'
+  );
 }
 
 // Create drizzle instance
@@ -28,7 +33,7 @@ pool.on('connect', () => {
   console.log('[PostgreSQL] ✅ Connected to database');
 });
 
-pool.on('error', (err) => {
+pool.on('error', err => {
   console.error('[PostgreSQL] ❌ Database error:', err);
 });
 

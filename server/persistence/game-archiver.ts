@@ -18,7 +18,7 @@ export class GameArchiver {
   async archiveGame(gameId: string): Promise<void> {
     try {
       console.log(`[GameArchiver] Starting archive for game ${gameId}`);
-      
+
       // Get game state from Redis
       const gameState = await getGameState(gameId);
       if (!gameState) {
@@ -28,13 +28,15 @@ export class GameArchiver {
 
       // SKIP SOLO GAMES - they remain local/ephemeral
       if (gameState.isSoloGame) {
-        console.log(`[GameArchiver] Skipping solo game ${gameId} - not persisting to database`);
+        console.log(
+          `[GameArchiver] Skipping solo game ${gameId} - not persisting to database`
+        );
         return;
       }
 
       // Get action history (BCN format)
       const actionHistory = await getActionHistory(gameId);
-      
+
       // Reconstruct the game to get PGN and move details
       const game = new BanChess();
       const moves: Array<{
@@ -45,7 +47,7 @@ export class GameArchiver {
         fenAfter: string;
         isBan: boolean;
       }> = [];
-      
+
       const bannedMoves: string[] = [];
       let moveCount = 0;
       let banCount = 0;
@@ -53,7 +55,7 @@ export class GameArchiver {
       // Process each action from history
       for (const action of actionHistory) {
         const [type, uci] = action.split(':');
-        
+
         if (type === 'b') {
           // Ban action
           const [from, to] = [uci.slice(0, 2), uci.slice(2, 4)];
@@ -71,7 +73,7 @@ export class GameArchiver {
             moveCount++;
             const moveNumber = Math.ceil(moveCount / 2);
             const color = moveCount % 2 === 1 ? 'white' : 'black';
-            
+
             // Buffer the move for batch insert
             await bufferedPersistence.bufferMove({
               gameId,
@@ -83,7 +85,7 @@ export class GameArchiver {
               isBan: false,
               createdAt: new Date(),
             });
-            
+
             moves.push({
               moveNumber,
               color,
@@ -120,7 +122,6 @@ export class GameArchiver {
 
       console.log(`[GameArchiver] Successfully archived game ${gameId}`);
       console.log(`[GameArchiver] Stats: ${moveCount} moves, ${banCount} bans`);
-      
     } catch (error) {
       console.error(`[GameArchiver] Error archiving game ${gameId}:`, error);
       throw error;
@@ -132,7 +133,7 @@ export class GameArchiver {
    */
   queueForArchival(gameId: string): void {
     this.archivalQueue.add(gameId);
-    
+
     // Process queue if not already processing
     if (!this.isProcessing) {
       this.processArchivalQueue();
@@ -149,16 +150,18 @@ export class GameArchiver {
     }
 
     this.isProcessing = true;
-    
+
     // Process games in batches
     const batch = Array.from(this.archivalQueue).slice(0, 5);
-    
+
     for (const gameId of batch) {
       try {
         await this.archiveGame(gameId);
         this.archivalQueue.delete(gameId);
       } catch {
-        console.error(`[GameArchiver] Failed to archive game ${gameId}, will retry later`);
+        console.error(
+          `[GameArchiver] Failed to archive game ${gameId}, will retry later`
+        );
         // Keep in queue for retry
       }
     }
@@ -179,19 +182,21 @@ export class GameArchiver {
     try {
       const activeGames = await redis.smembers('games:active');
       const allGameKeys = await redis.keys('game:*');
-      
+
       for (const key of allGameKeys) {
         const gameId = key.replace('game:', '').split(':')[0];
-        
+
         // Skip if it's an active game
         if (activeGames.includes(gameId)) {
           continue;
         }
-        
+
         // Check if game is completed
         const gameState = await getGameState(gameId);
         if (gameState && gameState.gameOver) {
-          console.log(`[GameArchiver] Queuing completed game ${gameId} for archival`);
+          console.log(
+            `[GameArchiver] Queuing completed game ${gameId} for archival`
+          );
           this.queueForArchival(gameId);
         }
       }

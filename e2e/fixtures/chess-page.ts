@@ -19,17 +19,29 @@ export class ChessPage {
   constructor(page: Page) {
     this.page = page;
     // Use more generic selectors that match the actual ChessBoard component
-    this.board = page.locator('.chessboard-container, .chess-board, [class*="chessboard"]').first();
+    this.board = page
+      .locator('.chessboard-container, .chess-board, [class*="chessboard"]')
+      .first();
     this.moveInput = page.locator('input[type="text"]').first();
-    this.submitMoveButton = page.getByRole('button', { name: /submit|make move|move/i });
-    this.banWordInput = page.locator('input[placeholder*="ban"], input[placeholder*="word"]');
+    this.submitMoveButton = page.getByRole('button', {
+      name: /submit|make move|move/i,
+    });
+    this.banWordInput = page.locator(
+      'input[placeholder*="ban"], input[placeholder*="word"]'
+    );
     this.submitBanButton = page.getByRole('button', { name: /ban/i });
     // Use more generic selectors instead of specific test IDs
     this.timer = page.locator('[class*="timer"], .timer, .game-timer').first();
-    this.playerTurn = page.locator('[class*="turn"], .player-turn, .current-player').first();
-    this.moveHistory = page.locator('[class*="history"], .move-history, .moves').first();
+    this.playerTurn = page
+      .locator('[class*="turn"], .player-turn, .current-player')
+      .first();
+    this.moveHistory = page
+      .locator('[class*="history"], .move-history, .moves')
+      .first();
     this.bannedWords = page.locator('[class*="banned"], .banned-words').first();
-    this.gameStatus = page.locator('[class*="status"], .game-status, .status').first();
+    this.gameStatus = page
+      .locator('[class*="status"], .game-status, .status')
+      .first();
     this.queueButton = page.getByRole('button', { name: /join queue/i });
     this.leaveQueueButton = page.getByRole('button', { name: /leave queue/i });
     this.resignButton = page.getByRole('button', { name: /resign/i });
@@ -68,29 +80,29 @@ export class ChessPage {
 
   async waitForTurn(player: 'white' | 'black') {
     await this.page.waitForFunction(
-      (expectedPlayer) => {
+      expectedPlayer => {
         // Look for turn indicators in various possible locations
         const possibleSelectors = [
-          '[class*="turn"]', 
-          '.player-turn', 
+          '[class*="turn"]',
+          '.player-turn',
           '.current-player',
           '[class*="status"]',
-          '.game-status'
+          '.game-status',
         ];
-        
+
         for (const selector of possibleSelectors) {
           const element = document.querySelector(selector);
           if (element?.textContent?.toLowerCase().includes(expectedPlayer)) {
             return true;
           }
         }
-        
+
         // Also check if it's white's turn by looking for move input availability
         if (expectedPlayer === 'white') {
           const moveInput = document.querySelector('input[type="text"]');
           return moveInput && !moveInput.disabled;
         }
-        
+
         return false;
       },
       player,

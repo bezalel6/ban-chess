@@ -9,7 +9,7 @@ interface MoveListProps {
 
 export default function MoveList({ history }: MoveListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   // Auto-scroll to bottom when history changes
   useEffect(() => {
     if (scrollRef.current) {
@@ -21,24 +21,24 @@ export default function MoveList({ history }: MoveListProps) {
     white?: { ban?: string; move?: string };
     black?: { ban?: string; move?: string };
   }
-  
+
   const rows: DisplayRow[] = [];
   let currentRow: DisplayRow = {};
   let moveCount = 0;
-  
+
   // Handle both object format (from ban-chess.ts) and string format
   if (history.length > 0 && typeof history[0] === 'object') {
     // New format: array of HistoryEntry objects
     const entries = history as HistoryEntry[];
     let pendingBan: string | undefined;
-    
-    entries.forEach((entry) => {
+
+    entries.forEach(entry => {
       const isWhiteTurn = moveCount % 2 === 0;
-      
+
       if (entry.actionType === 'ban') {
         // Format ban as "e2-e4"
         pendingBan = `${entry.action.from}-${entry.action.to}`;
-        
+
         // Add ban to current position
         if (isWhiteTurn) {
           currentRow.white = { ban: pendingBan };
@@ -48,7 +48,7 @@ export default function MoveList({ history }: MoveListProps) {
       } else if (entry.actionType === 'move') {
         // Use SAN notation if available
         const moveText = entry.san || `${entry.action.from}${entry.action.to}`;
-        
+
         // Add move to the existing ban entry or create new
         if (isWhiteTurn) {
           if (!currentRow.white) currentRow.white = {};
@@ -60,12 +60,12 @@ export default function MoveList({ history }: MoveListProps) {
           rows.push(currentRow);
           currentRow = {};
         }
-        
+
         moveCount++;
         pendingBan = undefined;
       }
     });
-    
+
     // Push incomplete row if exists
     if (currentRow.white || currentRow.black) {
       rows.push(currentRow);
@@ -87,32 +87,55 @@ export default function MoveList({ history }: MoveListProps) {
   }
 
   return (
-    <div ref={scrollRef} className="bg-background-tertiary rounded-lg p-2 h-full overflow-y-auto">
-      <table className="w-full text-sm border-collapse border border-border">
+    <div
+      ref={scrollRef}
+      className='bg-background-tertiary rounded-lg p-2 h-full overflow-y-auto'
+    >
+      <table className='w-full text-sm border-collapse border border-border'>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={index} className="hover:bg-background-secondary/50 h-8">
-              <td className={`px-2 py-1 text-foreground-muted font-semibold align-middle text-center border border-border w-8 ${
-                index % 2 === 0 ? 'bg-background-secondary/30' : 'bg-background-tertiary/50'
-              }`}>
+            <tr key={index} className='hover:bg-background-secondary/50 h-8'>
+              <td
+                className={`px-2 py-1 text-foreground-muted font-semibold align-middle text-center border border-border w-8 ${
+                  index % 2 === 0
+                    ? 'bg-background-secondary/30'
+                    : 'bg-background-tertiary/50'
+                }`}
+              >
                 {index + 1}.
               </td>
-              <td className={`px-2 py-1 text-left align-middle border border-border ${
-                index % 2 === 0 ? 'bg-background-secondary/20' : 'bg-background-tertiary/30'
-              }`}>
+              <td
+                className={`px-2 py-1 text-left align-middle border border-border ${
+                  index % 2 === 0
+                    ? 'bg-background-secondary/20'
+                    : 'bg-background-tertiary/30'
+                }`}
+              >
                 {row.white && (
-                  <span className="text-foreground font-medium">
-                    {row.white.ban && <span className="text-red-500 font-bold">{row.white.ban} </span>}
+                  <span className='text-foreground font-medium'>
+                    {row.white.ban && (
+                      <span className='text-red-500 font-bold'>
+                        {row.white.ban}{' '}
+                      </span>
+                    )}
                     {row.white.move && <span>{row.white.move}</span>}
                   </span>
                 )}
               </td>
-              <td className={`px-2 py-1 text-left align-middle border border-border ${
-                index % 2 === 0 ? 'bg-background-secondary/20' : 'bg-background-tertiary/30'
-              }`}>
+              <td
+                className={`px-2 py-1 text-left align-middle border border-border ${
+                  index % 2 === 0
+                    ? 'bg-background-secondary/20'
+                    : 'bg-background-tertiary/30'
+                }`}
+              >
                 {row.black && (
-                  <span className="text-foreground font-medium">
-                    {row.black.ban && <span className="text-red-500 font-bold">{row.black.ban} </span>}
+                  <span className='text-foreground font-medium'>
+                    {row.black.ban && (
+                      <span className='text-red-500 font-bold'>
+                        {row.black.ban}{' '}
+                      </span>
+                    )}
                     {row.black.move && <span>{row.black.move}</span>}
                   </span>
                 )}

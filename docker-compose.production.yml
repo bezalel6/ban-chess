@@ -11,9 +11,9 @@ services:
       - ./app-dist:/app
       # Option 2: Absolute path (uncomment and customize)
       # - /data/coolify/applications/chess-app/app-dist:/app
-    command: node server.js  # Runs the standalone server
+    command: node server.js # Runs the standalone server
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
       - NODE_ENV=production
       - HOSTNAME=0.0.0.0
@@ -31,7 +31,8 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      test:
+        ['CMD', 'wget', '--spider', '-q', 'http://localhost:3000/api/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -48,8 +49,8 @@ services:
       # - /data/coolify/applications/chess-app/ws-dist:/app
     command: node index.js
     ports:
-      - "3001:3001"
-      - "3002:3002"  # Health check port
+      - '3001:3001'
+      - '3002:3002' # Health check port
     environment:
       - NODE_ENV=production
       - WS_PORT=3001
@@ -66,7 +67,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:3002/health']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,14 +77,14 @@ services:
     image: redis:7-alpine
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis}
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis-data:/data
     networks:
       - app-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis}", "ping"]
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-redis}', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5

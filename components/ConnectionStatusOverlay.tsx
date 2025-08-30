@@ -14,11 +14,12 @@ export default function ConnectionStatusOverlay() {
   useEffect(() => {
     // Only show overlay after a delay to avoid flashing during normal reconnects
     let timer: ReturnType<typeof setTimeout>;
-    
-    const shouldShow = user && 
+
+    const shouldShow =
+      user &&
       readyState !== ReadyState.UNINSTANTIATED &&
       !(readyState === ReadyState.OPEN && isAuthenticated);
-    
+
     if (shouldShow) {
       // Wait 1.5 seconds before showing overlay to avoid brief disconnections
       timer = setTimeout(() => {
@@ -28,7 +29,7 @@ export default function ConnectionStatusOverlay() {
       setShowOverlay(false);
       setReconnectAttempt(0);
     }
-    
+
     return () => clearTimeout(timer);
   }, [user, readyState, isAuthenticated]);
 
@@ -46,9 +47,10 @@ export default function ConnectionStatusOverlay() {
 
   let message = 'Connecting...';
   if (readyState === ReadyState.CONNECTING) {
-    message = reconnectAttempt > 0 
-      ? `Reconnecting... (attempt ${reconnectAttempt})`
-      : 'Connecting to server...';
+    message =
+      reconnectAttempt > 0
+        ? `Reconnecting... (attempt ${reconnectAttempt})`
+        : 'Connecting to server...';
   } else if (readyState === ReadyState.OPEN && !isAuthenticated) {
     message = 'Authenticating...';
   } else if (readyState === ReadyState.CLOSED) {
@@ -58,10 +60,10 @@ export default function ConnectionStatusOverlay() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center backdrop-blur-sm">
-      <div className="text-center text-white">
-        <div className="loading-spinner mb-4"></div>
-        <p className="text-lg font-semibold">{message}</p>
+    <div className='fixed inset-0 bg-black/80 z-[100] flex items-center justify-center backdrop-blur-sm'>
+      <div className='text-center text-white'>
+        <div className='loading-spinner mb-4'></div>
+        <p className='text-lg font-semibold'>{message}</p>
       </div>
     </div>
   );

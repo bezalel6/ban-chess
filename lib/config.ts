@@ -2,7 +2,10 @@ import { getWebSocketUrl } from './websocket-config';
 
 const WEBSOCKET_URL = getWebSocketUrl(); // Force evaluation here
 
-console.log('NEXT_PUBLIC_WEBSOCKET_URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);
+console.log(
+  'NEXT_PUBLIC_WEBSOCKET_URL:',
+  process.env.NEXT_PUBLIC_WEBSOCKET_URL
+);
 console.log('Final WebSocket URL:', WEBSOCKET_URL);
 
 // Environment configuration
@@ -13,16 +16,16 @@ export const config = {
     reconnectInterval: 3000,
     maxReconnectAttempts: 5,
   },
-  
+
   // API configuration
   api: {
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || (
-      process.env.NODE_ENV === 'production'
+    baseUrl:
+      process.env.NEXT_PUBLIC_API_URL ||
+      (process.env.NODE_ENV === 'production'
         ? 'https://chess.rndev.site'
-        : 'http://localhost:3000'
-    ),
+        : 'http://localhost:3000'),
   },
-  
+
   // Authentication configuration
   auth: {
     // Session cookie settings
@@ -30,7 +33,7 @@ export const config = {
     secureCookie: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   },
-  
+
   // Game configuration
   game: {
     defaultTimeControl: {
@@ -38,7 +41,7 @@ export const config = {
       increment: 0,
     },
   },
-  
+
   // Feature flags
   features: {
     enableSounds: process.env.NEXT_PUBLIC_ENABLE_SOUNDS !== 'false',

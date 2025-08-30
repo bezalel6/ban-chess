@@ -20,29 +20,41 @@ class WebSocketSingleton {
   }
 
   connect(user: { userId?: string; username?: string }) {
-    console.log('[WS Singleton] connect() called with user:', user.username, 'Current state:', {
-      wsReady: this.ws?.readyState === WebSocket.OPEN,
-      isAuth: this.isAuthenticated,
-      sameUser: this.currentUser?.userId === user.userId
-    });
-    
+    console.log(
+      '[WS Singleton] connect() called with user:',
+      user.username,
+      'Current state:',
+      {
+        wsReady: this.ws?.readyState === WebSocket.OPEN,
+        isAuth: this.isAuthenticated,
+        sameUser: this.currentUser?.userId === user.userId,
+      }
+    );
+
     // If already connected with same user, do nothing
-    if (this.ws?.readyState === WebSocket.OPEN && 
-        this.currentUser?.userId === user.userId && 
-        this.isAuthenticated) {
+    if (
+      this.ws?.readyState === WebSocket.OPEN &&
+      this.currentUser?.userId === user.userId &&
+      this.isAuthenticated
+    ) {
       console.log('[WS Singleton] Already connected and authenticated');
       // Notify listeners that we're already authenticated
-      this.listeners.forEach(listener => listener({ 
-        type: 'authenticated', 
-        userId: user.userId || '', 
-        username: user.username || '' 
-      }));
+      this.listeners.forEach(listener =>
+        listener({
+          type: 'authenticated',
+          userId: user.userId || '',
+          username: user.username || '',
+        })
+      );
       return;
     }
 
     // If connecting or connected with different user, close and reconnect
-    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || 
-        this.currentUser?.userId !== user.userId)) {
+    if (
+      this.ws &&
+      (this.ws.readyState === WebSocket.CONNECTING ||
+        this.currentUser?.userId !== user.userId)
+    ) {
       console.log('[WS Singleton] Closing existing connection');
       this.ws.close();
       this.ws = null;
@@ -58,23 +70,23 @@ class WebSocketSingleton {
 
     this.ws.onopen = () => {
       console.log('[WS Singleton] Connected, authenticating...');
-      this.send({ 
-        type: 'authenticate', 
-        userId: user.userId || '', 
-        username: user.username || '' 
+      this.send({
+        type: 'authenticate',
+        userId: user.userId || '',
+        username: user.username || '',
       });
     };
 
-    this.ws.onmessage = (event) => {
+    this.ws.onmessage = event => {
       try {
         const msg = JSON.parse(event.data) as SimpleServerMsg;
         console.log('[WS Singleton] Received:', msg.type);
-        
+
         if (msg.type === 'authenticated') {
           this.isAuthenticated = true;
           console.log('[WS Singleton] Authenticated successfully');
         }
-        
+
         // Notify all listeners
         this.listeners.forEach(listener => listener(msg));
       } catch (error) {
@@ -88,7 +100,7 @@ class WebSocketSingleton {
       // Don't set ws to null here - let reconnect handle it
     };
 
-    this.ws.onerror = (error) => {
+    this.ws.onerror = error => {
       console.error('[WS Singleton] Error:', error);
     };
   }
@@ -113,7 +125,7 @@ class WebSocketSingleton {
     return {
       connected: this.ws?.readyState === WebSocket.OPEN,
       authenticated: this.isAuthenticated,
-      user: this.currentUser
+      user: this.currentUser,
     };
   }
 
@@ -142,5 +154,8 @@ if (typeof window !== 'undefined') {
   window.wsConnection = wsConnection;
   // Track how many times this code runs
   window.wsConnectionInstances = (window.wsConnectionInstances || 0) + 1;
-  console.log('[WS Singleton] Module loaded, instance count:', window.wsConnectionInstances);
+  console.log(
+    '[WS Singleton] Module loaded, instance count:',
+    window.wsConnectionInstances
+  );
 }

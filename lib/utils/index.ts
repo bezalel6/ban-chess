@@ -1,17 +1,17 @@
 /**
  * Comprehensive TypeScript utility types for the 2ban-2chess application
- * 
+ *
  * This module exports all utility types organized by category for easy importing.
  * Use named imports to get only the types you need in your components.
- * 
+ *
  * @example
  * ```typescript
  * // Import specific types
  * import type { Result, AsyncResult, GameId } from '@/lib/utils';
- * 
+ *
  * // Import API types
  * import type { ApiResponse, RouteHandler } from '@/lib/utils/api-types';
- * 
+ *
  * // Import React component types
  * import type { ChessBoardProps, ButtonProps } from '@/lib/utils/react-types';
  * ```
@@ -452,7 +452,9 @@ export function isArray<T = unknown>(value: unknown): value is T[] {
  * @param value - The value to check
  * @returns True if value is a function
  */
-export function isFunction(value: unknown): value is (...args: unknown[]) => unknown {
+export function isFunction(
+  value: unknown
+): value is (...args: unknown[]) => unknown {
   return typeof value === 'function';
 }
 
@@ -463,7 +465,7 @@ export function isFunction(value: unknown): value is (...args: unknown[]) => unk
  * @throws Error if value is null or undefined
  */
 export function assertDefined<T>(
-  value: T | null | undefined, 
+  value: T | null | undefined,
   message?: string
 ): asserts value is T {
   if (!isDefined(value)) {
@@ -477,7 +479,10 @@ export function assertDefined<T>(
  * @param message - Optional error message
  * @throws Error if condition is false
  */
-export function assert(condition: unknown, message?: string): asserts condition {
+export function assert(
+  condition: unknown,
+  message?: string
+): asserts condition {
   if (!condition) {
     throw new Error(message ?? 'Assertion failed');
   }

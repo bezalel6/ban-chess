@@ -1,119 +1,155 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
+  <head>
     <title>WebSocket Test</title>
     <style>
-        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
-        .log { margin: 5px 0; padding: 8px; background: #2a2a2a; border-left: 3px solid #666; }
-        .error { border-color: #ff4444; color: #ff6666; }
-        .success { border-color: #44ff44; color: #66ff66; }
-        .info { border-color: #4444ff; color: #6666ff; }
-        button { margin: 10px 5px; padding: 10px 20px; background: #333; color: #fff; border: 1px solid #666; cursor: pointer; }
-        button:hover { background: #444; }
-        h1 { color: #fff; }
+      body {
+        font-family: monospace;
+        padding: 20px;
+        background: #1a1a1a;
+        color: #fff;
+      }
+      .log {
+        margin: 5px 0;
+        padding: 8px;
+        background: #2a2a2a;
+        border-left: 3px solid #666;
+      }
+      .error {
+        border-color: #ff4444;
+        color: #ff6666;
+      }
+      .success {
+        border-color: #44ff44;
+        color: #66ff66;
+      }
+      .info {
+        border-color: #4444ff;
+        color: #6666ff;
+      }
+      button {
+        margin: 10px 5px;
+        padding: 10px 20px;
+        background: #333;
+        color: #fff;
+        border: 1px solid #666;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #444;
+      }
+      h1 {
+        color: #fff;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>🎮 Chess WebSocket Test</h1>
-    
+
     <div>
-        <button onclick="testDirect()">Test Direct (ws://rndev.local:3001)</button>
-        <button onclick="testProduction()">Test Production (wss://ws-chess.rndev.site)</button>
-        <button onclick="clearLogs()">Clear Logs</button>
+      <button onclick="testDirect()">
+        Test Direct (ws://rndev.local:3001)
+      </button>
+      <button onclick="testProduction()">
+        Test Production (wss://ws-chess.rndev.site)
+      </button>
+      <button onclick="clearLogs()">Clear Logs</button>
     </div>
-    
+
     <div id="logs"></div>
 
     <script>
-        function log(message, type = 'info') {
-            const logs = document.getElementById('logs');
-            const entry = document.createElement('div');
-            entry.className = 'log ' + type;
-            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-            logs.insertBefore(entry, logs.firstChild);
-        }
+      function log(message, type = 'info') {
+        const logs = document.getElementById('logs');
+        const entry = document.createElement('div');
+        entry.className = 'log ' + type;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logs.insertBefore(entry, logs.firstChild);
+      }
 
-        function clearLogs() {
-            document.getElementById('logs').innerHTML = '';
-        }
+      function clearLogs() {
+        document.getElementById('logs').innerHTML = '';
+      }
 
-        function testWebSocket(url) {
-            log(`🔌 Connecting to: ${url}`);
-            
-            try {
-                const ws = new WebSocket(url);
-                let pingInterval;
-                
-                ws.onopen = function() {
-                    log(`✅ Connected to ${url}`, 'success');
-                    
-                    // Send a test message
-                    const testMsg = {
-                        type: 'ping',
-                        timestamp: Date.now()
-                    };
-                    ws.send(JSON.stringify(testMsg));
-                    log(`📤 Sent: ${JSON.stringify(testMsg)}`);
-                    
-                    // Keep connection alive with pings
-                    pingInterval = setInterval(() => {
-                        if (ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({ type: 'ping' }));
-                        }
-                    }, 30000);
-                };
-                
-                ws.onmessage = function(event) {
-                    log(`📥 Received: ${event.data}`, 'success');
-                };
-                
-                ws.onerror = function(error) {
-                    log(`❌ Error occurred`, 'error');
-                    console.error('WebSocket error:', error);
-                };
-                
-                ws.onclose = function(event) {
-                    clearInterval(pingInterval);
-                    if (event.code === 1000) {
-                        log(`👋 Closed normally: ${event.reason || 'No reason'}`);
-                    } else {
-                        log(`❌ Disconnected: Code ${event.code}, Reason: ${event.reason || 'Unknown'}`, 'error');
-                    }
-                };
-                
-                // Store connection for manual testing
-                window.currentWs = ws;
-                
-            } catch (error) {
-                log(`❌ Failed to create WebSocket: ${error.message}`, 'error');
+      function testWebSocket(url) {
+        log(`🔌 Connecting to: ${url}`);
+
+        try {
+          const ws = new WebSocket(url);
+          let pingInterval;
+
+          ws.onopen = function () {
+            log(`✅ Connected to ${url}`, 'success');
+
+            // Send a test message
+            const testMsg = {
+              type: 'ping',
+              timestamp: Date.now(),
+            };
+            ws.send(JSON.stringify(testMsg));
+            log(`📤 Sent: ${JSON.stringify(testMsg)}`);
+
+            // Keep connection alive with pings
+            pingInterval = setInterval(() => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+              }
+            }, 30000);
+          };
+
+          ws.onmessage = function (event) {
+            log(`📥 Received: ${event.data}`, 'success');
+          };
+
+          ws.onerror = function (error) {
+            log(`❌ Error occurred`, 'error');
+            console.error('WebSocket error:', error);
+          };
+
+          ws.onclose = function (event) {
+            clearInterval(pingInterval);
+            if (event.code === 1000) {
+              log(`👋 Closed normally: ${event.reason || 'No reason'}`);
+            } else {
+              log(
+                `❌ Disconnected: Code ${event.code}, Reason: ${event.reason || 'Unknown'}`,
+                'error'
+              );
             }
-        }
+          };
 
-        function testDirect() {
-            // Try different connection methods
-            const methods = [
-                'wss://chess.rndev.site:3001',  // Direct SSL port
-                'wss://chess.rndev.site/ws',     // Path-based routing
-                `${window.location.protocol}//${window.location.hostname}:3001`
-            ];
-            
-            log('Testing connection methods...', 'info');
-            methods.forEach(url => {
-                log(`Trying: ${url}`, 'info');
-                try {
-                    testWebSocket(url);
-                } catch(e) {
-                    log(`Failed: ${e.message}`, 'error');
-                }
-            });
+          // Store connection for manual testing
+          window.currentWs = ws;
+        } catch (error) {
+          log(`❌ Failed to create WebSocket: ${error.message}`, 'error');
         }
-        
-        function testProduction() {
-            testWebSocket('wss://ws-chess.rndev.site');
-        }
-        
-        // Log current origin
-        log(`Current origin: ${window.location.origin}`, 'info');
+      }
+
+      function testDirect() {
+        // Try different connection methods
+        const methods = [
+          'wss://chess.rndev.site:3001', // Direct SSL port
+          'wss://chess.rndev.site/ws', // Path-based routing
+          `${window.location.protocol}//${window.location.hostname}:3001`,
+        ];
+
+        log('Testing connection methods...', 'info');
+        methods.forEach(url => {
+          log(`Trying: ${url}`, 'info');
+          try {
+            testWebSocket(url);
+          } catch (e) {
+            log(`Failed: ${e.message}`, 'error');
+          }
+        });
+      }
+
+      function testProduction() {
+        testWebSocket('wss://ws-chess.rndev.site');
+      }
+
+      // Log current origin
+      log(`Current origin: ${window.location.origin}`, 'info');
     </script>
-</body>
+  </body>
 </html>

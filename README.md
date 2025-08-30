@@ -1,6 +1,6 @@
 # ♟️ Ban Chess Web (MVP)
 
-An experimental **online platform for playing Ban Chess**, a chess variant where players alternate between banning opponent moves and making their own moves. 
+An experimental **online platform for playing Ban Chess**, a chess variant where players alternate between banning opponent moves and making their own moves.
 
 > 📖 **For complete game rules, see [RULES.md](./RULES.md)** - the canonical ruleset for Ban-Chess.
 
@@ -53,6 +53,7 @@ ban-chess-web/
 ## ⚡ Quick Start
 
 ### 1. Clone & Install
+
 ```bash
 git clone https://github.com/bezalel6/2ban-2chess.git
 cd 2ban-2chess
@@ -64,21 +65,27 @@ npm install
 **Recommended approach:** Run each server in a separate terminal for better log insight and debugging.
 
 **Terminal 1: WebSocket Server**
+
 ```bash
 npm run dev:ws
 ```
+
 This starts the WebSocket server on **ws://localhost:8081** with hot reload.
 
 **Terminal 2: Next.js Development Server**
+
 ```bash
 npm run dev:next
 ```
+
 This starts the Next.js app at [http://localhost:3000](http://localhost:3000).
 
-**Alternative: Single Command** *(less optimal for debugging)*
+**Alternative: Single Command** _(less optimal for debugging)_
+
 ```bash
 npm run dev
 ```
+
 Runs both servers concurrently, but logs are mixed and harder to analyze.
 
 > 📖 **For detailed development setup, debugging tips, and best practices, see [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)**
@@ -91,11 +98,11 @@ Runs both servers concurrently, but logs are mixed and harder to analyze.
 2. Click **"New Game"** → generates unique game ID and room.
 3. Copy the URL and share with opponent.
 4. On the game page:
+   - **Black bans first** - the game starts with Black banning a White move
+   - If it's your turn to **ban**, select an opponent's move to disable it (ban lasts one move only)
+   - If it's your turn to **move**, make a legal move on the board (cannot be the banned move)
+   - Turn order: Black bans → White moves → White bans → Black moves → repeat
 
-   * **Black bans first** - the game starts with Black banning a White move
-   * If it's your turn to **ban**, select an opponent's move to disable it (ban lasts one move only)
-   * If it's your turn to **move**, make a legal move on the board (cannot be the banned move)
-   * Turn order: Black bans → White moves → White bans → Black moves → repeat
 5. Game state updates in real time across all clients.
 
 > See [RULES.md](./RULES.md) for detailed game rules, special move handling, and edge cases.
@@ -120,9 +127,7 @@ interface Ban {
   to: string;
 }
 
-type Action = 
-  | { move: Move }
-  | { ban: Ban };
+type Action = { move: Move } | { ban: Ban };
 
 interface ActionResult {
   success: boolean;
@@ -150,26 +155,26 @@ interface HistoryEntry {
 
 ```ts
 type ClientMsg =
-  | { type: "create"; gameId: string }
-  | { type: "join"; gameId: string }
-  | { type: "ban"; gameId: string; ban: Ban }
-  | { type: "move"; gameId: string; move: Move };
+  | { type: 'create'; gameId: string }
+  | { type: 'join'; gameId: string }
+  | { type: 'ban'; gameId: string; ban: Ban }
+  | { type: 'move'; gameId: string; move: Move };
 ```
 
 ### Server → Client messages
 
 ```ts
 type ServerMsg =
-  | { 
-      type: "state"; 
-      fen: string; 
-      pgn: string; 
-      nextAction: "ban" | "move"; 
-      legalMoves?: Move[]; 
+  | {
+      type: 'state';
+      fen: string;
+      pgn: string;
+      nextAction: 'ban' | 'move';
+      legalMoves?: Move[];
       legalBans?: Ban[];
       history?: HistoryEntry[];
     }
-  | { type: "error"; message: string; error?: string };
+  | { type: 'error'; message: string; error?: string };
 ```
 
 ---
@@ -178,34 +183,33 @@ type ServerMsg =
 
 The board is rendered using [react-chessground](https://github.com/ruilisi/react-chessground):
 
-* `fen`: current position
-* `movable.dests`: built from `legalMoves` or `legalBans`
-* `onMove`: sends `{ type: "move" }` or `{ type: "ban" }` to server
+- `fen`: current position
+- `movable.dests`: built from `legalMoves` or `legalBans`
+- `onMove`: sends `{ type: "move" }` or `{ type: "ban" }` to server
 
 ---
 
 ## 📜 License
 
-* `ban-chess.ts` is MIT
-* `react-chessground` is GPL-3.0
-* This project is GPL-3.0 due to `react-chessground` dependency
+- `ban-chess.ts` is MIT
+- `react-chessground` is GPL-3.0
+- This project is GPL-3.0 due to `react-chessground` dependency
 
 ---
 
 ## ✅ Next Steps
 
-* [ ] Add authentication (user accounts, ratings)
-* [ ] Persist games in a DB (Postgres + Prisma)
-* [ ] Matchmaking / lobby system
-* [ ] Spectator mode
-* [ ] Analysis board & ban history
+- [ ] Add authentication (user accounts, ratings)
+- [ ] Persist games in a DB (Postgres + Prisma)
+- [ ] Matchmaking / lobby system
+- [ ] Spectator mode
+- [ ] Analysis board & ban history
 
 ---
 
 ### Credits
 
-* [ban-chess.ts](https://github.com/bezalel6/ban-chess.ts) by [@bezalel6](https://github.com/bezalel6)
-* [react-chessground](https://github.com/ruilisi/react-chessground) (React wrapper around Chessground from Lichess)
-
+- [ban-chess.ts](https://github.com/bezalel6/ban-chess.ts) by [@bezalel6](https://github.com/bezalel6)
+- [react-chessground](https://github.com/ruilisi/react-chessground) (React wrapper around Chessground from Lichess)
 
 ---

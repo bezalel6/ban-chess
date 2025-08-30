@@ -50,7 +50,11 @@ export interface UpdateUserData {
 /**
  * Repository for user operations
  */
-export class UserRepository extends BaseRepository<UserModel, CreateUserData, UpdateUserData> {
+export class UserRepository extends BaseRepository<
+  UserModel,
+  CreateUserData,
+  UpdateUserData
+> {
   constructor() {
     super(users, 'User');
   }
@@ -65,15 +69,15 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
         .from(users)
         .where(eq(users.username, username))
         .limit(1);
-      
+
       return {
         ok: true,
-        value: result[0] as UserModel | null
+        value: result[0] as UserModel | null,
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('findByUsername', error)
+        error: this.createDbError('findByUsername', error),
       };
     }
   }
@@ -88,15 +92,15 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
-      
+
       return {
         ok: true,
-        value: result[0] as UserModel | null
+        value: result[0] as UserModel | null,
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('findByEmail', error)
+        error: this.createDbError('findByEmail', error),
       };
     }
   }
@@ -109,21 +113,23 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
       const result = await db
         .select()
         .from(users)
-        .where(and(
-          eq(users.isActive, true),
-          gte(users.gamesPlayed, 5) // Min 5 games for leaderboard
-        ))
+        .where(
+          and(
+            eq(users.isActive, true),
+            gte(users.gamesPlayed, 5) // Min 5 games for leaderboard
+          )
+        )
         .orderBy(sql`${users.rating} DESC`)
         .limit(limit);
-      
+
       return {
         ok: true,
-        value: result as UserModel[]
+        value: result as UserModel[],
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('getLeaderboard', error)
+        error: this.createDbError('getLeaderboard', error),
       };
     }
   }
@@ -143,17 +149,17 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
       if (!userResult.value) {
         return {
           ok: false,
-          error: new Error(`User ${userId} not found`)
+          error: new Error(`User ${userId} not found`),
         };
       }
-      
+
       const user = userResult.value;
       const updates: UpdateUserData = {
         gamesPlayed: user.gamesPlayed + 1,
         rating: Math.max(0, user.rating + ratingChange), // Rating can't go below 0
-        lastSeenAt: new Date()
+        lastSeenAt: new Date(),
       };
-      
+
       // Update win/loss/draw count
       if (result === 'win') {
         updates.gamesWon = user.gamesWon + 1;
@@ -162,12 +168,12 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
       } else {
         updates.gamesDrawn = user.gamesDrawn + 1;
       }
-      
+
       return this.update(userId, updates);
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('updateGameStats', error)
+        error: this.createDbError('updateGameStats', error),
       };
     }
   }
@@ -181,16 +187,16 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
     if (!userResult.value) {
       return { ok: true, value: false };
     }
-    
+
     const user = userResult.value;
     if (!user.isActive) {
       return { ok: true, value: true };
     }
-    
+
     if (user.bannedUntil && user.bannedUntil > new Date()) {
       return { ok: true, value: true };
     }
-    
+
     return { ok: true, value: false };
   }
 
@@ -205,7 +211,7 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
     return this.update(userId, {
       isActive: !until, // Permanent ban if no end date
       bannedUntil: until,
-      banReason: reason
+      banReason: reason,
     });
   }
 
@@ -216,7 +222,7 @@ export class UserRepository extends BaseRepository<UserModel, CreateUserData, Up
     return this.update(userId, {
       isActive: true,
       bannedUntil: null,
-      banReason: null
+      banReason: null,
     });
   }
 }

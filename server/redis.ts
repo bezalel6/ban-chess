@@ -4,7 +4,7 @@ import type { TimeControl, GameEvent } from '../lib/game-types';
 // Type definitions for Redis data structures
 interface GameStateData {
   fen: string;
-  pgn?: string;  // Store PGN for full game reconstruction
+  pgn?: string; // Store PGN for full game reconstruction
   whitePlayerId?: string;
   blackPlayerId?: string;
   isSoloGame: boolean;
@@ -13,7 +13,7 @@ interface GameStateData {
   gameOver?: boolean;
   result?: string;
   timeControl?: TimeControl;
-  moveCount?: number;  // Track number of moves for efficient updates
+  moveCount?: number; // Track number of moves for efficient updates
 }
 
 // Action history stored as BCN (Ban Chess Notation) strings
@@ -36,32 +36,32 @@ interface QueuePlayerData {
 
 // Redis connection configuration
 // Default to 'redis' hostname for Docker, 'localhost' for local dev
-const defaultRedisUrl = process.env.NODE_ENV === 'production' 
-  ? 'redis://redis:6379' 
-  : 'redis://localhost:6379';
+const defaultRedisUrl =
+  process.env.NODE_ENV === 'production'
+    ? 'redis://redis:6379'
+    : 'redis://localhost:6379';
 const redisUrl = process.env.REDIS_URL || defaultRedisUrl;
 console.log('[Redis] Connecting to:', redisUrl.replace(/:[^:@]*@/, ':***@')); // Log URL with password hidden
 
 // Create main Redis client for general operations
 export const redis = new Redis(redisUrl, {
-  retryStrategy: (times) => {
+  retryStrategy: times => {
     const delay = Math.min(times * 50, 2000);
     console.log(`[Redis] Reconnecting attempt ${times}, delay: ${delay}ms`);
     return delay;
   },
-  reconnectOnError: (err) => {
+  reconnectOnError: err => {
     const targetError = 'READONLY';
     if (err.message.includes(targetError)) {
       console.log('[Redis] Reconnecting due to READONLY error');
       return true;
-      }
-      return false;
-    },
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: false,
-  }
-);
+    }
+    return false;
+  },
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: true,
+  lazyConnect: false,
+});
 
 // Create separate client for pub/sub (required by ioredis)
 export const redisPub = redis.duplicate();
@@ -100,11 +100,15 @@ redis.on('ready', () => {
   console.log('[Redis] ✅ Redis client ready');
 });
 
-redis.on('error', (err) => {
+redis.on('error', err => {
   // Check for authentication error
   if (err.message && err.message.includes('NOAUTH')) {
-    console.error('[Redis] ❌ Authentication failed - Redis requires a password');
-    console.error('[Redis] Set REDIS_URL with password in environment: redis://:password@host:port');
+    console.error(
+      '[Redis] ❌ Authentication failed - Redis requires a password'
+    );
+    console.error(
+      '[Redis] Set REDIS_URL with password in environment: redis://:password@host:port'
+    );
   } else {
     console.error('[Redis] ❌ Redis connection error:', err);
   }
@@ -127,10 +131,13 @@ redisPub.on('connect', () => {
 /**
  * Store game state in Redis with automatic expiration
  */
-export async function saveGameState(gameId: string, gameData: GameStateData): Promise<void> {
+export async function saveGameState(
+  gameId: string,
+  gameData: GameStateData
+): Promise<void> {
   const pipeline = redis.pipeline();
   const key = KEYS.GAME(gameId);
-  
+
   // Store main game data as hash
   const hashData: Record<string, string | number> = {
     fen: gameData.fen,
@@ -144,35 +151,38 @@ export async function saveGameState(gameId: string, gameData: GameStateData): Pr
     result: gameData.result || '',
     moveCount: gameData.moveCount || 0,
   };
-  
+
   // Store time control if present
   if (gameData.timeControl) {
     hashData.timeControlInitial = gameData.timeControl.initial;
     hashData.timeControlIncrement = gameData.timeControl.increment;
   }
-  
+
   pipeline.hset(key, hashData);
-  
+
   // Set expiration (24 hours for completed games, 4 hours for active)
   const ttl = gameData.gameOver ? 86400 : 14400;
   pipeline.expire(key, ttl);
-  
+
   // Update active games counter
   if (!gameData.gameOver) {
     pipeline.sadd('games:active', gameId);
   } else {
     pipeline.srem('games:active', gameId);
   }
-  
+
   await pipeline.exec();
 }
 
 /**
  * Store an action in the game history using BCN format
  */
-export async function addActionToHistory(gameId: string, action: string): Promise<void> {
+export async function addActionToHistory(
+  gameId: string,
+  action: string
+): Promise<void> {
   const key = KEYS.GAME_HISTORY(gameId);
-  
+
   const pipeline = redis.pipeline();
   pipeline.rpush(key, action); // Store BCN string directly
   pipeline.expire(key, 86400); // 24 hour expiration
@@ -191,14 +201,16 @@ export async function getActionHistory(gameId: string): Promise<ActionHistory> {
 /**
  * Retrieve game state from Redis
  */
-export async function getGameState(gameId: string): Promise<GameStateData | null> {
+export async function getGameState(
+  gameId: string
+): Promise<GameStateData | null> {
   const key = KEYS.GAME(gameId);
   const data = await redis.hgetall(key);
-  
+
   if (!data || Object.keys(data).length === 0) {
     return null;
   }
-  
+
   const gameStateData: GameStateData = {
     fen: data.fen,
     pgn: data.pgn || undefined,
@@ -211,22 +223,25 @@ export async function getGameState(gameId: string): Promise<GameStateData | null
     result: data.result || undefined,
     moveCount: data.moveCount ? parseInt(data.moveCount) : 0,
   };
-  
+
   // Retrieve time control if present
   if (data.timeControlInitial && data.timeControlIncrement) {
     gameStateData.timeControl = {
       initial: parseInt(data.timeControlInitial),
-      increment: parseInt(data.timeControlIncrement)
+      increment: parseInt(data.timeControlIncrement),
     };
   }
-  
+
   return gameStateData;
 }
 
 /**
  * Add player to matchmaking queue
  */
-export async function addToQueue(userId: string, username: string): Promise<number> {
+export async function addToQueue(
+  userId: string,
+  username: string
+): Promise<number> {
   // Check if already in queue using set
   const isInQueue = await redis.sismember(KEYS.QUEUE_SET, userId);
   if (isInQueue) {
@@ -238,14 +253,15 @@ export async function addToQueue(userId: string, username: string): Promise<numb
     });
     return position + 1;
   }
-  
+
   // Add to queue
   const playerData = JSON.stringify({ userId, username, joinedAt: Date.now() });
-  await redis.multi()
+  await redis
+    .multi()
     .rpush(KEYS.QUEUE, playerData)
     .sadd(KEYS.QUEUE_SET, userId)
     .exec();
-  
+
   // Return new queue length
   return await redis.llen(KEYS.QUEUE);
 }
@@ -256,7 +272,7 @@ export async function addToQueue(userId: string, username: string): Promise<numb
 export async function removeFromQueue(userId: string): Promise<void> {
   // Get all queue items
   const queue = await redis.lrange(KEYS.QUEUE, 0, -1);
-  
+
   // Find and remove the player's entry
   for (let i = 0; i < queue.length; i++) {
     const data = JSON.parse(queue[i]);
@@ -266,7 +282,7 @@ export async function removeFromQueue(userId: string): Promise<void> {
       break;
     }
   }
-  
+
   // Remove from set
   await redis.srem(KEYS.QUEUE_SET, userId);
 }
@@ -274,13 +290,12 @@ export async function removeFromQueue(userId: string): Promise<void> {
 /**
  * Get next two players from queue for matching
  */
-export async function getPlayersForMatch(): Promise<[QueuePlayerData, QueuePlayerData] | null> {
+export async function getPlayersForMatch(): Promise<
+  [QueuePlayerData, QueuePlayerData] | null
+> {
   // Pop two players atomically
-  const players = await redis.multi()
-    .lpop(KEYS.QUEUE)
-    .lpop(KEYS.QUEUE)
-    .exec();
-  
+  const players = await redis.multi().lpop(KEYS.QUEUE).lpop(KEYS.QUEUE).exec();
+
   if (!players || !players[0][1] || !players[1][1]) {
     // If we couldn't get two players, put any back
     if (players && players[0][1]) {
@@ -288,29 +303,38 @@ export async function getPlayersForMatch(): Promise<[QueuePlayerData, QueuePlaye
     }
     return null;
   }
-  
+
   const player1 = JSON.parse(players[0][1] as string);
   const player2 = JSON.parse(players[1][1] as string);
-  
+
   // Remove from queue set
-  await redis.multi()
+  await redis
+    .multi()
     .srem(KEYS.QUEUE_SET, player1.userId)
     .srem(KEYS.QUEUE_SET, player2.userId)
     .exec();
-  
+
   return [player1, player2];
 }
 
 /**
  * Store player session
  */
-export async function savePlayerSession(userId: string, sessionData: PlayerSessionData): Promise<void> {
+export async function savePlayerSession(
+  userId: string,
+  sessionData: PlayerSessionData
+): Promise<void> {
   const key = KEYS.PLAYER_SESSION(userId);
-  await redis.set(key, JSON.stringify({
-    ...sessionData,
-    lastSeen: Date.now(),
-  }), 'EX', 3600);
-  
+  await redis.set(
+    key,
+    JSON.stringify({
+      ...sessionData,
+      lastSeen: Date.now(),
+    }),
+    'EX',
+    3600
+  );
+
   // Add to online players set
   await redis.sadd(KEYS.ONLINE_PLAYERS, userId);
 }
@@ -319,7 +343,8 @@ export async function savePlayerSession(userId: string, sessionData: PlayerSessi
  * Remove player session
  */
 export async function removePlayerSession(userId: string): Promise<void> {
-  await redis.multi()
+  await redis
+    .multi()
     .del(KEYS.PLAYER_SESSION(userId))
     .srem(KEYS.ONLINE_PLAYERS, userId)
     .exec();
@@ -337,7 +362,7 @@ export async function getActiveGames(): Promise<string[]> {
  */
 export async function cleanupExpiredData(): Promise<void> {
   console.log('[Redis] Running cleanup task...');
-  
+
   // Remove inactive games from active set
   const activeGames = await getActiveGames();
   for (const gameId of activeGames) {
@@ -347,7 +372,7 @@ export async function cleanupExpiredData(): Promise<void> {
       console.log(`[Redis] Removed expired game from active set: ${gameId}`);
     }
   }
-  
+
   // Clean up orphaned player sessions
   const onlinePlayers = await redis.smembers(KEYS.ONLINE_PLAYERS);
   for (const userId of onlinePlayers) {
@@ -365,7 +390,10 @@ setInterval(cleanupExpiredData, 5 * 60 * 1000);
 /**
  * Store a game event in Redis
  */
-export async function addGameEvent(gameId: string, event: GameEvent): Promise<void> {
+export async function addGameEvent(
+  gameId: string,
+  event: GameEvent
+): Promise<void> {
   const key = KEYS.GAME_EVENTS(gameId);
   await redis.rpush(key, JSON.stringify(event));
   // Expire after 24 hours to prevent memory bloat
@@ -384,7 +412,10 @@ export async function getGameEvents(gameId: string): Promise<GameEvent[]> {
 /**
  * Get recent events for a game (last N events)
  */
-export async function getRecentGameEvents(gameId: string, count: number = 20): Promise<GameEvent[]> {
+export async function getRecentGameEvents(
+  gameId: string,
+  count: number = 20
+): Promise<GameEvent[]> {
   const key = KEYS.GAME_EVENTS(gameId);
   const events = await redis.lrange(key, -count, -1);
   return events.map(e => JSON.parse(e) as GameEvent);
@@ -393,10 +424,6 @@ export async function getRecentGameEvents(gameId: string, count: number = 20): P
 // Graceful shutdown
 export async function shutdown(): Promise<void> {
   console.log('[Redis] Closing connections...');
-  await Promise.all([
-    redis.quit(),
-    redisPub.quit(),
-    redisSub.quit(),
-  ]);
+  await Promise.all([redis.quit(), redisPub.quit(), redisSub.quit()]);
   console.log('[Redis] All connections closed');
 }

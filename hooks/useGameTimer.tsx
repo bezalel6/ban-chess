@@ -9,7 +9,11 @@ interface UseGameTimerProps {
   onTimeout?: () => void;
 }
 
-export function useGameTimer({ clock, isActive, onTimeout }: UseGameTimerProps) {
+export function useGameTimer({
+  clock,
+  isActive,
+  onTimeout,
+}: UseGameTimerProps) {
   const [displayTime, setDisplayTime] = useState<number>(clock?.remaining || 0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
@@ -33,20 +37,20 @@ export function useGameTimer({ clock, isActive, onTimeout }: UseGameTimerProps) 
     if (isActive && clock && clock.remaining > 0) {
       // Reset the lastUpdate ref to current time when starting
       lastUpdateRef.current = Date.now();
-      
+
       intervalRef.current = setInterval(() => {
         setDisplayTime(prevTime => {
           const now = Date.now();
           const elapsed = now - lastUpdateRef.current;
           lastUpdateRef.current = now;
-          
+
           const newTime = Math.max(0, prevTime - elapsed);
-          
+
           // Check for timeout
           if (newTime === 0 && prevTime > 0 && onTimeout) {
             onTimeout();
           }
-          
+
           return newTime;
         });
       }, 100); // Update every 100ms for smooth display

@@ -8,7 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile.standalone
     ports:
-      - "3000:3000"  # Expose to host for Cloudflare tunnel
+      - '3000:3000' # Expose to host for Cloudflare tunnel
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_WEBSOCKET_URL=wss://ws-chess.rndev.site
@@ -32,7 +32,7 @@ services:
       context: .
       dockerfile: Dockerfile.websocket
     ports:
-      - "3001:3001"  # Expose to host for Cloudflare tunnel
+      - '3001:3001' # Expose to host for Cloudflare tunnel
     environment:
       - NODE_ENV=production
       - REDIS_URL=redis://redis:6379
@@ -58,7 +58,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 5

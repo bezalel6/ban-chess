@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { User, Volume2, Play } from "lucide-react";
-import type { AuthSession } from "@/types/auth";
-import { useState, useEffect } from "react";
+import { User, Volume2, Play } from 'lucide-react';
+import type { AuthSession } from '@/types/auth';
+import { useState, useEffect } from 'react';
 import soundManager, {
   eventTypes,
   eventMetadata,
   availableSounds,
   type EventType,
-} from "@/lib/sound-manager";
+} from '@/lib/sound-manager';
 
 interface SettingsClientProps {
   session: AuthSession;
@@ -16,7 +16,7 @@ interface SettingsClientProps {
 
 export default function SettingsClient({ session }: SettingsClientProps) {
   const { user } = session;
-  const isGuest = user.provider === "guest";
+  const isGuest = user.provider === 'guest';
 
   // Sound settings state
   const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
@@ -56,37 +56,37 @@ export default function SettingsClient({ session }: SettingsClientProps) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Settings</h1>
+    <div className='max-w-3xl mx-auto space-y-6'>
+      <h1 className='text-2xl font-bold'>Settings</h1>
 
       {/* Account Section */}
-      <div className="bg-background-secondary rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <User className="h-5 w-5 text-lichess-orange-500" />
+      <div className='bg-background-secondary rounded-lg p-6'>
+        <h2 className='text-lg font-semibold mb-4 flex items-center gap-2'>
+          <User className='h-5 w-5 text-lichess-orange-500' />
           Account
         </h2>
-        <div className="space-y-4">
+        <div className='space-y-4'>
           <div>
-            <p className="font-medium">Username</p>
-            <p className="text-sm text-foreground-muted">
-              {user.username || "Unknown"}
+            <p className='font-medium'>Username</p>
+            <p className='text-sm text-foreground-muted'>
+              {user.username || 'Unknown'}
             </p>
           </div>
           <div>
-            <p className="font-medium">Account Type</p>
-            <p className="text-sm text-foreground-muted">
-              {isGuest ? "Guest Account" : "Registered"}
+            <p className='font-medium'>Account Type</p>
+            <p className='text-sm text-foreground-muted'>
+              {isGuest ? 'Guest Account' : 'Registered'}
             </p>
           </div>
           {isGuest && (
-            <div className="mt-4 p-4 bg-lichess-orange-500/10 rounded-lg">
-              <p className="text-sm text-foreground-muted mb-3">
+            <div className='mt-4 p-4 bg-lichess-orange-500/10 rounded-lg'>
+              <p className='text-sm text-foreground-muted mb-3'>
                 Guest accounts are temporary. Sign in to save your games and
                 preferences.
               </p>
               <a
-                href="/auth/signin"
-                className="inline-block px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600 transition-colors text-sm"
+                href='/auth/signin'
+                className='inline-block px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600 transition-colors text-sm'
               >
                 Sign In
               </a>
@@ -96,51 +96,51 @@ export default function SettingsClient({ session }: SettingsClientProps) {
       </div>
 
       {/* Sound Settings */}
-      <div className="bg-background-secondary rounded-lg p-6">
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Volume2 className="h-5 w-5 text-lichess-orange-500" />
+      <div className='bg-background-secondary rounded-lg p-6'>
+        <h2 className='text-lg font-semibold mb-4 flex items-center gap-2'>
+          <Volume2 className='h-5 w-5 text-lichess-orange-500' />
           Sound Settings
         </h2>
 
-        <div className="space-y-6">
+        <div className='space-y-6'>
           {/* Master Sound Toggle */}
-          <div className="flex items-center justify-between">
+          <div className='flex items-center justify-between'>
             <div>
-              <p className="font-medium">Enable Sound Effects</p>
-              <p className="text-sm text-foreground-muted">
+              <p className='font-medium'>Enable Sound Effects</p>
+              <p className='text-sm text-foreground-muted'>
                 Turn all game sounds on or off
               </p>
             </div>
             <button
               onClick={handleSoundToggle}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                soundEnabled ? "bg-lichess-orange-500" : "bg-gray-600"
+                soundEnabled ? 'bg-lichess-orange-500' : 'bg-gray-600'
               }`}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  soundEnabled ? "translate-x-6" : "translate-x-1"
+                  soundEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
             </button>
           </div>
 
           {/* Volume Slider */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="font-medium">Volume</p>
-              <span className="text-sm text-foreground-muted">
+          <div className='space-y-2'>
+            <div className='flex items-center justify-between'>
+              <p className='font-medium'>Volume</p>
+              <span className='text-sm text-foreground-muted'>
                 {Math.round(volume * 100)}%
               </span>
             </div>
             <input
-              type="range"
-              min="0"
-              max="100"
+              type='range'
+              min='0'
+              max='100'
               value={volume * 100}
-              onChange={(e) => handleVolumeChange(Number(e.target.value) / 100)}
+              onChange={e => handleVolumeChange(Number(e.target.value) / 100)}
               disabled={!soundEnabled}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className='w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
               style={{
                 background: soundEnabled
                   ? `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${
@@ -152,42 +152,42 @@ export default function SettingsClient({ session }: SettingsClientProps) {
           </div>
 
           {/* Event Sound Mapping */}
-          <div className="space-y-4">
+          <div className='space-y-4'>
             <div>
-              <p className="font-medium mb-1">Event Sounds</p>
-              <p className="text-sm text-foreground-muted mb-4">
+              <p className='font-medium mb-1'>Event Sounds</p>
+              <p className='text-sm text-foreground-muted mb-4'>
                 Customize which sound plays for each game event
               </p>
             </div>
 
-            <div className="space-y-3">
-              {eventTypes.map((eventType) => {
+            <div className='space-y-3'>
+              {eventTypes.map(eventType => {
                 const EventIcon = eventMetadata[eventType].icon;
                 return (
                   <div
                     key={eventType}
-                    className="flex items-center gap-3 p-3 bg-background rounded-lg"
+                    className='flex items-center gap-3 p-3 bg-background rounded-lg'
                   >
-                    <EventIcon className="h-4 w-4 text-foreground-muted flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">
+                    <EventIcon className='h-4 w-4 text-foreground-muted flex-shrink-0' />
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium'>
                         {eventMetadata[eventType].name}
                       </p>
                     </div>
                     <select
-                      value={eventSoundMap[eventType] || ""}
-                      onChange={(e) => {
+                      value={eventSoundMap[eventType] || ''}
+                      onChange={e => {
                         const value =
-                          e.target.value === "" ? null : e.target.value;
+                          e.target.value === '' ? null : e.target.value;
                         handleEventSoundChange(eventType, value);
                       }}
                       disabled={!soundEnabled}
-                      className="px-3 py-1.5 bg-background-secondary border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-lichess-orange-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px]"
+                      className='px-3 py-1.5 bg-background-secondary border border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-lichess-orange-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px]'
                     >
-                      {availableSounds.map((sound) => (
+                      {availableSounds.map(sound => (
                         <option
-                          key={sound.file || "none"}
-                          value={sound.file || ""}
+                          key={sound.file || 'none'}
+                          value={sound.file || ''}
                         >
                           {sound.name}
                         </option>
@@ -196,10 +196,10 @@ export default function SettingsClient({ session }: SettingsClientProps) {
                     <button
                       onClick={() => testSound(eventType)}
                       disabled={!soundEnabled || !eventSoundMap[eventType]}
-                      className="p-1.5 text-foreground-muted hover:text-lichess-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      title="Test sound"
+                      className='p-1.5 text-foreground-muted hover:text-lichess-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                      title='Test sound'
                     >
-                      <Play className="h-4 w-4" />
+                      <Play className='h-4 w-4' />
                     </button>
                   </div>
                 );

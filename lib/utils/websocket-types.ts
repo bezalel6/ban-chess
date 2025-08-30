@@ -12,7 +12,12 @@ import type { Optional, Brand } from './types';
 /**
  * WebSocket connection state
  */
-export type WsConnectionState = 'connecting' | 'connected' | 'disconnecting' | 'disconnected' | 'error';
+export type WsConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'disconnecting'
+  | 'disconnected'
+  | 'error';
 
 /**
  * WebSocket ready states (standard values)
@@ -278,7 +283,9 @@ export type WsMessage = ClientMessage | ServerMessage;
  * WebSocket event handler function
  * @template T - The message type
  */
-export type WsEventHandler<T extends WsMessage = WsMessage> = (message: T) => void | Promise<void>;
+export type WsEventHandler<T extends WsMessage = WsMessage> = (
+  message: T
+) => void | Promise<void>;
 
 /**
  * WebSocket connection event handlers
@@ -318,8 +325,14 @@ export interface WsClient {
   connect(): Promise<void>;
   disconnect(code?: WsCloseCode, reason?: string): void;
   send<T extends ClientMessage>(message: T): boolean;
-  on<T extends ServerMessage>(type: T['type'], handler: WsEventHandler<T>): void;
-  off<T extends ServerMessage>(type: T['type'], handler: WsEventHandler<T>): void;
+  on<T extends ServerMessage>(
+    type: T['type'],
+    handler: WsEventHandler<T>
+  ): void;
+  off<T extends ServerMessage>(
+    type: T['type'],
+    handler: WsEventHandler<T>
+  ): void;
   isConnected(): boolean;
 }
 
@@ -345,7 +358,10 @@ export interface WsServer {
   readonly clientCount: number;
   start(): Promise<void>;
   stop(): Promise<void>;
-  broadcast<T extends ServerMessage>(message: T, filter?: (client: WsServerClient) => boolean): void;
+  broadcast<T extends ServerMessage>(
+    message: T,
+    filter?: (client: WsServerClient) => boolean
+  ): void;
   getClient(clientId: string): Optional<WsServerClient>;
   getClientsByGame(gameId: string): WsServerClient[];
   getClientsByUser(userId: string): WsServerClient[];
@@ -366,7 +382,10 @@ export type MessageType<T extends WsMessage> = T['type'];
  * @template T - The message union type
  * @template K - The message type key
  */
-export type MessageByType<T extends WsMessage, K extends MessageType<T>> = Extract<T, { type: K }>;
+export type MessageByType<
+  T extends WsMessage,
+  K extends MessageType<T>,
+> = Extract<T, { type: K }>;
 
 /**
  * WebSocket connection metrics
@@ -420,7 +439,9 @@ export function isMessageType<T extends WsMessage>(
  * @param message - The message without timestamp
  * @returns Message with timestamp
  */
-export function createWsMessage<T extends WsMessage>(message: Omit<T, 'timestamp'>): T {
+export function createWsMessage<T extends WsMessage>(
+  message: Omit<T, 'timestamp'>
+): T {
   return {
     ...message,
     timestamp: Date.now(),
@@ -452,10 +473,15 @@ export function isAckMessage(message: WsMessage): message is WsAckMessage {
  */
 export function getReadyStateName(readyState: WsReadyState): string {
   switch (readyState) {
-    case 0: return 'CONNECTING';
-    case 1: return 'OPEN';
-    case 2: return 'CLOSING';
-    case 3: return 'CLOSED';
-    default: return 'UNKNOWN';
+    case 0:
+      return 'CONNECTING';
+    case 1:
+      return 'OPEN';
+    case 2:
+      return 'CLOSING';
+    case 3:
+      return 'CLOSED';
+    default:
+      return 'UNKNOWN';
   }
 }

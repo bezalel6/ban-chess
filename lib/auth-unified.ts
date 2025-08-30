@@ -21,10 +21,12 @@ const usernameSchema = z
     /^[a-zA-Z0-9_-]+$/,
     'Username can only contain letters, numbers, hyphens, and underscores'
   )
-  .transform((s) => s.trim());
+  .transform(s => s.trim());
 
 const sessionOptions = {
-  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long_change_this_in_production',
+  password:
+    process.env.SESSION_SECRET ||
+    'complex_password_at_least_32_characters_long_change_this_in_production',
   cookieName: 'chess_session',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production',
@@ -35,7 +37,10 @@ const sessionOptions = {
 };
 
 // In-memory store for active users (in production, use Redis or a database)
-const activeUsers = new Map<string, { username: string; userId: string; lastSeen: number }>();
+const activeUsers = new Map<
+  string,
+  { username: string; userId: string; lastSeen: number }
+>();
 
 // Cache the session for the current request
 export const getSession = cache(async (): Promise<IronSession<SessionData>> => {
@@ -47,7 +52,7 @@ export const getSession = cache(async (): Promise<IronSession<SessionData>> => {
 export const getCurrentUser = cache(async (): Promise<SessionData | null> => {
   const session = await getSession();
   if (!session.userId || !session.username) return null;
-  
+
   return {
     userId: session.userId,
     username: session.username,
@@ -60,14 +65,14 @@ export const getCurrentUser = cache(async (): Promise<SessionData | null> => {
 export function isUsernameTaken(username: string): boolean {
   const normalizedUsername = username.toLowerCase().trim();
   const now = Date.now();
-  
+
   // Clean up old entries (older than 1 hour)
   for (const [userId, userData] of activeUsers.entries()) {
     if (now - userData.lastSeen > 60 * 60 * 1000) {
       activeUsers.delete(userId);
     }
   }
-  
+
   // Check if username is taken
   for (const userData of activeUsers.values()) {
     if (userData.username.toLowerCase() === normalizedUsername) {
@@ -78,7 +83,7 @@ export function isUsernameTaken(username: string): boolean {
 }
 
 // Login result types
-export type LoginResult = 
+export type LoginResult =
   | { success: true; user: { userId: string; username: string } }
   | { success: false; error: string };
 
@@ -87,35 +92,35 @@ export async function login(username: string): Promise<LoginResult> {
   try {
     // Validate username
     const validatedUsername = usernameSchema.parse(username);
-    
+
     // Check if username is taken
     if (isUsernameTaken(validatedUsername)) {
       return { success: false, error: 'Username is already taken' };
     }
-    
+
     const session = await getSession();
-    
+
     // Generate unique user ID
     const userId = crypto.randomUUID();
     const now = Date.now();
-    
+
     // Save to session
     session.userId = userId;
     session.username = validatedUsername;
     session.isLoggedIn = true;
     session.createdAt = now;
     await session.save();
-    
+
     // Add to active users
-    activeUsers.set(userId, { 
-      username: validatedUsername, 
+    activeUsers.set(userId, {
+      username: validatedUsername,
       userId,
-      lastSeen: now 
+      lastSeen: now,
     });
-    
-    return { 
-      success: true, 
-      user: { userId, username: validatedUsername } 
+
+    return {
+      success: true,
+      user: { userId, username: validatedUsername },
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -128,12 +133,12 @@ export async function login(username: string): Promise<LoginResult> {
 // Logout function
 export async function logout(): Promise<void> {
   const session = await getSession();
-  
+
   // Remove from active users if exists
   if (session.userId) {
     activeUsers.delete(session.userId);
   }
-  
+
   session.destroy();
   await session.save();
 }
@@ -153,12 +158,13 @@ export async function updateUserActivity(): Promise<void> {
 export function getActiveUserCount(): number {
   const now = Date.now();
   let activeCount = 0;
-  
+
   for (const userData of activeUsers.values()) {
-    if (now - userData.lastSeen <= 60 * 60 * 1000) { // Active within last hour
+    if (now - userData.lastSeen <= 60 * 60 * 1000) {
+      // Active within last hour
       activeCount++;
     }
   }
-  
+
   return activeCount;
 }

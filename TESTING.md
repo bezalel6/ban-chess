@@ -3,6 +3,7 @@
 This comprehensive guide covers the end-to-end (E2E) testing setup using Playwright for the 2Ban-2Chess Next.js 15 application.
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Setup](#setup)
 - [Running Tests](#running-tests)
@@ -15,6 +16,7 @@ This comprehensive guide covers the end-to-end (E2E) testing setup using Playwri
 ## Overview
 
 Our testing setup includes:
+
 - **Playwright** for E2E testing
 - **@axe-core/playwright** for accessibility testing
 - **GitHub Actions** for CI/CD
@@ -94,6 +96,7 @@ npm run test:codegen
 ### Test Output
 
 Tests run headless by default and output to:
+
 - **Terminal**: Real-time test results
 - **JSON**: `test-results.json` for programmatic access
 - **JUnit XML**: `test-results.xml` for CI integration
@@ -112,12 +115,12 @@ import { Page, Locator } from '@playwright/test';
 export class ChessPage {
   readonly page: Page;
   readonly board: Locator;
-  
+
   constructor(page: Page) {
     this.page = page;
     this.board = page.locator('[data-testid="chess-board"]');
   }
-  
+
   async makeMove(move: string) {
     await this.moveInput.fill(move);
     await this.submitMoveButton.click();
@@ -149,9 +152,9 @@ test.describe('Chess Game', () => {
     await chessPage.goto();
     await chessPage.joinQueue();
     await chessPage.waitForGameStart();
-    
+
     await chessPage.makeMove('e2e4');
-    
+
     const history = await chessPage.getMoveHistory();
     expect(history).toContain('e2e4');
   });
@@ -163,7 +166,10 @@ test.describe('Chess Game', () => {
 Common utilities are available in `e2e/utils/test-helpers.ts`:
 
 ```typescript
-import { generateTestUsername, waitForWebSocketConnection } from './utils/test-helpers';
+import {
+  generateTestUsername,
+  waitForWebSocketConnection,
+} from './utils/test-helpers';
 
 test('example', async ({ page }) => {
   const username = generateTestUsername('player');
@@ -205,6 +211,7 @@ Use `data-testid` attributes for reliable element selection:
 ```
 
 Access in tests:
+
 ```typescript
 const board = page.locator('[data-testid="chess-board"]');
 ```
@@ -232,6 +239,7 @@ env:
 ### Test Reports
 
 CI generates:
+
 - Test results (JSON, XML)
 - Screenshots on failure
 - Videos on failure
@@ -362,7 +370,7 @@ Test responsive design:
 ```typescript
 test.describe('Mobile', () => {
   test.use({ viewport: { width: 375, height: 667 } });
-  
+
   test('should work on mobile', async ({ page }) => {
     await page.goto('/');
     // Mobile-specific assertions
@@ -428,6 +436,7 @@ npx playwright test --update-snapshots
 ## Support
 
 For issues or questions:
+
 1. Check existing tests for patterns
 2. Review Playwright docs
 3. Check CI logs for errors

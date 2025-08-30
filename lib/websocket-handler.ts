@@ -4,37 +4,36 @@
 
 import type { SimpleServerMsg, SimpleClientMsg } from '@/lib/game-types';
 import type { Result } from '@/lib/utils';
-import { 
-  parseClientMessage, 
+import {
+  parseClientMessage,
   parseServerMessage,
-  createMessage 
+  createMessage,
 } from '@/lib/utils/websocket-types';
 
 /**
  * Parses and validates incoming WebSocket messages
  */
-export function parseWebSocketMessage<T extends SimpleServerMsg | SimpleClientMsg>(
-  data: unknown,
-  messageType: 'server' | 'client'
-): Result<T, Error> {
+export function parseWebSocketMessage<
+  T extends SimpleServerMsg | SimpleClientMsg,
+>(data: unknown, messageType: 'server' | 'client'): Result<T, Error> {
   try {
     // Handle string data
     if (typeof data === 'string') {
       const parsed = JSON.parse(data);
-      
+
       if (messageType === 'server') {
         return parseServerMessage(parsed) as Result<T, Error>;
       } else {
         return parseClientMessage(parsed) as Result<T, Error>;
       }
     }
-    
+
     // Handle MessageEvent
     if (data && typeof data === 'object' && 'data' in data) {
       const messageEvent = data as MessageEvent;
       return parseWebSocketMessage(messageEvent.data, messageType);
     }
-    
+
     // Handle direct object
     if (messageType === 'server') {
       return parseServerMessage(data) as Result<T, Error>;
@@ -44,7 +43,10 @@ export function parseWebSocketMessage<T extends SimpleServerMsg | SimpleClientMs
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error : new Error('Failed to parse WebSocket message')
+      error:
+        error instanceof Error
+          ? error
+          : new Error('Failed to parse WebSocket message'),
     };
   }
 }
@@ -52,10 +54,9 @@ export function parseWebSocketMessage<T extends SimpleServerMsg | SimpleClientMs
 /**
  * Creates a type-safe WebSocket message
  */
-export function createWebSocketMessage<T extends SimpleServerMsg | SimpleClientMsg>(
-  type: T['type'],
-  payload: Omit<T, 'type'>
-): string {
+export function createWebSocketMessage<
+  T extends SimpleServerMsg | SimpleClientMsg,
+>(type: T['type'], payload: Omit<T, 'type'>): string {
   const message = createMessage(type, payload);
   return JSON.stringify(message);
 }
@@ -66,14 +67,24 @@ export function createWebSocketMessage<T extends SimpleServerMsg | SimpleClientM
 export function isServerMessage(msg: unknown): msg is SimpleServerMsg {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as Record<string, unknown>;
-  
+
   const serverTypes = [
-    'state', 'joined', 'authenticated', 'queued', 
-    'matched', 'error', 'solo-game-created', 
-    'clock-update', 'timeout', 'game-event', 'pong'
+    'state',
+    'joined',
+    'authenticated',
+    'queued',
+    'matched',
+    'error',
+    'solo-game-created',
+    'clock-update',
+    'timeout',
+    'game-event',
+    'pong',
   ];
-  
-  return 'type' in m && typeof m.type === 'string' && serverTypes.includes(m.type);
+
+  return (
+    'type' in m && typeof m.type === 'string' && serverTypes.includes(m.type)
+  );
 }
 
 /**
@@ -82,22 +93,31 @@ export function isServerMessage(msg: unknown): msg is SimpleServerMsg {
 export function isClientMessage(msg: unknown): msg is SimpleClientMsg {
   if (!msg || typeof msg !== 'object') return false;
   const m = msg as Record<string, unknown>;
-  
+
   const clientTypes = [
-    'authenticate', 'join-game', 'join-queue', 
-    'leave-queue', 'create-solo-game', 'action', 
-    'give-time', 'ping'
+    'authenticate',
+    'join-game',
+    'join-queue',
+    'leave-queue',
+    'create-solo-game',
+    'action',
+    'give-time',
+    'ping',
   ];
-  
-  return 'type' in m && typeof m.type === 'string' && clientTypes.includes(m.type);
+
+  return (
+    'type' in m && typeof m.type === 'string' && clientTypes.includes(m.type)
+  );
 }
 
 /**
  * Message handler factory for type-safe message processing
  */
-export class WebSocketMessageHandler<T extends SimpleServerMsg | SimpleClientMsg> {
+export class WebSocketMessageHandler<
+  T extends SimpleServerMsg | SimpleClientMsg,
+> {
   private handlers = new Map<T['type'], (msg: T) => void | Promise<void>>();
-  
+
   /**
    * Register a handler for a specific message type
    */
@@ -108,34 +128,39 @@ export class WebSocketMessageHandler<T extends SimpleServerMsg | SimpleClientMsg
     this.handlers.set(type, handler);
     return this;
   }
-  
+
   /**
    * Process an incoming message
    */
-  async handle(data: unknown, messageType: 'server' | 'client'): Promise<Result<void, Error>> {
+  async handle(
+    data: unknown,
+    messageType: 'server' | 'client'
+  ): Promise<Result<void, Error>> {
     const parsed = parseWebSocketMessage<T>(data, messageType);
-    
+
     if (!parsed.ok) {
       return parsed;
     }
-    
+
     const message = parsed.value;
     const handler = this.handlers.get(message.type);
-    
+
     if (!handler) {
       return {
         ok: false,
-        error: new Error(`No handler registered for message type: ${message.type}`)
+        error: new Error(
+          `No handler registered for message type: ${message.type}`
+        ),
       };
     }
-    
+
     try {
       await handler(message);
       return { ok: true, value: undefined };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Handler failed')
+        error: error instanceof Error ? error : new Error('Handler failed'),
       };
     }
   }

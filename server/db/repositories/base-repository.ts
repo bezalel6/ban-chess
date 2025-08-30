@@ -3,7 +3,11 @@
  */
 
 import { db } from '@/server/db';
-import type { DbResult, DbTransaction, BaseModel } from '@/lib/utils/database-types';
+import type {
+  DbResult,
+  DbTransaction,
+  BaseModel,
+} from '@/lib/utils/database-types';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 
@@ -13,7 +17,7 @@ import type { PgTable } from 'drizzle-orm/pg-core';
 export abstract class BaseRepository<
   TModel extends BaseModel,
   TCreate extends Partial<TModel>,
-  TUpdate extends Partial<TModel>
+  TUpdate extends Partial<TModel>,
 > {
   constructor(
     protected table: PgTable,
@@ -30,15 +34,15 @@ export abstract class BaseRepository<
         .from(this.table)
         .where(eq(this.table.id, id))
         .limit(1);
-      
+
       return {
         ok: true,
-        value: result[0] as TModel | null
+        value: result[0] as TModel | null,
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('findById', error)
+        error: this.createDbError('findById', error),
       };
     }
   }
@@ -54,23 +58,25 @@ export abstract class BaseRepository<
   }): Promise<DbResult<TModel[]>> {
     try {
       let query = db.select().from(this.table);
-      
+
       // Apply filters
       if (options?.where) {
-        const conditions = Object.entries(options.where).map(([key, value]) => 
+        const conditions = Object.entries(options.where).map(([key, value]) =>
           eq(this.table[key], value)
         );
         query = query.where(and(...conditions));
       }
-      
+
       // Apply ordering
       if (options?.orderBy) {
         const orderClauses = options.orderBy.map(({ field, direction }) =>
-          direction === 'desc' ? desc(this.table[field]) : asc(this.table[field])
+          direction === 'desc'
+            ? desc(this.table[field])
+            : asc(this.table[field])
         );
         query = query.orderBy(...orderClauses);
       }
-      
+
       // Apply pagination
       if (options?.limit) {
         query = query.limit(options.limit);
@@ -78,16 +84,16 @@ export abstract class BaseRepository<
       if (options?.offset) {
         query = query.offset(options.offset);
       }
-      
+
       const result = await query;
       return {
         ok: true,
-        value: result as TModel[]
+        value: result as TModel[],
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('findAll', error)
+        error: this.createDbError('findAll', error),
       };
     }
   }
@@ -97,19 +103,16 @@ export abstract class BaseRepository<
    */
   async create(data: TCreate): Promise<DbResult<TModel>> {
     try {
-      const result = await db
-        .insert(this.table)
-        .values(data)
-        .returning();
-      
+      const result = await db.insert(this.table).values(data).returning();
+
       return {
         ok: true,
-        value: result[0] as TModel
+        value: result[0] as TModel,
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('create', error)
+        error: this.createDbError('create', error),
       };
     }
   }
@@ -123,26 +126,26 @@ export abstract class BaseRepository<
         .update(this.table)
         .set({
           ...data,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(this.table.id, id))
         .returning();
-      
+
       if (result.length === 0) {
         return {
           ok: false,
-          error: new Error(`${this.modelName} with id ${id} not found`)
+          error: new Error(`${this.modelName} with id ${id} not found`),
         };
       }
-      
+
       return {
         ok: true,
-        value: result[0] as TModel
+        value: result[0] as TModel,
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('update', error)
+        error: this.createDbError('update', error),
       };
     }
   }
@@ -156,15 +159,15 @@ export abstract class BaseRepository<
         .delete(this.table)
         .where(eq(this.table.id, id))
         .returning();
-      
+
       return {
         ok: true,
-        value: result.length > 0
+        value: result.length > 0,
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('delete', error)
+        error: this.createDbError('delete', error),
       };
     }
   }
@@ -176,18 +179,18 @@ export abstract class BaseRepository<
     fn: (tx: DbTransaction) => Promise<T>
   ): Promise<DbResult<T>> {
     try {
-      const result = await db.transaction(async (tx) => {
+      const result = await db.transaction(async tx => {
         return await fn(tx as DbTransaction);
       });
-      
+
       return {
         ok: true,
-        value: result
+        value: result,
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('transaction', error)
+        error: this.createDbError('transaction', error),
       };
     }
   }
@@ -197,26 +200,24 @@ export abstract class BaseRepository<
    */
   async count(where?: Record<string, unknown>): Promise<DbResult<number>> {
     try {
-      let query = db
-        .select({ count: sql<number>`count(*)` })
-        .from(this.table);
-      
+      let query = db.select({ count: sql<number>`count(*)` }).from(this.table);
+
       if (where) {
-        const conditions = Object.entries(where).map(([key, value]) => 
+        const conditions = Object.entries(where).map(([key, value]) =>
           eq(this.table[key], value)
         );
         query = query.where(and(...conditions));
       }
-      
+
       const result = await query;
       return {
         ok: true,
-        value: Number(result[0]?.count || 0)
+        value: Number(result[0]?.count || 0),
       };
     } catch (error) {
       return {
         ok: false,
-        error: this.createDbError('count', error)
+        error: this.createDbError('count', error),
       };
     }
   }
@@ -227,10 +228,10 @@ export abstract class BaseRepository<
   async exists(id: string): Promise<DbResult<boolean>> {
     const result = await this.count({ id });
     if (!result.ok) return result;
-    
+
     return {
       ok: true,
-      value: result.value > 0
+      value: result.value > 0,
     };
   }
 
@@ -238,7 +239,8 @@ export abstract class BaseRepository<
    * Create a database error with context
    */
   protected createDbError(operation: string, error: unknown): Error {
-    const message = error instanceof Error ? error.message : 'Unknown database error';
+    const message =
+      error instanceof Error ? error.message : 'Unknown database error';
     return new Error(`${this.modelName} ${operation} failed: ${message}`);
   }
 }

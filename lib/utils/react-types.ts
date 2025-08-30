@@ -3,15 +3,15 @@
  * Designed for the 2ban-2chess Next.js application with React 19
  */
 
-import type { 
-  ReactNode, 
-  ComponentType, 
-  RefObject, 
+import type {
+  ReactNode,
+  ComponentType,
+  RefObject,
   MutableRefObject,
   CSSProperties,
   ButtonHTMLAttributes,
   InputHTMLAttributes,
-  SelectHTMLAttributes
+  SelectHTMLAttributes,
 } from 'react';
 import type { Optional, Brand } from './types';
 
@@ -31,7 +31,8 @@ export type RequireProps<T, K extends keyof T> = T & Required<Pick<T, K>>;
  * @template T - The component props type
  * @template K - Keys to make optional
  */
-export type OptionalProps<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type OptionalProps<T, K extends keyof T> = Omit<T, K> &
+  Partial<Pick<T, K>>;
 
 /**
  * Extract props from a component type
@@ -81,7 +82,9 @@ export interface WithHtmlAttributes {
  * Polymorphic component props
  * @template T - The HTML element type
  */
-export interface PolymorphicProps<T extends keyof HTMLElementTagNameMap = 'div'> {
+export interface PolymorphicProps<
+  T extends keyof HTMLElementTagNameMap = 'div',
+> {
   as?: T;
 }
 
@@ -104,7 +107,9 @@ export interface BaseFieldProps extends WithHtmlAttributes {
 /**
  * Text input field props
  */
-export interface TextFieldProps extends BaseFieldProps, Omit<InputHTMLAttributes<HTMLInputElement>, 'name'> {
+export interface TextFieldProps
+  extends BaseFieldProps,
+    Omit<InputHTMLAttributes<HTMLInputElement>, 'name'> {
   type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
   placeholder?: string;
   maxLength?: number;
@@ -116,7 +121,12 @@ export interface TextFieldProps extends BaseFieldProps, Omit<InputHTMLAttributes
  * Select field props
  * @template T - The option value type
  */
-export interface SelectFieldProps<T = string> extends BaseFieldProps, Omit<SelectHTMLAttributes<HTMLSelectElement>, 'name' | 'value' | 'onChange'> {
+export interface SelectFieldProps<T = string>
+  extends BaseFieldProps,
+    Omit<
+      SelectHTMLAttributes<HTMLSelectElement>,
+      'name' | 'value' | 'onChange'
+    > {
   value?: T;
   options: Array<{
     value: T;
@@ -130,7 +140,9 @@ export interface SelectFieldProps<T = string> extends BaseFieldProps, Omit<Selec
 /**
  * Button component props
  */
-export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'>, WithHtmlAttributes {
+export interface ButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'>,
+    WithHtmlAttributes {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'link';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
@@ -148,7 +160,9 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
  * Hook return type utility
  * @template T - The hook function type
  */
-export type HookReturnType<T> = T extends (...args: never[]) => infer R ? R : never;
+export type HookReturnType<T> = T extends (...args: never[]) => infer R
+  ? R
+  : never;
 
 /**
  * Async hook state
@@ -178,8 +192,11 @@ export interface AsyncHookActions<TArgs extends readonly unknown[] = []> {
  * @template E - The error type
  * @template TArgs - The function arguments type
  */
-export type AsyncHook<T, E = Error, TArgs extends readonly unknown[] = []> = 
-  AsyncHookState<T, E> & AsyncHookActions<TArgs>;
+export type AsyncHook<
+  T,
+  E = Error,
+  TArgs extends readonly unknown[] = [],
+> = AsyncHookState<T, E> & AsyncHookActions<TArgs>;
 
 /**
  * Local storage hook return type
@@ -271,7 +288,13 @@ export type ChessSquare = Brand<string, 'ChessSquare'>;
 /**
  * Chess piece type
  */
-export type PieceType = 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn';
+export type PieceType =
+  | 'king'
+  | 'queen'
+  | 'rook'
+  | 'bishop'
+  | 'knight'
+  | 'pawn';
 
 /**
  * Chess piece color
@@ -452,7 +475,9 @@ export function isRenderProp<T = Record<string, unknown>>(
  * @param ref - The ref to check
  * @returns Type predicate for ref object
  */
-export function isRefObject<T>(ref: CombinedRef<T>): ref is RefObject<T> | MutableRefObject<T> {
+export function isRefObject<T>(
+  ref: CombinedRef<T>
+): ref is RefObject<T> | MutableRefObject<T> {
   return typeof ref === 'object' && ref !== null && 'current' in ref;
 }
 
@@ -481,7 +506,10 @@ export function createChessSquare(file: string, rank: number): ChessSquare {
  * @param square - The chess square identifier
  * @returns File and rank
  */
-export function parseChessSquare(square: ChessSquare): { file: string; rank: number } {
+export function parseChessSquare(square: ChessSquare): {
+  file: string;
+  rank: number;
+} {
   return {
     file: square[0],
     rank: parseInt(square[1], 10),

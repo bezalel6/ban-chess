@@ -14,50 +14,50 @@ graph TB
         Chess[react-chessground]
         Sound[Howler.js]
     end
-    
+
     subgraph "Application Layer"
         Next[Next.js Server]
         Auth[Auth Handler]
         Session[Iron Session]
     end
-    
+
     subgraph "Real-time Layer"
         WS1[WebSocket Server 1]
         WS2[WebSocket Server N]
         Queue[Matchmaking Queue]
         Rooms[Game Rooms]
     end
-    
+
     subgraph "Persistence Layer"
         Redis[(Redis)]
         PubSub[Redis Pub/Sub]
         History[Action History - BCN]
         GameState[Game State - PGN]
     end
-    
+
     subgraph "Game Logic Layer"
         Engine[ban-chess.ts v1.2.2]
         BCN[BCN Serialization]
         Validator[Move Validator]
     end
-    
+
     Browser --> RC
     RC --> Chess
     RC --> Sound
     RC --> Next
     RC -.->|WebSocket| WS1
     RC -.->|WebSocket| WS2
-    
+
     Next --> Auth
     Auth --> Session
-    
+
     WS1 --> Redis
     WS2 --> Redis
     WS1 --> PubSub
     WS2 --> PubSub
     Redis --> History
     Redis --> GameState
-    
+
     WS1 --> Queue
     WS1 --> Rooms
     Rooms --> Engine
@@ -74,16 +74,16 @@ graph TD
     App[App Layout]
     App --> HomePage[Home Page]
     App --> GamePage[Game Page]
-    
+
     HomePage --> UsernameOverlay[Username Overlay]
-    
+
     GamePage --> ChessBoard[ChessBoard Component]
     GamePage --> UserInfo[User Info]
     GamePage --> SoundControl[Sound Control]
-    
+
     ChessBoard --> WSClient[WebSocket Client]
     ChessBoard --> SoundManager[Sound Manager]
-    
+
     UserInfo --> AuthContext[Auth Context]
     UsernameOverlay --> AuthContext
 ```
@@ -93,35 +93,35 @@ graph TD
 ```mermaid
 graph LR
     Client[Client]
-    
+
     subgraph "HTTP Server (Port 3000)"
         NextJS[Next.js App Router]
         API[API Routes]
         AuthAPI[/api/auth/*]
     end
-    
+
     subgraph "WebSocket Server (Port 8081)"
         WSServer[WS Server]
         GameManager[Game Manager]
         PlayerManager[Player Manager]
         QueueManager[Queue Manager]
     end
-    
+
     subgraph "Game Engine"
         BanChess[ban-chess.ts]
         MoveValidation[Move Validation]
         StateComputation[State Computation]
     end
-    
+
     Client --> NextJS
     Client --> WSServer
     NextJS --> API
     API --> AuthAPI
-    
+
     WSServer --> GameManager
     WSServer --> PlayerManager
     WSServer --> QueueManager
-    
+
     GameManager --> BanChess
     BanChess --> MoveValidation
     BanChess --> StateComputation
@@ -138,7 +138,7 @@ sequenceDiagram
     participant NextJS
     participant Session
     participant WSServer
-    
+
     User->>Browser: Enter username
     Browser->>NextJS: POST /api/auth/login
     NextJS->>Session: Create session
@@ -157,14 +157,14 @@ sequenceDiagram
     participant Player2
     participant WSServer
     participant GameEngine
-    
+
     Player1->>WSServer: join-queue
     Player2->>WSServer: join-queue
     WSServer->>WSServer: Match players
     WSServer->>GameEngine: Create game
     WSServer-->>Player1: matched (white)
     WSServer-->>Player2: matched (black)
-    
+
     loop Game Turns
         WSServer-->>Player1: state (ban phase)
         Player1->>WSServer: ban move
@@ -183,11 +183,13 @@ sequenceDiagram
 BCN is a compact, network-friendly format for representing Ban Chess actions, providing ~90% bandwidth reduction compared to JSON:
 
 ### Format Specification
+
 - **Ban**: `b:e2e4` (6 characters) - Bans the move from e2 to e4
 - **Move**: `m:d2d4` (6 characters) - Moves from d2 to d4
 - **Promotion**: `m:e7e8q` (7-8 characters) - Promotes to queen
 
 ### Serialization Example
+
 ```typescript
 // Serialize for network/storage
 BanChess.serializeAction({ ban: { from: 'e2', to: 'e4' } }); // "b:e2e4"
@@ -203,49 +205,54 @@ const game = BanChess.replayFromActions(["b:e2e4", "m:d2d4", ...]);
 
 ### Frontend Stack
 
-| Component | Technology | Purpose | Version |
-|-----------|------------|---------|---------|
-| Framework | Next.js | React framework with SSR | 15.x |
-| UI Library | React | Component-based UI | 19.x |
-| Chess UI | react-chessground | Interactive chess board | 1.5.0 |
-| Styling | Tailwind CSS | Utility-first CSS | 4.1.12 |
-| Audio | Howler.js | Web audio API wrapper | 2.2.4 |
-| Type Safety | TypeScript | Static typing | 5.x |
+| Component   | Technology        | Purpose                  | Version |
+| ----------- | ----------------- | ------------------------ | ------- |
+| Framework   | Next.js           | React framework with SSR | 15.x    |
+| UI Library  | React             | Component-based UI       | 19.x    |
+| Chess UI    | react-chessground | Interactive chess board  | 1.5.0   |
+| Styling     | Tailwind CSS      | Utility-first CSS        | 4.1.12  |
+| Audio       | Howler.js         | Web audio API wrapper    | 2.2.4   |
+| Type Safety | TypeScript        | Static typing            | 5.x     |
 
 ### Backend Stack
 
-| Component | Technology | Purpose | Version |
-|-----------|------------|---------|---------|
-| Runtime | Node.js | JavaScript runtime | 20.x |
-| WebSocket | ws | WebSocket server | 8.18.0 |
-| Game Logic | ban-chess.ts | Chess variant engine | 1.2.2 |
-| Persistence | Redis/ioredis | Game state & pub/sub | 5.x |
-| Session | iron-session | Encrypted sessions | 8.0.4 |
-| IDs | nanoid/uuid | Unique identifiers | 5.1.5/9.0.1 |
+| Component   | Technology    | Purpose              | Version     |
+| ----------- | ------------- | -------------------- | ----------- |
+| Runtime     | Node.js       | JavaScript runtime   | 20.x        |
+| WebSocket   | ws            | WebSocket server     | 8.18.0      |
+| Game Logic  | ban-chess.ts  | Chess variant engine | 1.2.2       |
+| Persistence | Redis/ioredis | Game state & pub/sub | 5.x         |
+| Session     | iron-session  | Encrypted sessions   | 8.0.4       |
+| IDs         | nanoid/uuid   | Unique identifiers   | 5.1.5/9.0.1 |
 
 ## Design Patterns
 
 ### 1. Component-Based Architecture
+
 - **Pattern**: Atomic Design
 - **Implementation**: Small, reusable React components
 - **Benefits**: Maintainability, testability, reusability
 
 ### 2. Context Pattern
+
 - **Pattern**: React Context API
 - **Implementation**: AuthContext for user state
 - **Benefits**: Avoid prop drilling, centralized state
 
 ### 3. Observer Pattern
+
 - **Pattern**: WebSocket event handling
 - **Implementation**: Event-driven message processing
 - **Benefits**: Decoupled communication, real-time updates
 
 ### 4. Repository Pattern
+
 - **Pattern**: Game state management
 - **Implementation**: GameRoom class encapsulation
 - **Benefits**: Data abstraction, clean interfaces
 
 ### 5. Factory Pattern
+
 - **Pattern**: Game creation
 - **Implementation**: Game factory in WebSocket server
 - **Benefits**: Consistent game initialization
@@ -275,22 +282,23 @@ const game = BanChess.replayFromActions(["b:e2e4", "m:d2d4", ...]);
 ```typescript
 // Redis-Backed State (Persistent)
 interface RedisState {
-  'game:{id}': {           // Hash
+  'game:{id}': {
+    // Hash
     fen: string;
-    pgn: string;           // Full game in PGN format
+    pgn: string; // Full game in PGN format
     whitePlayerId: string;
     blackPlayerId: string;
     timeControl: TimeControl;
     startTime: number;
   };
-  'game:{id}:history': string[];  // List of BCN actions
-  'matchmaking:queue': Player[];   // Queue for matchmaking
-  'players:online': Set<string>;   // Online player IDs
+  'game:{id}:history': string[]; // List of BCN actions
+  'matchmaking:queue': Player[]; // Queue for matchmaking
+  'players:online': Set<string>; // Online player IDs
 }
 
 // In-Memory State (Transient)
 interface ServerState {
-  games: Map<string, BanChess>;  // Active game instances
+  games: Map<string, BanChess>; // Active game instances
   authenticatedPlayers: Map<WebSocket, Player>;
   timeManagers: Map<string, TimeManager>;
 }
@@ -307,7 +315,7 @@ graph TD
     Auth[Authorization Check]
     Action[Perform Action]
     Reject[Reject Request]
-    
+
     Request --> Session
     Session -->|Valid| Auth
     Session -->|Invalid| Reject
@@ -358,12 +366,12 @@ graph TD
 
 ### Performance Metrics
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| Initial Load | < 3s | ~2s |
-| WebSocket Latency | < 100ms | ~50ms |
-| Move Processing | < 50ms | ~20ms |
-| Memory Usage | < 100MB | ~60MB |
+| Metric            | Target  | Current |
+| ----------------- | ------- | ------- |
+| Initial Load      | < 3s    | ~2s     |
+| WebSocket Latency | < 100ms | ~50ms   |
+| Move Processing   | < 50ms  | ~20ms   |
+| Memory Usage      | < 100MB | ~60MB   |
 
 ## Scalability Architecture (Current Implementation)
 
@@ -372,37 +380,37 @@ graph TD
 ```mermaid
 graph TB
     LB[Load Balancer]
-    
+
     subgraph "Next.js Cluster"
         Next1[Next.js Instance 1]
         Next2[Next.js Instance 2]
         NextN[Next.js Instance N]
     end
-    
+
     subgraph "WebSocket Cluster"
         WS1[WS Server 1]
         WS2[WS Server 2]
         WSN[WS Server N]
     end
-    
+
     subgraph "Redis Cluster"
         Redis[(Redis Primary)]
         RedisSub[Redis Pub/Sub]
         RedisReplica[(Redis Replica)]
     end
-    
+
     LB --> Next1
     LB --> Next2
     LB --> NextN
-    
+
     WS1 --> Redis
     WS2 --> Redis
     WSN --> Redis
-    
+
     WS1 -.->|Subscribe| RedisSub
     WS2 -.->|Subscribe| RedisSub
     WSN -.->|Subscribe| RedisSub
-    
+
     Redis --> RedisReplica
 ```
 
@@ -485,7 +493,7 @@ graph LR
     Lint[Lint & Format]
     Build[Build Check]
     Commit[Commit]
-    
+
     Code --> Test
     Test --> Lint
     Lint --> Build
@@ -501,7 +509,7 @@ graph LR
     Test[Tests]
     Build[Build]
     Deploy[Deploy]
-    
+
     Push --> CI
     CI --> Test
     Test --> Build
@@ -530,27 +538,31 @@ graph LR
 ## Future Architecture Enhancements
 
 ### Phase 1: Persistence Layer
+
 - PostgreSQL for game history
 - User profiles and stats
 - Game replay functionality
 
 ### Phase 2: Microservices
+
 - Separate auth service
 - Dedicated game service
 - Analytics service
 
 ### Phase 3: Advanced Features
+
 - AI opponent service
 - Tournament system
 - Real-time spectating
 
 ### Phase 4: Mobile Support
+
 - React Native apps
 - Progressive Web App
 - Responsive design improvements
 
 ---
 
-*Last Updated: 2025-08-29*  
-*Architecture Version: 2.0.0*  
-*Now with Redis persistence, BCN serialization, and horizontal scaling support*
+_Last Updated: 2025-08-29_  
+_Architecture Version: 2.0.0_  
+_Now with Redis persistence, BCN serialization, and horizontal scaling support_

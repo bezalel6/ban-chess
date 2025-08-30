@@ -12,7 +12,7 @@ export const test = base.extend<Fixtures>({
     const chessPage = new ChessPage(page);
     await use(chessPage);
   },
-  
+
   authPage: async ({ page }, use) => {
     const authPage = new AuthPage(page);
     await use(authPage);

@@ -3,6 +3,7 @@
 ## Overview
 
 The 2ban-2chess application uses a hybrid persistence strategy inspired by Lichess:
+
 - **Redis**: Hot cache for active games (4-24 hour TTL)
 - **PostgreSQL**: Permanent storage for completed games and user statistics
 - **Buffered Writes**: Moves are buffered and batch-inserted for performance
@@ -31,15 +32,18 @@ The 2ban-2chess application uses a hybrid persistence strategy inspired by Liche
 ### 1. Install PostgreSQL
 
 #### Windows:
+
 Download from https://www.postgresql.org/download/windows/
 
 #### macOS:
+
 ```bash
 brew install postgresql@14
 brew services start postgresql@14
 ```
 
 #### Linux:
+
 ```bash
 sudo apt update
 sudo apt install postgresql postgresql-contrib
@@ -152,7 +156,7 @@ Batch Insert: Up to 1000 rows at once
 
 ```sql
 -- Check table sizes
-SELECT 
+SELECT
   schemaname,
   tablename,
   pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
@@ -195,9 +199,9 @@ SMEMBERS players:online
 
 ```sql
 -- Archive games older than 6 months (optional)
-DELETE FROM game_events 
+DELETE FROM game_events
 WHERE game_id IN (
-  SELECT id FROM games 
+  SELECT id FROM games
   WHERE completed_at < NOW() - INTERVAL '6 months'
 );
 
@@ -220,6 +224,7 @@ psql chess2ban < backup_20240101.sql
 ### Common Issues
 
 1. **"Database does not exist"**
+
    ```bash
    createdb chess2ban
    ```
@@ -256,6 +261,7 @@ npm run migrate:redis-to-postgres
 ```
 
 This will:
+
 1. Find all completed games in Redis
 2. Archive them to PostgreSQL
 3. Maintain Redis TTLs for active games

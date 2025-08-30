@@ -14,7 +14,9 @@ export function markEnd(label: string) {
       window.performance.measure(label, `${label}-start`, `${label}-end`);
       const measure = window.performance.getEntriesByName(label, 'measure')[0];
       if (measure && measure.duration > 16) {
-        console.warn(`⚠️ Slow operation: ${label} took ${measure.duration.toFixed(2)}ms`);
+        console.warn(
+          `⚠️ Slow operation: ${label} took ${measure.duration.toFixed(2)}ms`
+        );
       }
     } catch {
       // Ignore if start mark doesn't exist

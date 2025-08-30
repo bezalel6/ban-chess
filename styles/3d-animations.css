@@ -61,7 +61,8 @@
 
 /* Check pulse animation */
 @keyframes check-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
   }
   50% {
@@ -71,7 +72,8 @@
 
 /* Victory celebration */
 @keyframes victory-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0);
   }
   25% {
@@ -102,7 +104,7 @@
 
 /* Board reflection effect */
 .board-reflection::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
@@ -133,7 +135,8 @@
 
 /* Time warning pulse */
 @keyframes time-warning {
-  0%, 100% {
+  0%,
+  100% {
     border-color: rgba(255, 0, 0, 0.5);
   }
   50% {

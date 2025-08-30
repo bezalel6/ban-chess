@@ -17,7 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -83,7 +83,7 @@ jobs:
             -w "\n%{http_code}" \
             -s \
             -o /dev/null || echo "timeout")
-          
+
           if [ "$response" = "timeout" ]; then
             echo "⚠️ Webhook timed out after 30 seconds - deployment may still be processing"
             echo "Check Coolify dashboard for deployment status"

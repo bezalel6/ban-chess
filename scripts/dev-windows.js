@@ -12,14 +12,14 @@ const process = require('process');
 const processes = [];
 
 // Handle Ctrl+C properly on Windows
-if (process.platform === "win32") {
-  const rl = require("readline").createInterface({
+if (process.platform === 'win32') {
+  const rl = require('readline').createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
 
-  rl.on("SIGINT", function () {
-    process.emit("SIGINT");
+  rl.on('SIGINT', function () {
+    process.emit('SIGINT');
   });
 }
 
@@ -28,13 +28,15 @@ function spawnProcess(command, args, name) {
   const proc = spawn(command, args, {
     shell: true,
     stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1' }
+    env: { ...process.env, FORCE_COLOR: '1' },
   });
-  
+
   processes.push({ proc, name });
-  
+
   proc.on('exit', (code, signal) => {
-    console.log(`[${name}] Process exited with code ${code} and signal ${signal}`);
+    console.log(
+      `[${name}] Process exited with code ${code} and signal ${signal}`
+    );
     // If one process dies, kill all others
     if (code !== 0 && code !== null) {
       console.log('One process failed, terminating all...');
@@ -42,7 +44,7 @@ function spawnProcess(command, args, name) {
       process.exit(code);
     }
   });
-  
+
   return proc;
 }
 

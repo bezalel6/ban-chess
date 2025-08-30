@@ -75,7 +75,7 @@ export const getCachedGameState = unstable_cache(
   }
 );
 
-// Utility function to create custom cached functions  
+// Utility function to create custom cached functions
 export function createCachedFunction<T extends unknown[], R>(
   fn: (...args: T) => Promise<R>,
   keyParts: string[],
@@ -91,6 +91,9 @@ export function createCachedFunction<T extends unknown[], R>(
 }
 
 // Type-safe cache key generator
-export function generateCacheKey(prefix: string, ...parts: (string | number)[]): string {
+export function generateCacheKey(
+  prefix: string,
+  ...parts: (string | number)[]
+): string {
   return [prefix, ...parts.map(String)].join('-');
 }

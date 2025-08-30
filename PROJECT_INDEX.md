@@ -5,6 +5,7 @@
 **2ban-2chess** is a real-time multiplayer chess variant platform implementing "Ban Chess" - a strategic twist on traditional chess where players can ban opponent moves before each turn.
 
 ### Key Features
+
 - 🎮 Real-time multiplayer gameplay via WebSocket
 - 🔐 User authentication with iron-session
 - 🎵 Sound effects and audio feedback
@@ -15,15 +16,16 @@
 ## 🏗️ Architecture Overview
 
 ### Technology Stack
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Frontend | Next.js 14 (App Router) | React framework with SSR |
-| UI Components | react-chessground | Interactive chess board |
-| Styling | Tailwind CSS v4 | Utility-first CSS |
-| Game Logic | ban-chess.ts | Chess variant engine |
-| Real-time | WebSocket (ws) | Bidirectional communication |
-| Authentication | iron-session | Secure session management |
-| Runtime | Node.js + TypeScript | Type-safe backend |
+
+| Layer          | Technology              | Purpose                     |
+| -------------- | ----------------------- | --------------------------- |
+| Frontend       | Next.js 14 (App Router) | React framework with SSR    |
+| UI Components  | react-chessground       | Interactive chess board     |
+| Styling        | Tailwind CSS v4         | Utility-first CSS           |
+| Game Logic     | ban-chess.ts            | Chess variant engine        |
+| Real-time      | WebSocket (ws)          | Bidirectional communication |
+| Authentication | iron-session            | Secure session management   |
+| Runtime        | Node.js + TypeScript    | Type-safe backend           |
 
 ### System Architecture
 
@@ -42,32 +44,36 @@ graph TB
 ### Core Directories
 
 #### `/app` - Next.js App Router
-| Path | Description | Key Files |
-|------|-------------|-----------|
+
+| Path          | Description              | Key Files                     |
+| ------------- | ------------------------ | ----------------------------- |
 | `/api/auth/*` | Authentication endpoints | login, logout, session routes |
-| `/game/[id]` | Dynamic game pages | Real-time game interface |
-| `/` | Root layout & homepage | Main entry point |
+| `/game/[id]`  | Dynamic game pages       | Real-time game interface      |
+| `/`           | Root layout & homepage   | Main entry point              |
 
 #### `/components` - React Components
-| Component | Purpose | Dependencies |
-|-----------|---------|--------------|
-| `ChessBoard.tsx` | Chess board wrapper | react-chessground |
-| `SoundControl.tsx` | Audio management UI | Howler.js |
-| `UserInfo.tsx` | User session display | AuthContext |
+
+| Component             | Purpose              | Dependencies        |
+| --------------------- | -------------------- | ------------------- |
+| `ChessBoard.tsx`      | Chess board wrapper  | react-chessground   |
+| `SoundControl.tsx`    | Audio management UI  | Howler.js           |
+| `UserInfo.tsx`        | User session display | AuthContext         |
 | `UsernameOverlay.tsx` | Username input modal | Authentication flow |
 
 #### `/lib` - Core Libraries
-| Module | Purpose | Exports |
-|--------|---------|---------|
-| `game-types.ts` | TypeScript types | Move, Ban, Messages |
-| `ws-client.ts` | WebSocket client | Connection management |
-| `sound-manager.ts` | Audio controller | Sound effects system |
-| `session.ts` | Session config | Iron-session setup |
-| `performance-monitor.ts` | Performance tracking | Metrics collection |
+
+| Module                   | Purpose              | Exports               |
+| ------------------------ | -------------------- | --------------------- |
+| `game-types.ts`          | TypeScript types     | Move, Ban, Messages   |
+| `ws-client.ts`           | WebSocket client     | Connection management |
+| `sound-manager.ts`       | Audio controller     | Sound effects system  |
+| `session.ts`             | Session config       | Iron-session setup    |
+| `performance-monitor.ts` | Performance tracking | Metrics collection    |
 
 #### `/server` - Backend Services
-| Service | Port | Protocol | Purpose |
-|---------|------|----------|---------|
+
+| Service        | Port | Protocol  | Purpose               |
+| -------------- | ---- | --------- | --------------------- |
 | `ws-server.ts` | 8081 | WebSocket | Game state management |
 
 ## 🔌 API Documentation
@@ -77,9 +83,11 @@ graph TB
 #### Authentication API
 
 ##### POST `/api/auth/login`
+
 Authenticate user and create session.
 
 **Request Body:**
+
 ```typescript
 {
   username: string; // 2-20 alphanumeric characters
@@ -87,6 +95,7 @@ Authenticate user and create session.
 ```
 
 **Response:**
+
 ```typescript
 {
   success: boolean;
@@ -96,9 +105,11 @@ Authenticate user and create session.
 ```
 
 ##### POST `/api/auth/logout`
+
 Destroy current session.
 
 **Response:**
+
 ```typescript
 {
   success: boolean;
@@ -106,9 +117,11 @@ Destroy current session.
 ```
 
 ##### GET `/api/auth/session`
+
 Retrieve current session data.
 
 **Response:**
+
 ```typescript
 {
   user?: { id: string; username: string };
@@ -118,6 +131,7 @@ Retrieve current session data.
 ### WebSocket Protocol
 
 #### Connection
+
 ```
 ws://localhost:8081
 ```
@@ -142,11 +156,11 @@ type ClientMsg =
 type ServerMsg =
   | {
       type: 'state';
-      fen: string;              // Board position in FEN notation
-      pgn: string;              // Game history in PGN format
+      fen: string; // Board position in FEN notation
+      pgn: string; // Game history in PGN format
       nextAction: 'ban' | 'move';
-      legalMoves?: Move[];      // Available moves (if player's turn)
-      legalBans?: Ban[];        // Available bans (if banning phase)
+      legalMoves?: Move[]; // Available moves (if player's turn)
+      legalBans?: Ban[]; // Available bans (if banning phase)
       history?: HistoryEntry[]; // Complete game history
       turn: 'white' | 'black';
       gameId: string;
@@ -155,8 +169,18 @@ type ServerMsg =
   | { type: 'error'; message: string; error?: string }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
-  | { type: 'matched'; gameId: string; color: 'white' | 'black'; opponent?: string }
-  | { type: 'joined'; gameId: string; color: 'white' | 'black'; players?: object };
+  | {
+      type: 'matched';
+      gameId: string;
+      color: 'white' | 'black';
+      opponent?: string;
+    }
+  | {
+      type: 'joined';
+      gameId: string;
+      color: 'white' | 'black';
+      players?: object;
+    };
 ```
 
 ## 🎮 Game Flow
@@ -177,6 +201,7 @@ stateDiagram-v2
 ```
 
 ### Turn Sequence
+
 1. **Ban Phase**: Current player selects one opponent move to ban
 2. **Move Phase**: Opponent makes a legal move (excluding banned move)
 3. **State Update**: Board updates, turn switches
@@ -185,28 +210,30 @@ stateDiagram-v2
 ## 🔊 Sound System
 
 ### Audio Events
-| Event | Sound File | Trigger |
-|-------|------------|---------|
-| Move | `move.wav` | Player moves piece |
-| Opponent Move | `opponent-move.wav` | Opponent moves |
-| Capture | `capture.wav` | Piece captured |
-| Check | `check.wav` | King in check |
-| Castle | `castle.wav` | Castling move |
-| Promote | `promote.wav` | Pawn promotion |
-| Ban | `ban.wav` | Move banned |
-| Game Start | `game-start.wav` | Match begins |
-| Game End | `game-end.wav` | Checkmate/stalemate |
+
+| Event         | Sound File          | Trigger             |
+| ------------- | ------------------- | ------------------- |
+| Move          | `move.wav`          | Player moves piece  |
+| Opponent Move | `opponent-move.wav` | Opponent moves      |
+| Capture       | `capture.wav`       | Piece captured      |
+| Check         | `check.wav`         | King in check       |
+| Castle        | `castle.wav`        | Castling move       |
+| Promote       | `promote.wav`       | Pawn promotion      |
+| Ban           | `ban.wav`           | Move banned         |
+| Game Start    | `game-start.wav`    | Match begins        |
+| Game End      | `game-end.wav`      | Checkmate/stalemate |
 
 ## 🛠️ Development
 
 ### Commands
 
 #### Recommended Development Workflow
+
 ```bash
 # Terminal 1: WebSocket server with isolated logs
 npm run dev:ws        # Start WebSocket server with hot reload
 
-# Terminal 2: Next.js server with isolated logs  
+# Terminal 2: Next.js server with isolated logs
 npm run dev:next      # Start Next.js development server
 
 # Alternative: Combined (less optimal for log analysis)
@@ -214,6 +241,7 @@ npm run dev           # Start both servers concurrently
 ```
 
 #### Build & Production
+
 ```bash
 npm run build         # Production build
 npm run start         # Start production server
@@ -221,6 +249,7 @@ npm run ws-server     # Production WebSocket server
 ```
 
 #### Code Quality
+
 ```bash
 npm run type-check    # TypeScript validation
 npm run lint          # ESLint checks
@@ -231,12 +260,14 @@ npm run analyze       # Run all checks
 ### Environment Setup
 
 No environment variables required for basic setup. Uses:
+
 - Next.js: Port 3000
 - WebSocket: Port 8081
 
 ### Dependencies
 
 #### Core Dependencies
+
 - `next@14.2.18` - React framework
 - `react@18` - UI library
 - `ban-chess.ts@1.1.3` - Game engine
@@ -248,11 +279,13 @@ No environment variables required for basic setup. Uses:
 ## 🔒 Security Features
 
 ### Authentication
+
 - Session-based authentication via iron-session
 - Secure cookie storage
 - Username validation (2-20 alphanumeric)
 
 ### Game Security
+
 - Server-side move validation
 - WebSocket message authentication
 - Player identity verification
@@ -261,6 +294,7 @@ No environment variables required for basic setup. Uses:
 ## 📊 Performance Optimizations
 
 ### Features Implemented
+
 - React Server Components for reduced bundle size
 - WebSocket connection pooling
 - Lazy loading of game components
@@ -268,6 +302,7 @@ No environment variables required for basic setup. Uses:
 - Efficient board state updates
 
 ### Monitoring
+
 - Custom performance monitor (`performance-monitor.ts`)
 - WebSocket connection health checks
 - Error tracking and recovery
@@ -275,6 +310,7 @@ No environment variables required for basic setup. Uses:
 ## 🚀 Deployment Considerations
 
 ### Production Checklist
+
 - [ ] Configure production WebSocket URL
 - [ ] Set up SSL/TLS for WebSocket
 - [ ] Configure session secrets
@@ -285,6 +321,7 @@ No environment variables required for basic setup. Uses:
 - [ ] Set up database for game persistence
 
 ### Scaling Considerations
+
 - WebSocket server horizontal scaling
 - Redis for session storage
 - Database for game history
@@ -294,6 +331,7 @@ No environment variables required for basic setup. Uses:
 ## 📝 Testing Strategy
 
 ### Test Coverage Areas
+
 - Unit tests for game logic
 - Component testing for UI
 - E2E tests for game flows
@@ -301,6 +339,7 @@ No environment variables required for basic setup. Uses:
 - Authentication flow tests
 
 ### Testing Commands
+
 ```bash
 npm run test        # Run test suite
 npm run test:watch  # Watch mode
@@ -310,8 +349,9 @@ npm run test:e2e    # E2E tests
 ## 🔄 Future Enhancements
 
 ### Planned Features
+
 - [ ] Persistent game storage
-- [ ] User profiles and statistics  
+- [ ] User profiles and statistics
 - [ ] Tournament system
 - [ ] Spectator mode
 - [ ] Game analysis tools
@@ -323,12 +363,14 @@ npm run test:e2e    # E2E tests
 ## 📚 Related Documentation
 
 ### External Resources
+
 - [ban-chess.ts Documentation](https://github.com/bezalel6/ban-chess.ts)
 - [react-chessground API](https://github.com/ruilisi/react-chessground)
 - [Next.js 14 Documentation](https://nextjs.org/docs)
 - [WebSocket Protocol RFC](https://tools.ietf.org/html/rfc6455)
 
 ### Internal Docs
+
 - [`CLAUDE.md`](./CLAUDE.md) - AI assistant configuration
 - [`README.md`](./README.md) - Quick start guide
 - [`package.json`](./package.json) - Dependencies & scripts
@@ -336,6 +378,7 @@ npm run test:e2e    # E2E tests
 ## 🤝 Contributing
 
 ### Development Workflow
+
 1. Create feature branch
 2. Implement changes with tests
 3. Run `npm run analyze`
@@ -344,6 +387,7 @@ npm run test:e2e    # E2E tests
 6. Merge to main
 
 ### Code Standards
+
 - TypeScript strict mode
 - ESLint configuration
 - Prettier formatting
@@ -352,5 +396,5 @@ npm run test:e2e    # E2E tests
 
 ---
 
-*Last Updated: 2025-08-26*  
-*Version: 0.1.0*
+_Last Updated: 2025-08-26_  
+_Version: 0.1.0_

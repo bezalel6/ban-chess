@@ -67,12 +67,19 @@ export interface ApiSuccessResponse<T = unknown> {
 /**
  * HTTP methods supported by the API
  */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
+export type HttpMethod =
+  | 'GET'
+  | 'POST'
+  | 'PUT'
+  | 'PATCH'
+  | 'DELETE'
+  | 'HEAD'
+  | 'OPTIONS';
 
 /**
  * HTTP status codes commonly used in the application
  */
-export type HttpStatusCode = 
+export type HttpStatusCode =
   | 200 // OK
   | 201 // Created
   | 204 // No Content
@@ -104,7 +111,10 @@ export interface RouteContext<T = Record<string, string>> {
  * @template TParams - Route parameters type
  * @template TResponse - Response data type
  */
-export type RouteHandler<TParams = Record<string, string>, TResponse = unknown> = (
+export type RouteHandler<
+  TParams = Record<string, string>,
+  TResponse = unknown,
+> = (
   request: NextRequest,
   context: RouteContext<TParams>
 ) => Promise<NextResponse<ApiResponse<TResponse>>>;
@@ -118,7 +128,7 @@ export type RouteHandler<TParams = Record<string, string>, TResponse = unknown> 
 export interface ApiRouteHandlers<
   TParams = Record<string, string>,
   _TRequest = unknown,
-  TResponse = unknown
+  TResponse = unknown,
 > {
   GET?: RouteHandler<TParams, TResponse>;
   POST?: RouteHandler<TParams, TResponse>;
@@ -143,15 +153,15 @@ export interface QueryParamsSchema {
  * @template T - The query params schema
  */
 export type QueryParams<T extends QueryParamsSchema> = {
-  [K in keyof T]: T[K] extends 'string' 
-    ? string 
+  [K in keyof T]: T[K] extends 'string'
+    ? string
     : T[K] extends 'number'
-    ? number
-    : T[K] extends 'boolean'
-    ? boolean
-    : T[K] extends 'array'
-    ? string[]
-    : never;
+      ? number
+      : T[K] extends 'boolean'
+        ? boolean
+        : T[K] extends 'array'
+          ? string[]
+          : never;
 };
 
 /**
@@ -200,7 +210,10 @@ export interface ApiRequestOptions<T = unknown> {
  * API client response
  * @template T - Response data type
  */
-export type ApiClientResponse<T> = AsyncResult<ApiResponse<T>, ApiErrorResponse>;
+export type ApiClientResponse<T> = AsyncResult<
+  ApiResponse<T>,
+  ApiErrorResponse
+>;
 
 // ========================================
 // SPECIFIC API ENDPOINT TYPES
@@ -296,7 +309,7 @@ export namespace GameApi {
  * @returns Standardized API success response
  */
 export function createApiResponse<T>(
-  data: T, 
+  data: T,
   message?: string
 ): ApiSuccessResponse<T> {
   return {
@@ -353,7 +366,9 @@ export function createPaginatedResponse<T>(
  * @param response - The API response
  * @returns True if response is an error
  */
-export function isApiError(response: ApiResponse): response is ApiErrorResponse {
+export function isApiError(
+  response: ApiResponse
+): response is ApiErrorResponse {
   return !response.success;
 }
 
@@ -363,7 +378,9 @@ export function isApiError(response: ApiResponse): response is ApiErrorResponse 
  * @param response - The API response
  * @returns True if response is successful
  */
-export function isApiSuccess<T>(response: ApiResponse<T>): response is ApiSuccessResponse<T> {
+export function isApiSuccess<T>(
+  response: ApiResponse<T>
+): response is ApiSuccessResponse<T> {
   return response.success === true;
 }
 

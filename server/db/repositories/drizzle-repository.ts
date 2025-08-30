@@ -39,12 +39,12 @@ export const userRepo = {
         .from(users)
         .where(eq(users.username, username))
         .limit(1);
-      
+
       return { ok: true, value: user };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
   },
@@ -57,18 +57,15 @@ export const userRepo = {
       const result = await db
         .select()
         .from(users)
-        .where(and(
-          eq(users.isActive, true),
-          gte(users.gamesPlayed, 5)
-        ))
+        .where(and(eq(users.isActive, true), gte(users.gamesPlayed, 5)))
         .orderBy(desc(users.rating))
         .limit(limit);
-      
+
       return { ok: true, value: result };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
   },
@@ -82,21 +79,20 @@ export const userRepo = {
     ratingChange: number
   ): Promise<DbResult<User>> {
     try {
-      
       // Get current stats
       const [user] = await db
         .select()
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      
+
       if (!user) {
         return {
           ok: false,
-          error: new Error(`User ${userId} not found`)
+          error: new Error(`User ${userId} not found`),
         };
       }
-      
+
       // Calculate updates
       const updates: Partial<NewUser> = {
         gamesPlayed: user.gamesPlayed + 1,
@@ -106,19 +102,19 @@ export const userRepo = {
         ...(result === 'loss' && { gamesLost: user.gamesLost + 1 }),
         ...(result === 'draw' && { gamesDrawn: user.gamesDrawn + 1 }),
       };
-      
+
       // Update and return
       const [updated] = await db
         .update(users)
         .set(updates)
         .where(eq(users.id, userId))
         .returning();
-      
+
       return { ok: true, value: updated };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
   },
@@ -129,18 +125,18 @@ export const userRepo = {
   async isBanned(userId: string): Promise<DbResult<boolean>> {
     const result = await this.findByUsername(userId);
     if (!result.ok) return result;
-    
+
     const user = result.value;
     if (!user) return { ok: true, value: false };
-    
+
     // Business logic for ban checking
     if (!user.isActive) return { ok: true, value: true };
     if (user.bannedUntil && user.bannedUntil > new Date()) {
       return { ok: true, value: true };
     }
-    
+
     return { ok: true, value: false };
-  }
+  },
 };
 
 /**
@@ -159,17 +155,14 @@ export const gameRepo = {
       if (data.blackPlayerId) {
         data.blackPlayerId = createBrand<UserId>(data.blackPlayerId);
       }
-      
-      const [game] = await db
-        .insert(games)
-        .values(data)
-        .returning();
-      
+
+      const [game] = await db.insert(games).values(data).returning();
+
       return { ok: true, value: game };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
   },
@@ -179,21 +172,22 @@ export const gameRepo = {
    */
   async getActiveGames(userId: string): Promise<DbResult<Game[]>> {
     try {
-      
       const result = await db
         .select()
         .from(games)
-        .where(and(
-          sql`${games.whitePlayerId} = ${userId} OR ${games.blackPlayerId} = ${userId}`,
-          eq(games.result, null)
-        ))
+        .where(
+          and(
+            sql`${games.whitePlayerId} = ${userId} OR ${games.blackPlayerId} = ${userId}`,
+            eq(games.result, null)
+          )
+        )
         .orderBy(desc(games.startedAt));
-      
+
       return { ok: true, value: result };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
   },
@@ -207,32 +201,31 @@ export const gameRepo = {
     fenFinal: string
   ): Promise<DbResult<Game>> {
     try {
-      
       const [updated] = await db
         .update(games)
         .set({
           result,
           fenFinal,
-          completedAt: new Date()
+          completedAt: new Date(),
         })
         .where(eq(games.id, gameId))
         .returning();
-      
+
       if (!updated) {
         return {
           ok: false,
-          error: new Error(`Game ${gameId} not found`)
+          error: new Error(`Game ${gameId} not found`),
         };
       }
-      
+
       return { ok: true, value: updated };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
-  }
+  },
 };
 
 /**
@@ -244,16 +237,13 @@ export const moveRepo = {
    */
   async addMove(move: NewMove): Promise<DbResult<Move>> {
     try {
-      const [created] = await db
-        .insert(moves)
-        .values(move)
-        .returning();
-      
+      const [created] = await db.insert(moves).values(move).returning();
+
       return { ok: true, value: created };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
   },
@@ -268,15 +258,15 @@ export const moveRepo = {
         .from(moves)
         .where(eq(moves.gameId, gameId))
         .orderBy(moves.moveNumber);
-      
+
       return { ok: true, value: result };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error : new Error('Database error')
+        error: error instanceof Error ? error : new Error('Database error'),
       };
     }
-  }
+  },
 };
 
 /**
@@ -291,7 +281,8 @@ export async function withResult<T>(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error : new Error('Database operation failed')
+      error:
+        error instanceof Error ? error : new Error('Database operation failed'),
     };
   }
 }
@@ -308,7 +299,7 @@ export async function transaction<T>(
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error : new Error('Transaction failed')
+      error: error instanceof Error ? error : new Error('Transaction failed'),
     };
   }
 }

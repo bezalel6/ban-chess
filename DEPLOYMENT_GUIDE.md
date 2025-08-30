@@ -22,12 +22,12 @@ GitHub Push → GitHub Actions Build → Push to Registry → Webhook to Coolify
 
 Go to **Settings** → **Secrets and variables** → **Actions** and add:
 
-| Secret Name | Description | Example Value |
-|------------|-------------|---------------|
-| `COOLIFY_WEBHOOK_URL` | Coolify webhook endpoint | `https://coolify.example.com/api/v1/deploy/webhook` |
-| `COOLIFY_DEPLOY_TOKEN` | Coolify API token for deployment | `clfy_xxxxxxxxxxxxx` |
-| `NEXTAUTH_SECRET` | NextAuth.js secret | `your-nextauth-secret` |
-| `DATABASE_URL` | Production database URL | `postgresql://user:pass@host/db` |
+| Secret Name            | Description                      | Example Value                                       |
+| ---------------------- | -------------------------------- | --------------------------------------------------- |
+| `COOLIFY_WEBHOOK_URL`  | Coolify webhook endpoint         | `https://coolify.example.com/api/v1/deploy/webhook` |
+| `COOLIFY_DEPLOY_TOKEN` | Coolify API token for deployment | `clfy_xxxxxxxxxxxxx`                                |
+| `NEXTAUTH_SECRET`      | NextAuth.js secret               | `your-nextauth-secret`                              |
+| `DATABASE_URL`         | Production database URL          | `postgresql://user:pass@host/db`                    |
 
 ## Step 2: Coolify Configuration
 
@@ -127,8 +127,8 @@ services:
   app:
     image: ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_SHA:-latest}
     ports:
-      - "3000:3000"
-      - "3001:3001"
+      - '3000:3000'
+      - '3001:3001'
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL}
@@ -183,12 +183,14 @@ volumes:
 ### Rollback Process
 
 In Coolify:
+
 1. Go to your application
 2. Click **"Deployments"**
 3. Find previous successful deployment
 4. Click **"Rollback"**
 
 Or via GitHub:
+
 1. Revert the commit
 2. Push to trigger new deployment
 
@@ -203,16 +205,19 @@ Or via GitHub:
 ## Troubleshooting
 
 ### Build Fails
+
 - Check GitHub Actions logs
 - Verify all secrets are set correctly
 - Ensure package-lock.json is committed
 
 ### Deployment Fails
+
 - Check Coolify logs: `docker logs <container-id>`
 - Verify webhook URL and token
 - Check Docker registry permissions
 
 ### Application Won't Start
+
 - Verify environment variables in Coolify
 - Check port configurations
 - Review application logs in Coolify
@@ -220,20 +225,26 @@ Or via GitHub:
 ## Additional Optimizations
 
 ### Caching Strategy
+
 The workflow uses GitHub Actions cache for:
+
 - Node modules
 - Next.js build cache
 - Docker layers
 
 ### Health Checks
+
 Add to your Dockerfile:
+
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 ```
 
 ### Scaling
+
 Coolify supports:
+
 - Horizontal scaling (multiple instances)
 - Load balancing
 - Zero-downtime deployments

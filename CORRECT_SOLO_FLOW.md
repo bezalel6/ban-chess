@@ -1,6 +1,7 @@
 # Correct Solo Game Flow
 
 ## The Problem
+
 The current implementation is broken because it tries to treat solo games like multiplayer games with patches, rather than understanding the fundamental difference in how solo games should work.
 
 ## Correct Behavior
@@ -15,7 +16,7 @@ In a solo game, the player alternates between playing for White and Black. The p
    - Board stays in BLACK perspective
 
 2. **White's Move Phase**
-   - Board flips to WHITE perspective  
+   - Board flips to WHITE perspective
    - Player plays White's move (without banned move available)
    - Board stays in WHITE perspective
 

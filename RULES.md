@@ -1,9 +1,11 @@
 # BAN-CHESS CANONICAL RULES
+
 **Version 1.0.0 - Single Source of Truth**
 
 This document serves as the **DEFINITIVE** ruleset for Ban-Chess. All implementations MUST conform to these rules exactly. Any deviation is a bug.
 
 ## Table of Contents
+
 1. [Core Principles](#core-principles)
 2. [Turn Order & Game Flow](#turn-order--game-flow)
 3. [Ban Mechanics](#ban-mechanics)
@@ -28,6 +30,7 @@ This document serves as the **DEFINITIVE** ruleset for Ban-Chess. All implementa
 ## Turn Order & Game Flow
 
 ### Game Start Sequence
+
 1. **Move 0**: Black bans a white move (MANDATORY)
 2. **Move 1**: White makes a move (cannot be the banned move)
 3. **Move 1 (cont)**: White bans a black move
@@ -36,6 +39,7 @@ This document serves as the **DEFINITIVE** ruleset for Ban-Chess. All implementa
 6. Continue alternating: move → ban for same color
 
 ### Turn Determination
+
 ```
 IF game just started:
   Current turn = BLACK (for ban)
@@ -46,26 +50,31 @@ ELSE IF last action was MOVE:
 ```
 
 ### CANONICAL RULING: Black Bans First
+
 **DECISION**: Black ALWAYS bans first. This is intentional game design to offset White's traditional first-move advantage in chess.
 
 ## Ban Mechanics
 
 ### What Can Be Banned
+
 1. **Any legal move** of the opponent can be banned
 2. **Format**: Ban is specified as `{from: Square, to: Square}`
 3. **Scope**: Ban affects ONLY the exact from→to combination
 
 ### Ban Duration
+
 - **Lifetime**: EXACTLY one move
 - **Expiration**: Ban expires immediately after opponent makes any legal move
 - **No persistence**: Previous bans have no effect on future turns
 
 ### Legal Bans Calculation
+
 ```
 Legal bans = ALL legal moves of the opponent in current position
 ```
 
 ### CANONICAL RULING: Special Move Bans
+
 1. **Castling CAN be banned**: Banning e1→g1 prevents kingside castling
 2. **En passant CAN be banned**: Treated as a normal pawn capture move
 3. **Promotion CAN be banned**: Banning e7→e8 bans ALL promotion types to that square
@@ -73,11 +82,13 @@ Legal bans = ALL legal moves of the opponent in current position
 ## Move Mechanics
 
 ### Legal Moves After Ban
+
 ```
 Legal moves = All standard chess moves MINUS the currently banned move
 ```
 
 ### Move Validation
+
 1. Move must be legal according to standard chess rules
 2. Move must NOT match the currently banned {from, to} pair
 3. Move must follow all standard chess constraints (can't leave king in check, etc.)
@@ -85,33 +96,40 @@ Legal moves = All standard chess moves MINUS the currently banned move
 ## Special Moves
 
 ### Castling
+
 - **Can be banned**: By banning king's movement (e.g., e1→g1)
 - **Implementation**: Treat as king move for ban purposes
 - **Rights preservation**: Banning castling doesn't remove castling rights permanently
 
 ### En Passant
+
 - **Can be banned**: By banning the capturing pawn's move
 - **Window**: En passant opportunity expires normally (one move)
 - **Ban interaction**: If en passant is banned, opportunity still expires after one move
 
 ### Pawn Promotion
+
 - **Ban affects ALL pieces**: Banning e7→e8 prevents promotion to Q, R, B, or N
 - **Implementation**: Ban checks only {from, to}, not promotion piece
 
 ### CANONICAL RULING: Promotion Ban Scope
+
 **DECISION**: A ban on a promotion square (e.g., e7→e8) prevents ALL promotions to that square, regardless of piece choice.
 
 ## Check & Checkmate
 
 ### Check Interactions with Bans
+
 1. **Getting out of check is MANDATORY**: Standard chess rule applies
 2. **Banning escape moves**: You CAN ban moves that would escape check
 3. **If only escape is banned**: This creates CHECKMATE (game over)
 
 ### CANONICAL RULING: Check Priority
+
 **DECISION**: If a player is in check and their only legal escape move is banned, they are in CHECKMATE. The ban takes precedence.
 
 ### Checkmate Definition
+
 ```
 Checkmate occurs when:
 1. King is in check AND
@@ -121,6 +139,7 @@ Checkmate occurs when:
 ## Draw Conditions
 
 ### Stalemate
+
 ```
 Stalemate occurs when:
 1. Player is NOT in check AND
@@ -128,20 +147,25 @@ Stalemate occurs when:
 ```
 
 ### CANONICAL RULING: Stalemate with Bans
+
 **DECISION**: If all moves are banned (theoretical edge case), it's stalemate if not in check.
 
 ### Three-fold Repetition
+
 - **Position includes ban state**: Same position + same ban = same state
 - **Count**: Three identical states trigger draw claim
 - **Implementation**: Include ban in position hash
 
 ### Fifty-Move Rule
+
 - **Bans do NOT count as moves** for the fifty-move counter
 - **Only actual piece movements** reset the counter
 - **Pawn moves and captures** reset as normal
 
 ### CANONICAL RULING: Draw Rules
-**DECISION**: 
+
+**DECISION**:
+
 1. Three-fold repetition considers ban state
 2. Fifty-move rule ignores bans (only counts actual moves)
 3. Insufficient material draws apply normally
@@ -149,11 +173,13 @@ Stalemate occurs when:
 ## Game End Conditions
 
 ### Victory Conditions
+
 1. **Checkmate**: Opponent's king in check with no legal escape (considering ban)
 2. **Resignation**: Player voluntarily resigns
 3. **Time forfeit**: Player runs out of time (if using time control)
 
 ### Draw Conditions
+
 1. **Stalemate**: No legal moves while not in check
 2. **Three-fold repetition**: Same position + ban state three times
 3. **Fifty-move rule**: 50 moves without pawn move or capture
@@ -163,15 +189,18 @@ Stalemate occurs when:
 ## Edge Cases
 
 ### Only One Legal Move Scenarios
+
 - **If only move is banned**: Results in checkmate (if in check) or stalemate (if not in check)
 - **No "pass" option**: Players cannot skip their turn
 
 ### Disconnection Handling
+
 - **During ban phase**: Player must reconnect to continue
 - **During move phase**: Player must reconnect to continue
 - **Reconnection**: Game state fully preserved, including current ban
 
 ### Time Controls (Optional Feature)
+
 - **Not mandatory**: Games can be played without time limits
 - **When implemented**: Standard chess clock rules apply
 - **No auto-banning**: Players must always make their own ban choices
@@ -180,6 +209,7 @@ Stalemate occurs when:
 ## Counter-Programming Instructions
 
 ### DO NOT Rely on chess.ts Defaults
+
 ```javascript
 // WRONG - Don't assume chess.ts handles bans
 const isLegal = chess.isLegalMove(move);
@@ -210,6 +240,7 @@ const isLegal = chess.isLegalMove(move) && !isBannedMove(move);
 ### Forbidden Shortcuts
 
 **NEVER**:
+
 - Skip ban validation "for performance"
 - Allow moves during ban phase
 - Allow bans during move phase

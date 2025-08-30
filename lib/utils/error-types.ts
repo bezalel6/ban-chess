@@ -17,7 +17,7 @@ export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 /**
  * Error categories for classification
  */
-export type ErrorCategory = 
+export type ErrorCategory =
   | 'validation'
   | 'authentication'
   | 'authorization'
@@ -69,7 +69,12 @@ export interface AuthError extends BaseAppError {
   readonly category: 'authentication';
   readonly provider?: string;
   readonly userId?: string;
-  readonly reason: 'invalid_credentials' | 'token_expired' | 'account_locked' | 'provider_error' | 'unknown';
+  readonly reason:
+    | 'invalid_credentials'
+    | 'token_expired'
+    | 'account_locked'
+    | 'provider_error'
+    | 'unknown';
 }
 
 /**
@@ -130,7 +135,13 @@ export interface GameError extends BaseAppError {
   readonly category: 'business';
   readonly gameId?: string;
   readonly playerId?: string;
-  readonly errorType: 'invalid_move' | 'game_not_found' | 'player_not_in_game' | 'game_over' | 'not_player_turn' | 'invalid_ban';
+  readonly errorType:
+    | 'invalid_move'
+    | 'game_not_found'
+    | 'player_not_in_game'
+    | 'game_over'
+    | 'not_player_turn'
+    | 'invalid_ban';
 }
 
 /**
@@ -151,7 +162,7 @@ export interface WebSocketError extends BaseAppError {
 /**
  * All possible application errors
  */
-export type AppError = 
+export type AppError =
   | ValidationError
   | AuthError
   | AuthzError
@@ -165,7 +176,11 @@ export type AppError =
 /**
  * Errors that can be shown to users
  */
-export type DisplayableError = UserFacingError | ValidationError | BusinessError | GameError;
+export type DisplayableError =
+  | UserFacingError
+  | ValidationError
+  | BusinessError
+  | GameError;
 
 // ========================================
 // ERROR RESULT TYPES
@@ -197,20 +212,26 @@ export type ValidationResult<T> = Result<T, ValidationError[]>;
  * Error handler function
  * @template T - The error type
  */
-export type ErrorHandler<T extends AppError = AppError> = (error: T) => void | Promise<void>;
+export type ErrorHandler<T extends AppError = AppError> = (
+  error: T
+) => void | Promise<void>;
 
 /**
  * Error recovery function
  * @template T - The error type
  * @template R - The recovery result type
  */
-export type ErrorRecovery<T extends AppError = AppError, R = unknown> = (error: T) => R | Promise<R>;
+export type ErrorRecovery<T extends AppError = AppError, R = unknown> = (
+  error: T
+) => R | Promise<R>;
 
 /**
  * Error reporting function
  * @template T - The error type
  */
-export type ErrorReporter<T extends AppError = AppError> = (error: T) => void | Promise<void>;
+export type ErrorReporter<T extends AppError = AppError> = (
+  error: T
+) => void | Promise<void>;
 
 /**
  * Comprehensive error handling configuration
@@ -328,14 +349,17 @@ export function createNetworkError(
     code: options?.code ?? 'NETWORK_ERROR',
     message,
     category: 'network',
-    severity: options?.statusCode && options.statusCode >= 500 ? 'high' : 'medium',
+    severity:
+      options?.statusCode && options.statusCode >= 500 ? 'high' : 'medium',
     timestamp: Date.now(),
     url: options?.url,
     method: options?.method,
     statusCode: options?.statusCode,
     responseBody: options?.responseBody,
     timeout: options?.timeout ?? false,
-    retryable: options?.retryable ?? (options?.statusCode ? options.statusCode >= 500 : false),
+    retryable:
+      options?.retryable ??
+      (options?.statusCode ? options.statusCode >= 500 : false),
     context: options?.context,
     cause: options?.cause,
   };
@@ -398,7 +422,9 @@ export function isAppError(error: unknown): error is AppError {
  * @returns True if error is a validation error
  */
 export function isValidationError(error: unknown): error is ValidationError {
-  return isAppError(error) && error.category === 'validation' && 'field' in error;
+  return (
+    isAppError(error) && error.category === 'validation' && 'field' in error
+  );
 }
 
 /**
@@ -408,15 +434,15 @@ export function isValidationError(error: unknown): error is ValidationError {
  */
 export function isRetryableError(error: unknown): boolean {
   if (!isAppError(error)) return false;
-  
+
   if (error.category === 'network') {
     return (error as NetworkError).retryable;
   }
-  
+
   if (error.category === 'database') {
     return error.severity !== 'critical';
   }
-  
+
   return false;
 }
 
@@ -430,7 +456,7 @@ export function getUserMessage(error: unknown): string {
     if ('userMessage' in error) {
       return (error as UserFacingError).userMessage;
     }
-    
+
     switch (error.category) {
       case 'validation':
         return error.message;
@@ -446,11 +472,11 @@ export function getUserMessage(error: unknown): string {
         return 'An unexpected error occurred. Please try again.';
     }
   }
-  
+
   if (error instanceof Error) {
     return error.message;
   }
-  
+
   return 'An unexpected error occurred.';
 }
 
@@ -472,7 +498,7 @@ export function toAppError(
 ): BaseAppError {
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
-  
+
   return {
     code: options?.code ?? 'UNKNOWN_ERROR',
     message,

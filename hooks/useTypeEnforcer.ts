@@ -30,79 +30,90 @@ export function useTypeEnforcer<T>(
 
   useEffect(() => {
     const violations: string[] = [];
-    
+
     // Check for 'any' type usage (compile-time check won't catch runtime bypasses)
     if (value && typeof value === 'object') {
       const valueStr = JSON.stringify(value);
-      
+
       // Check for Result pattern usage
       if (options?.enforceResult) {
         if (!('ok' in value)) {
-          violations.push('🚨 NOT USING RESULT PATTERN! Use Result<T, E> instead of try-catch!');
+          violations.push(
+            '🚨 NOT USING RESULT PATTERN! Use Result<T, E> instead of try-catch!'
+          );
         }
       }
-      
+
       // Check for branded types
       if (options?.enforceBrandedTypes) {
         if (valueStr.includes('Id') && !valueStr.includes('__brand')) {
-          violations.push('⚠️ UNBRANDED ID DETECTED! Use createBrand<UserId>() or createBrand<GameId>()!');
+          violations.push(
+            '⚠️ UNBRANDED ID DETECTED! Use createBrand<UserId>() or createBrand<GameId>()!'
+          );
         }
       }
-      
+
       // Check for discriminated unions
       if (options?.enforceDiscriminatedUnions) {
         if ('history' in value && Array.isArray((value as any).history)) {
           const history = (value as any).history;
           if (history.some((item: any) => typeof item === 'string')) {
-            violations.push('❌ MIXED TYPE ARRAY! History should only contain HistoryEntry objects!');
+            violations.push(
+              '❌ MIXED TYPE ARRAY! History should only contain HistoryEntry objects!'
+            );
           }
           if (history.some((item: any) => item && !item.timestamp)) {
-            violations.push('📅 MISSING TIMESTAMP! All HistoryEntry objects must have timestamps!');
+            violations.push(
+              '📅 MISSING TIMESTAMP! All HistoryEntry objects must have timestamps!'
+            );
           }
         }
       }
     }
-    
+
     // Check for null/undefined without proper handling
     if (value === null || value === undefined) {
       if (!typeName.includes('Optional') && !typeName.includes('Maybe')) {
         violations.push('💀 NULL/UNDEFINED without Optional type wrapper!');
       }
     }
-    
+
     // Detect type assertions (as any, as unknown)
     const stack = new Error().stack || '';
     if (stack.includes('as any') || stack.includes('as unknown')) {
       violations.push('🎭 TYPE ASSERTION DETECTED! Stop lying to TypeScript!');
     }
-    
+
     // Process violations
     if (violations.length > 0) {
       violationCount.current += violations.length;
       const key = `${typeName}-${Date.now()}`;
       typeViolations.set(key, violations.length);
-      
+
       // Clean old violations
       if (typeViolations.size > 100) {
         const oldestKey = Array.from(typeViolations.keys())[0];
         typeViolations.delete(oldestKey);
       }
-      
+
       // Calculate annoyance level
-      const totalViolations = Array.from(typeViolations.values()).reduce((a, b) => a + b, 0);
-      
+      const totalViolations = Array.from(typeViolations.values()).reduce(
+        (a, b) => a + b,
+        0
+      );
+
       if (totalViolations > MAX_VIOLATIONS_BEFORE_ANNOYANCE) {
         setIsAnnoyed(true);
-        
+
         // Generate increasingly annoying messages
         const messages = generateAnnoyanceMessage(
           violations,
           totalViolations,
           options?.annoyanceLevel || 'passive'
         );
-        
+
         setAnnoyanceMessage(messages);
-        
+
         // Log to console with increasing severity
         if (options?.annoyanceLevel === 'nuclear') {
           console.error('🔥🔥🔥 TYPE SAFETY VIOLATION 🔥🔥🔥');
@@ -117,19 +128,19 @@ export function useTypeEnforcer<T>(
         }
       }
     }
-    
+
     // Random type safety tips (10% chance)
     if (Math.random() < 0.1 && process.env.NODE_ENV === 'development') {
       showRandomTypeSafetyTip();
     }
   }, [value, typeName, options]);
-  
+
   // Return annoying helpers that force proper type usage
   return {
     isTypeSafe: !isAnnoyed,
     violations: violationCount.current,
     annoyanceMessage,
-    
+
     // Force developers to acknowledge type safety
     acknowledgeTypeSafety: () => {
       if (isAnnoyed) {
@@ -137,13 +148,15 @@ export function useTypeEnforcer<T>(
           'Type "I promise to use proper TypeScript utilities" to continue:'
         );
         if (acknowledgment !== 'I promise to use proper TypeScript utilities') {
-          throw new Error('Type safety acknowledgment failed. Please use proper types!');
+          throw new Error(
+            'Type safety acknowledgment failed. Please use proper types!'
+          );
         }
         setIsAnnoyed(false);
         violationCount.current = 0;
       }
     },
-    
+
     // Passive-aggressive type guard
     assertTypeSafety: <T>(value: T): T => {
       if (isAnnoyed) {
@@ -177,7 +190,7 @@ function generateAnnoyanceMessage(
   level: 'passive' | 'aggressive' | 'nuclear'
 ): string {
   const base = violations.join('\n');
-  
+
   if (level === 'nuclear') {
     return `
 🔥🔥🔥 CRITICAL TYPE SAFETY MELTDOWN 🔥🔥🔥
@@ -196,7 +209,7 @@ Please read the TypeScript utilities documentation:
 Or just use 'any' everywhere and accept chaos. Your choice.
     `;
   }
-  
+
   if (level === 'aggressive') {
     return `
 ⚠️ SERIOUSLY, STOP IGNORING TYPE SAFETY ⚠️
@@ -209,7 +222,7 @@ The TypeScript utilities exist for a reason.
 Use them. Your future self will thank you.
     `;
   }
-  
+
   // Passive level
   return `
 💭 Hey friend, just a gentle reminder:
@@ -235,7 +248,7 @@ function showRandomTypeSafetyTip() {
     '💡 Tip: The TypeScript compiler is smarter than you think!',
     '💡 Tip: Every "any" is a future runtime error waiting to happen!',
   ];
-  
+
   const tip = tips[Math.floor(Math.random() * tips.length)];
   console.log(`%c${tip}`, 'color: #4fc3f7; font-weight: bold;');
 }
@@ -252,33 +265,33 @@ export function useResultEnforcer<T, E>(
     enforceResult: true,
     annoyanceLevel: 'aggressive',
   });
-  
+
   useEffect(() => {
     let mounted = true;
-    
+
     operation()
-      .then((value) => {
+      .then(value => {
         if (mounted) {
           setResult({ ok: true, value } as Result<T, E>);
         }
       })
-      .catch((error) => {
+      .catch(error => {
         if (mounted) {
           setResult({ ok: false, error } as Result<T, E>);
           errorHandler?.(error);
         }
       });
-    
+
     return () => {
       mounted = false;
     };
   }, []);
-  
+
   // Force acknowledgment if not using Result pattern
   if (!enforcer.isTypeSafe) {
     console.warn('⚠️ You should be using Result<T, E> pattern!');
   }
-  
+
   return result;
 }
 
@@ -288,14 +301,14 @@ export function useResultEnforcer<T, E>(
  */
 export function useUltimateTypeEnforcer() {
   const [typeScore, setTypeScore] = useState(100);
-  
+
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       // Monitor global type safety
       const interval = setInterval(() => {
         const score = calculateGlobalTypeSafetyScore();
         setTypeScore(score);
-        
+
         if (score < 50) {
           console.error(`
 ⚠️⚠️⚠️ GLOBAL TYPE SAFETY SCORE: ${score}/100 ⚠️⚠️⚠️
@@ -312,11 +325,11 @@ Check lib/utils/ for all available utilities.
           `);
         }
       }, 30000); // Check every 30 seconds
-      
+
       return () => clearInterval(interval);
     }
   }, []);
-  
+
   return {
     typeScore,
     isTypeSafe: typeScore > 80,
@@ -335,7 +348,10 @@ Check lib/utils/ for all available utilities.
  */
 function calculateGlobalTypeSafetyScore(): number {
   const baseScore = 100;
-  const violations = Array.from(typeViolations.values()).reduce((a, b) => a + b, 0);
+  const violations = Array.from(typeViolations.values()).reduce(
+    (a, b) => a + b,
+    0
+  );
   return Math.max(0, baseScore - violations * 5);
 }
 

@@ -1,6 +1,7 @@
 # Server-Authoritative Architecture Redesign
 
 ## Core Principle
+
 **The server is the ONLY source of truth. The client is a dumb terminal.**
 
 ## What the Server Should Send
@@ -10,28 +11,28 @@ For every game state update, the server sends ONE comprehensive message containi
 ```typescript
 {
   type: 'game-state',
-  
+
   // Display Instructions
   board: {
     fen: string,                    // Current board position
     orientation: 'white' | 'black', // Which way to show the board
     highlightedSquares: string[],   // Squares to highlight (bans, checks, etc.)
   },
-  
+
   // Interaction Instructions
   interaction: {
     enabled: boolean,                // Can the player interact?
     allowedSquares: string[],        // Which squares can be clicked
     actionType: 'move' | 'ban',     // What happens when clicked
   },
-  
+
   // UI Display
   ui: {
     currentTurnLabel: string,        // "White's Turn" / "Black's Turn"
     actionLabel: string,             // "Ban a White move" / "Make your move"
     playerRole: string,              // "Playing as White" / "Playing as Black"
   },
-  
+
   // Game Metadata
   meta: {
     gameId: string,
@@ -56,7 +57,7 @@ That's it. NO logic. NO state management. NO perspective calculations.
 function GameClient({ gameState, sendAction }) {
   return (
     <>
-      <Board 
+      <Board
         fen={gameState.board.fen}
         orientation={gameState.board.orientation}
         highlights={gameState.board.highlightedSquares}
@@ -64,7 +65,7 @@ function GameClient({ gameState, sendAction }) {
         allowedSquares={gameState.interaction.allowedSquares}
         onSquareClick={(from, to) => sendAction({ from, to })}
       />
-      <UI 
+      <UI
         turnLabel={gameState.ui.currentTurnLabel}
         actionLabel={gameState.ui.actionLabel}
         playerRole={gameState.ui.playerRole}
@@ -77,6 +78,7 @@ function GameClient({ gameState, sendAction }) {
 ## Server Logic for Solo Games
 
 The server tracks:
+
 - Current chess turn (white/black)
 - Current action phase (move/ban)
 - Who is acting (different from chess turn during ban phase)

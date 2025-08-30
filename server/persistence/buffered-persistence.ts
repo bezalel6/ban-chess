@@ -44,7 +44,10 @@ export class BufferedPersistenceService {
   private startPeriodicFlush() {
     this.flushInterval = setInterval(() => {
       this.flushAllBuffers().catch(err => {
-        console.error('[BufferedPersistence] Error during periodic flush:', err);
+        console.error(
+          '[BufferedPersistence] Error during periodic flush:',
+          err
+        );
       });
     }, this.FLUSH_INTERVAL_MS);
   }
@@ -54,14 +57,14 @@ export class BufferedPersistenceService {
    */
   async bufferMove(move: BufferedMove): Promise<void> {
     const gameId = move.gameId;
-    
+
     if (!this.moveBuffer.has(gameId)) {
       this.moveBuffer.set(gameId, []);
     }
-    
+
     const buffer = this.moveBuffer.get(gameId)!;
     buffer.push(move);
-    
+
     // Check if we should flush this game's buffer
     if (buffer.length >= this.BUFFER_SIZE) {
       await this.flushGameMoves(gameId);
@@ -73,13 +76,13 @@ export class BufferedPersistenceService {
    */
   async bufferEvent(event: BufferedGameEvent): Promise<void> {
     const gameId = event.gameId;
-    
+
     if (!this.eventBuffer.has(gameId)) {
       this.eventBuffer.set(gameId, []);
     }
-    
+
     this.eventBuffer.get(gameId)!.push(event);
-    
+
     // Events are less frequent, flush after 50
     if (this.eventBuffer.get(gameId)!.length >= 50) {
       await this.flushGameEvents(gameId);
@@ -92,7 +95,7 @@ export class BufferedPersistenceService {
   private async flushGameMoves(gameId: string): Promise<void> {
     const buffer = this.moveBuffer.get(gameId);
     if (!buffer || buffer.length === 0) return;
-    
+
     try {
       // Batch insert moves
       await db.insert(moves).values(
@@ -108,13 +111,18 @@ export class BufferedPersistenceService {
           isBan: move.isBan,
         }))
       );
-      
-      console.log(`[BufferedPersistence] Flushed ${buffer.length} moves for game ${gameId}`);
-      
+
+      console.log(
+        `[BufferedPersistence] Flushed ${buffer.length} moves for game ${gameId}`
+      );
+
       // Clear the buffer for this game
       this.moveBuffer.set(gameId, []);
     } catch (error) {
-      console.error(`[BufferedPersistence] Error flushing moves for game ${gameId}:`, error);
+      console.error(
+        `[BufferedPersistence] Error flushing moves for game ${gameId}:`,
+        error
+      );
       // Keep the buffer on error to retry later
     }
   }
@@ -125,7 +133,7 @@ export class BufferedPersistenceService {
   private async flushGameEvents(gameId: string): Promise<void> {
     const buffer = this.eventBuffer.get(gameId);
     if (!buffer || buffer.length === 0) return;
-    
+
     try {
       await db.insert(gameEvents).values(
         buffer.map(event => ({
@@ -135,13 +143,18 @@ export class BufferedPersistenceService {
           timestamp: event.timestamp,
         }))
       );
-      
-      console.log(`[BufferedPersistence] Flushed ${buffer.length} events for game ${gameId}`);
-      
+
+      console.log(
+        `[BufferedPersistence] Flushed ${buffer.length} events for game ${gameId}`
+      );
+
       // Clear the buffer
       this.eventBuffer.set(gameId, []);
     } catch (error) {
-      console.error(`[BufferedPersistence] Error flushing events for game ${gameId}:`, error);
+      console.error(
+        `[BufferedPersistence] Error flushing events for game ${gameId}:`,
+        error
+      );
     }
   }
 
@@ -151,21 +164,21 @@ export class BufferedPersistenceService {
   async flushAllBuffers(): Promise<void> {
     const movePromises: Promise<void>[] = [];
     const eventPromises: Promise<void>[] = [];
-    
+
     // Flush all move buffers
     for (const gameId of this.moveBuffer.keys()) {
       if (this.moveBuffer.get(gameId)?.length ?? 0 > 0) {
         movePromises.push(this.flushGameMoves(gameId));
       }
     }
-    
+
     // Flush all event buffers
     for (const gameId of this.eventBuffer.keys()) {
       if (this.eventBuffer.get(gameId)?.length ?? 0 > 0) {
         eventPromises.push(this.flushGameEvents(gameId));
       }
     }
-    
+
     // Wait for all flushes to complete
     await Promise.all([...movePromises, ...eventPromises]);
   }
@@ -176,9 +189,9 @@ export class BufferedPersistenceService {
   async flushGame(gameId: string): Promise<void> {
     await Promise.all([
       this.flushGameMoves(gameId),
-      this.flushGameEvents(gameId)
+      this.flushGameEvents(gameId),
     ]);
-    
+
     // Remove buffers for completed game
     this.moveBuffer.delete(gameId);
     this.eventBuffer.delete(gameId);
@@ -187,8 +200,13 @@ export class BufferedPersistenceService {
   /**
    * Create or update a user
    */
-  async upsertUser(userId: string, username: string, email?: string): Promise<void> {
-    await db.insert(users)
+  async upsertUser(
+    userId: string,
+    username: string,
+    email?: string
+  ): Promise<void> {
+    await db
+      .insert(users)
       .values({
         id: userId,
         username,
@@ -235,9 +253,10 @@ export class BufferedPersistenceService {
   }): Promise<void> {
     // First flush any remaining moves/events
     await this.flushGame(gameData.id);
-    
+
     // Update the game record
-    await db.update(games)
+    await db
+      .update(games)
       .set({
         pgn: gameData.pgn,
         fenFinal: gameData.fenFinal,
@@ -248,48 +267,58 @@ export class BufferedPersistenceService {
         completedAt: new Date(),
       })
       .where(eq(games.id, gameData.id));
-    
+
     // Update player statistics if it's not a solo game
     const game = await db.query.games.findFirst({
       where: eq(games.id, gameData.id),
     });
-    
+
     if (game && !game.isSoloGame && game.whitePlayerId && game.blackPlayerId) {
       // Update games played count
       await Promise.all([
-        db.update(users)
-          .set({ 
-            gamesPlayed: sql`${users.gamesPlayed} + 1`,
-            gamesWon: gameData.result === '1-0' 
-              ? sql`${users.gamesWon} + 1` 
-              : users.gamesWon,
-            gamesLost: gameData.result === '0-1'
-              ? sql`${users.gamesLost} + 1`
-              : users.gamesLost,
-            gamesDrawn: gameData.result === '1/2-1/2'
-              ? sql`${users.gamesDrawn} + 1`
-              : users.gamesDrawn,
-          })
-          .where(eq(users.id, game.whitePlayerId)),
-        
-        db.update(users)
+        db
+          .update(users)
           .set({
             gamesPlayed: sql`${users.gamesPlayed} + 1`,
-            gamesWon: gameData.result === '0-1'
-              ? sql`${users.gamesWon} + 1`
-              : users.gamesWon,
-            gamesLost: gameData.result === '1-0'
-              ? sql`${users.gamesLost} + 1`
-              : users.gamesLost,
-            gamesDrawn: gameData.result === '1/2-1/2'
-              ? sql`${users.gamesDrawn} + 1`
-              : users.gamesDrawn,
+            gamesWon:
+              gameData.result === '1-0'
+                ? sql`${users.gamesWon} + 1`
+                : users.gamesWon,
+            gamesLost:
+              gameData.result === '0-1'
+                ? sql`${users.gamesLost} + 1`
+                : users.gamesLost,
+            gamesDrawn:
+              gameData.result === '1/2-1/2'
+                ? sql`${users.gamesDrawn} + 1`
+                : users.gamesDrawn,
+          })
+          .where(eq(users.id, game.whitePlayerId)),
+
+        db
+          .update(users)
+          .set({
+            gamesPlayed: sql`${users.gamesPlayed} + 1`,
+            gamesWon:
+              gameData.result === '0-1'
+                ? sql`${users.gamesWon} + 1`
+                : users.gamesWon,
+            gamesLost:
+              gameData.result === '1-0'
+                ? sql`${users.gamesLost} + 1`
+                : users.gamesLost,
+            gamesDrawn:
+              gameData.result === '1/2-1/2'
+                ? sql`${users.gamesDrawn} + 1`
+                : users.gamesDrawn,
           })
           .where(eq(users.id, game.blackPlayerId)),
       ]);
     }
-    
-    console.log(`[BufferedPersistence] Game ${gameData.id} completed and archived`);
+
+    console.log(
+      `[BufferedPersistence] Game ${gameData.id} completed and archived`
+    );
   }
 
   /**
@@ -327,10 +356,10 @@ export class BufferedPersistenceService {
     if (this.flushInterval) {
       clearInterval(this.flushInterval);
     }
-    
+
     // Flush all remaining buffers
     await this.flushAllBuffers();
-    
+
     console.log('[BufferedPersistence] Service shutdown complete');
   }
 }

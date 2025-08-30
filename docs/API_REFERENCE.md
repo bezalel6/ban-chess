@@ -13,11 +13,13 @@ Authenticate a user and create a new session.
 ##### Request
 
 **Headers:**
+
 ```
 Content-Type: application/json
 ```
 
 **Body:**
+
 ```json
 {
   "username": "player123"
@@ -25,11 +27,13 @@ Content-Type: application/json
 ```
 
 **Validation Rules:**
+
 - `username`: Required, string, 2-20 characters, alphanumeric only
 
 ##### Response
 
 **Success (200):**
+
 ```json
 {
   "success": true,
@@ -41,6 +45,7 @@ Content-Type: application/json
 ```
 
 **Error (400):**
+
 ```json
 {
   "success": false,
@@ -49,6 +54,7 @@ Content-Type: application/json
 ```
 
 **Error (500):**
+
 ```json
 {
   "success": false,
@@ -63,9 +69,9 @@ Content-Type: application/json
 const response = await fetch('/api/auth/login', {
   method: 'POST',
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   },
-  body: JSON.stringify({ username: 'player123' })
+  body: JSON.stringify({ username: 'player123' }),
 });
 
 const data = await response.json();
@@ -87,6 +93,7 @@ No body required. Session cookie must be present.
 ##### Response
 
 **Success (200):**
+
 ```json
 {
   "success": true
@@ -98,7 +105,7 @@ No body required. Session cookie must be present.
 ```typescript
 const response = await fetch('/api/auth/logout', {
   method: 'POST',
-  credentials: 'same-origin'
+  credentials: 'same-origin',
 });
 
 if (response.ok) {
@@ -119,6 +126,7 @@ No body required. Session cookie must be present.
 ##### Response
 
 **With Session (200):**
+
 ```json
 {
   "user": {
@@ -129,6 +137,7 @@ No body required. Session cookie must be present.
 ```
 
 **No Session (200):**
+
 ```json
 {}
 ```
@@ -137,7 +146,7 @@ No body required. Session cookie must be present.
 
 ```typescript
 const response = await fetch('/api/auth/session', {
-  credentials: 'same-origin'
+  credentials: 'same-origin',
 });
 
 const data = await response.json();
@@ -155,6 +164,7 @@ if (data.user) {
 ### Connection
 
 #### Endpoint
+
 ```
 ws://localhost:8081
 ```
@@ -168,12 +178,12 @@ ws.onopen = () => {
   console.log('Connected to game server');
 };
 
-ws.onmessage = (event) => {
+ws.onmessage = event => {
   const message = JSON.parse(event.data);
   handleServerMessage(message);
 };
 
-ws.onerror = (error) => {
+ws.onerror = error => {
   console.error('WebSocket error:', error);
 };
 
@@ -199,12 +209,15 @@ Authenticate the WebSocket connection with user credentials.
 ```
 
 **Example:**
+
 ```typescript
-ws.send(JSON.stringify({
-  type: 'authenticate',
-  userId: '550e8400-e29b-41d4-a716-446655440000',
-  username: 'player123'
-}));
+ws.send(
+  JSON.stringify({
+    type: 'authenticate',
+    userId: '550e8400-e29b-41d4-a716-446655440000',
+    username: 'player123',
+  })
+);
 ```
 
 ---
@@ -215,13 +228,14 @@ Join the matchmaking queue to find an opponent.
 
 ```typescript
 {
-  type: 'join-queue'
+  type: 'join-queue';
 }
 ```
 
 **Prerequisites:** Must be authenticated
 
 **Example:**
+
 ```typescript
 ws.send(JSON.stringify({ type: 'join-queue' }));
 ```
@@ -234,13 +248,14 @@ Leave the matchmaking queue.
 
 ```typescript
 {
-  type: 'leave-queue'
+  type: 'leave-queue';
 }
 ```
 
 **Prerequisites:** Must be in queue
 
 **Example:**
+
 ```typescript
 ws.send(JSON.stringify({ type: 'leave-queue' }));
 ```
@@ -259,11 +274,14 @@ Join an existing game by ID.
 ```
 
 **Example:**
+
 ```typescript
-ws.send(JSON.stringify({
-  type: 'join-game',
-  gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-}));
+ws.send(
+  JSON.stringify({
+    type: 'join-game',
+    gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  })
+);
 ```
 
 ---
@@ -283,21 +301,25 @@ Ban an opponent's move during the ban phase.
 }
 ```
 
-**Prerequisites:** 
+**Prerequisites:**
+
 - Must be your turn
 - Must be in ban phase
 - Ban must be legal
 
 **Example:**
+
 ```typescript
-ws.send(JSON.stringify({
-  type: 'ban',
-  gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  ban: {
-    from: 'e2',
-    to: 'e4'
-  }
-}));
+ws.send(
+  JSON.stringify({
+    type: 'ban',
+    gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    ban: {
+      from: 'e2',
+      to: 'e4',
+    },
+  })
+);
 ```
 
 ---
@@ -319,33 +341,39 @@ Make a chess move during the move phase.
 ```
 
 **Prerequisites:**
+
 - Must be your turn
 - Must be in move phase
 - Move must be legal
 - Move must not be banned
 
 **Example:**
+
 ```typescript
 // Regular move
-ws.send(JSON.stringify({
-  type: 'move',
-  gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  move: {
-    from: 'e2',
-    to: 'e4'
-  }
-}));
+ws.send(
+  JSON.stringify({
+    type: 'move',
+    gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    move: {
+      from: 'e2',
+      to: 'e4',
+    },
+  })
+);
 
 // Pawn promotion
-ws.send(JSON.stringify({
-  type: 'move',
-  gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  move: {
-    from: 'e7',
-    to: 'e8',
-    promotion: 'q'
-  }
-}));
+ws.send(
+  JSON.stringify({
+    type: 'move',
+    gameId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    move: {
+      from: 'e7',
+      to: 'e8',
+      promotion: 'q',
+    },
+  })
+);
 ```
 
 ---
@@ -435,6 +463,7 @@ Current game state update.
 ```
 
 **Move Type:**
+
 ```typescript
 interface Move {
   from: string;
@@ -444,6 +473,7 @@ interface Move {
 ```
 
 **Ban Type:**
+
 ```typescript
 interface Ban {
   from: string;
@@ -452,15 +482,16 @@ interface Ban {
 ```
 
 **HistoryEntry Type:**
+
 ```typescript
 interface HistoryEntry {
   turnNumber: number;
   player: 'white' | 'black';
   actionType: 'ban' | 'move';
   action: Ban | Move;
-  san?: string;              // Standard Algebraic Notation
-  fen: string;               // Position after action
-  bannedMove?: Ban;          // The banned move (if ban action)
+  san?: string; // Standard Algebraic Notation
+  fen: string; // Position after action
+  bannedMove?: Ban; // The banned move (if ban action)
 }
 ```
 
@@ -479,6 +510,7 @@ Error message from the server.
 ```
 
 **Common Errors:**
+
 - "Not authenticated"
 - "Game not found"
 - "Not your turn"
@@ -519,9 +551,9 @@ type ClientMsg =
   | { type: 'ban'; gameId: string; ban: Ban }
   | { type: 'move'; gameId: string; move: Move };
 
-// All server message types  
+// All server message types
 type ServerMsg =
-  | { type: 'state'; /* ... */ }
+  | { type: 'state' /* ... */ }
   | { type: 'error'; message: string; error?: string }
   | { type: 'authenticated'; userId: string; username: string }
   | { type: 'queued'; position: number }
@@ -535,18 +567,19 @@ type ServerMsg =
 
 ### HTTP Errors
 
-| Status Code | Meaning | Common Causes |
-|------------|---------|---------------|
-| 400 | Bad Request | Invalid input, validation failure |
-| 401 | Unauthorized | Missing or invalid session |
-| 404 | Not Found | Resource doesn't exist |
-| 500 | Server Error | Internal server error |
+| Status Code | Meaning      | Common Causes                     |
+| ----------- | ------------ | --------------------------------- |
+| 400         | Bad Request  | Invalid input, validation failure |
+| 401         | Unauthorized | Missing or invalid session        |
+| 404         | Not Found    | Resource doesn't exist            |
+| 500         | Server Error | Internal server error             |
 
 ### WebSocket Errors
 
 WebSocket errors are sent as `error` type messages with descriptive messages.
 
 **Error Response Pattern:**
+
 ```typescript
 {
   type: 'error',
@@ -611,7 +644,7 @@ Currently no rate limiting is implemented. Future versions will include:
 const loginResponse = await fetch('/api/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username: 'player123' })
+  body: JSON.stringify({ username: 'player123' }),
 });
 const { user } = await loginResponse.json();
 
@@ -620,49 +653,55 @@ const ws = new WebSocket('ws://localhost:8081');
 
 // 3. Authenticate WebSocket connection
 ws.onopen = () => {
-  ws.send(JSON.stringify({
-    type: 'authenticate',
-    userId: user.id,
-    username: user.username
-  }));
+  ws.send(
+    JSON.stringify({
+      type: 'authenticate',
+      userId: user.id,
+      username: user.username,
+    })
+  );
 };
 
 // 4. Join queue after authentication
-ws.onmessage = (event) => {
+ws.onmessage = event => {
   const msg = JSON.parse(event.data);
-  
+
   if (msg.type === 'authenticated') {
     // Join matchmaking queue
     ws.send(JSON.stringify({ type: 'join-queue' }));
   }
-  
+
   if (msg.type === 'matched') {
     console.log(`Matched! Playing as ${msg.color} against ${msg.opponent}`);
     // Game will start automatically
   }
-  
+
   if (msg.type === 'state') {
     // Handle game state updates
     updateBoard(msg.fen);
-    
+
     if (msg.nextAction === 'ban' && isMyTurn(msg.turn)) {
       // Select a ban
       const ban = selectBan(msg.legalBans);
-      ws.send(JSON.stringify({
-        type: 'ban',
-        gameId: msg.gameId,
-        ban
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'ban',
+          gameId: msg.gameId,
+          ban,
+        })
+      );
     }
-    
+
     if (msg.nextAction === 'move' && isMyTurn(msg.turn)) {
       // Make a move
       const move = selectMove(msg.legalMoves);
-      ws.send(JSON.stringify({
-        type: 'move',
-        gameId: msg.gameId,
-        move
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'move',
+          gameId: msg.gameId,
+          move,
+        })
+      );
     }
   }
 };
@@ -678,4 +717,4 @@ ws.onmessage = (event) => {
 
 ---
 
-*Last Updated: 2025-08-26*
+_Last Updated: 2025-08-26_

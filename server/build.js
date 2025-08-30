@@ -13,7 +13,7 @@ async function build() {
       sourcemap: true,
       format: 'cjs',
     });
-    
+
     console.log('✅ WebSocket server built successfully');
   } catch (error) {
     console.error('❌ Build failed:', error);

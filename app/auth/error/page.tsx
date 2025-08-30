@@ -39,24 +39,22 @@ export default function AuthErrorPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="max-w-md w-full bg-background-secondary rounded-lg shadow-xl p-8">
-        <div className="text-center">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold mb-4">Authentication Error</h1>
-          <p className="text-foreground-muted mb-6">
-            {getErrorMessage()}
-          </p>
-          <div className="space-y-3">
+    <div className='min-h-screen flex items-center justify-center bg-background p-4'>
+      <div className='max-w-md w-full bg-background-secondary rounded-lg shadow-xl p-8'>
+        <div className='text-center'>
+          <div className='text-6xl mb-4'>⚠️</div>
+          <h1 className='text-2xl font-bold mb-4'>Authentication Error</h1>
+          <p className='text-foreground-muted mb-6'>{getErrorMessage()}</p>
+          <div className='space-y-3'>
             <Link
-              href="/auth/signin"
-              className="block w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-all"
+              href='/auth/signin'
+              className='block w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-all'
             >
               Try Again
             </Link>
             <Link
-              href="/"
-              className="block w-full px-6 py-3 bg-background border border-border rounded-lg hover:bg-background-tertiary transition-all"
+              href='/'
+              className='block w-full px-6 py-3 bg-background border border-border rounded-lg hover:bg-background-tertiary transition-all'
             >
               Go Home
             </Link>

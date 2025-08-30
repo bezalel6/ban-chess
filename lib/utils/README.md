@@ -77,7 +77,9 @@ import type { ApiResponse, createApiResponse } from '@/lib/utils/api-types';
 // Route handler with proper typing
 export async function GET(): Promise<NextResponse<ApiResponse<User[]>>> {
   const users = await db.user.findMany();
-  return NextResponse.json(createApiResponse(users, 'Users fetched successfully'));
+  return NextResponse.json(
+    createApiResponse(users, 'Users fetched successfully')
+  );
 }
 ```
 
@@ -92,13 +94,13 @@ interface CustomButtonProps extends ButtonProps {
   tooltip?: string;
 }
 
-export function CustomButton({ 
-  children, 
+export function CustomButton({
+  children,
   variant = 'primary',
   size = 'md',
   icon,
   tooltip,
-  ...props 
+  ...props
 }: CustomButtonProps & WithChildren) {
   // Implementation
 }
@@ -109,6 +111,7 @@ export function CustomButton({
 ### 1. `types.ts` - Core Utilities
 
 **Key Features:**
+
 - **Result/Error Types**: `Result<T, E>`, `AsyncResult<T, E>` for functional error handling
 - **Object Manipulation**: `DeepPartial<T>`, `RequireKeys<T, K>`, `OptionalKeys<T, K>`
 - **Array Utilities**: `NonEmptyArray<T>`, `ArrayElement<T>`, `Head<T>`, `Tail<T>`
@@ -116,6 +119,7 @@ export function CustomButton({
 - **Conditional Types**: `If<C, T, F>`, `Equals<X, Y>`, type-level programming
 
 **Example:**
+
 ```typescript
 // Functional error handling
 const result: Result<User, string> = await fetchUser(id);
@@ -131,6 +135,7 @@ const userId: UserId = createBrand('user-456');
 ### 2. `api-types.ts` - API & HTTP
 
 **Key Features:**
+
 - **Response Wrappers**: `ApiResponse<T>`, `PaginatedResponse<T>`
 - **Route Handlers**: `RouteHandler<TParams, TResponse>` for Next.js 15
 - **HTTP Types**: `HttpMethod`, `HttpStatusCode` unions
@@ -138,10 +143,11 @@ const userId: UserId = createBrand('user-456');
 - **Namespaced APIs**: `UserApi`, `GameApi` for specific endpoints
 
 **Example:**
+
 ```typescript
 // Type-safe route handler
 const getUserGames: RouteHandler<
-  { username: string }, 
+  { username: string },
   UserApi.UserGamesResponse
 > = async (request, { params }) => {
   const { username } = await params;
@@ -152,6 +158,7 @@ const getUserGames: RouteHandler<
 ### 3. `database-types.ts` - Database & ORM
 
 **Key Features:**
+
 - **Repository Pattern**: `BaseRepository<T>`, `SoftDeleteRepository<T>`
 - **Query Building**: `QueryOptions<T>`, `FilterOptions<T>`, `SortOptions<T>`
 - **Model Types**: `UserModel`, `GameModel`, `MoveModel` based on schema
@@ -159,6 +166,7 @@ const getUserGames: RouteHandler<
 - **CRUD Operations**: Type-safe create/update input types
 
 **Example:**
+
 ```typescript
 // Repository with full type safety
 class UserRepository implements BaseRepository<UserModel> {
@@ -171,6 +179,7 @@ class UserRepository implements BaseRepository<UserModel> {
 ### 4. `websocket-types.ts` - Real-time Communication
 
 **Key Features:**
+
 - **Message System**: `ClientMessage`, `ServerMessage` unions
 - **Game Messages**: `WsGameStateMessage`, `WsActionMessage` for chess moves
 - **Connection Management**: `WsClient`, `WsServer` interfaces
@@ -178,6 +187,7 @@ class UserRepository implements BaseRepository<UserModel> {
 - **State Management**: Connection states, ready states, close codes
 
 **Example:**
+
 ```typescript
 // Type-safe WebSocket message handling
 function handleMessage(message: ServerMessage) {
@@ -191,6 +201,7 @@ function handleMessage(message: ServerMessage) {
 ### 5. `react-types.ts` - React Components
 
 **Key Features:**
+
 - **Component Props**: `ButtonProps`, `TextFieldProps`, form components
 - **Chess Components**: `ChessBoardProps`, `GameStatusProps`, chess-specific types
 - **Hook Types**: `AsyncHook<T>`, `UseToggleReturn`, common hook patterns
@@ -198,6 +209,7 @@ function handleMessage(message: ServerMessage) {
 - **Context Types**: `GameContextValue`, `AuthContextValue`
 
 **Example:**
+
 ```typescript
 // Chess-specific component with full typing
 interface ChessBoardProps {
@@ -215,6 +227,7 @@ export function ChessBoard({ position, onMove, ...props }: ChessBoardProps) {
 ### 6. `error-types.ts` - Error Handling
 
 **Key Features:**
+
 - **Error Hierarchy**: `AppError` with categorized error types
 - **Validation Errors**: Field-specific validation with constraints
 - **Network Errors**: HTTP status codes, retry logic, timeout handling
@@ -222,6 +235,7 @@ export function ChessBoard({ position, onMove, ...props }: ChessBoardProps) {
 - **Error Recovery**: Retryable errors, user-friendly messages
 
 **Example:**
+
 ```typescript
 // Comprehensive error handling
 try {
@@ -238,17 +252,21 @@ try {
 ## 🛡️ Type Safety Features
 
 ### 1. Branded Types
+
 Prevent common mistakes by wrapping primitives:
+
 ```typescript
 type GameId = Brand<string, 'GameId'>;
 type UserId = Brand<string, 'UserId'>;
 
 // These are not interchangeable despite both being strings
-function joinGame(gameId: GameId, userId: UserId) { }
+function joinGame(gameId: GameId, userId: UserId) {}
 ```
 
 ### 2. Result Types
+
 Functional error handling without exceptions:
+
 ```typescript
 function parseMove(input: string): Result<ChessMove, ValidationError> {
   // Always returns success or failure, never throws
@@ -256,14 +274,18 @@ function parseMove(input: string): Result<ChessMove, ValidationError> {
 ```
 
 ### 3. Deep Type Utilities
+
 Work with complex nested objects safely:
+
 ```typescript
 type PartialUser = DeepPartial<User>; // All fields optional recursively
 type RequiredProfile = RequireKeys<User, 'profile'>; // Make profile required
 ```
 
 ### 4. Conditional Types
+
 Type-level programming for complex scenarios:
+
 ```typescript
 type ApiMethod<T> = T extends 'GET' ? GetHandler : PostHandler;
 ```
@@ -271,6 +293,7 @@ type ApiMethod<T> = T extends 'GET' ? GetHandler : PostHandler;
 ## 🎯 Best Practices
 
 ### 1. Import Only What You Need
+
 ```typescript
 // ✅ Good - specific imports
 import type { Result, GameId } from '@/lib/utils';
@@ -281,16 +304,18 @@ import type * as Utils from '@/lib/utils';
 ```
 
 ### 2. Use Branded Types for Critical IDs
+
 ```typescript
 // ✅ Good - type-safe IDs
 type GameId = Brand<string, 'GameId'>;
 type UserId = Brand<string, 'UserId'>;
 
 // ❌ Avoid - mixing up string IDs
-function joinGame(gameId: string, userId: string) { }
+function joinGame(gameId: string, userId: string) {}
 ```
 
 ### 3. Prefer Result Types Over Exceptions
+
 ```typescript
 // ✅ Good - explicit error handling
 async function fetchUser(id: string): AsyncResult<User, ApiError> {
@@ -304,6 +329,7 @@ async function fetchUser(id: string): Promise<User> {
 ```
 
 ### 4. Use Type Guards for Runtime Safety
+
 ```typescript
 // ✅ Good - runtime type checking
 if (isApiError(response)) {
@@ -316,16 +342,21 @@ if (isApiError(response)) {
 ## 🔧 Integration Points
 
 ### Next.js 15 Route Handlers
+
 ```typescript
 import type { RouteHandler } from '@/lib/utils/api-types';
 
-export const GET: RouteHandler<{ id: string }, User> = async (req, { params }) => {
+export const GET: RouteHandler<{ id: string }, User> = async (
+  req,
+  { params }
+) => {
   const { id } = await params;
   // Fully typed route handler
 };
 ```
 
 ### Drizzle ORM Models
+
 ```typescript
 import type { UserModel, CreateUserInput } from '@/lib/utils/database-types';
 
@@ -334,6 +365,7 @@ const user: UserModel = await db.insert(users).values(userData);
 ```
 
 ### WebSocket Communication
+
 ```typescript
 import type { WsGameStateMessage } from '@/lib/utils/websocket-types';
 
@@ -344,6 +376,7 @@ socket.on('message', (message: WsGameStateMessage) => {
 ```
 
 ### React Components
+
 ```typescript
 import type { ChessBoardProps } from '@/lib/utils/react-types';
 
@@ -356,7 +389,7 @@ export function ChessBoard(props: ChessBoardProps) {
 ## 🚀 Performance Considerations
 
 - **Tree Shaking**: Use specific imports to enable dead code elimination
-- **Type-Only Imports**: Use `import type` for types to avoid runtime bloat  
+- **Type-Only Imports**: Use `import type` for types to avoid runtime bloat
 - **Minimal Runtime**: Most utilities are compile-time only
 - **Brand Types**: Zero runtime overhead, compile-time safety only
 

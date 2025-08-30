@@ -10,22 +10,19 @@ export interface A11yOptions {
 /**
  * Run accessibility tests on a page
  */
-export async function testAccessibility(
-  page: Page,
-  options: A11yOptions = {}
-) {
+export async function testAccessibility(page: Page, options: A11yOptions = {}) {
   const { context = 'main', rules = {}, skipFailures = false } = options;
-  
+
   // Inject axe-core
   await injectAxe(page);
-  
+
   // Configure axe with custom rules if provided
   if (Object.keys(rules).length > 0) {
     await configureAxe(page, {
-      rules
+      rules,
     });
   }
-  
+
   // Run accessibility checks
   await checkA11y(
     page,
@@ -33,8 +30,8 @@ export async function testAccessibility(
     {
       detailedReport: true,
       detailedReportOptions: {
-        html: true
-      }
+        html: true,
+      },
     },
     skipFailures
   );
@@ -45,7 +42,7 @@ export async function testAccessibility(
  */
 export async function testKeyboardNavigation(page: Page) {
   const issues: string[] = [];
-  
+
   // Check if all interactive elements are keyboard accessible
   const interactiveElements = await page.evaluate(() => {
     const selectors = [
@@ -54,32 +51,39 @@ export async function testKeyboardNavigation(page: Page) {
       'input:not([disabled])',
       'select:not([disabled])',
       'textarea:not([disabled])',
-      '[tabindex]:not([tabindex="-1"])'
+      '[tabindex]:not([tabindex="-1"])',
     ];
-    
+
     const elements = document.querySelectorAll(selectors.join(', '));
     const inaccessible: string[] = [];
-    
-    elements.forEach((el) => {
+
+    elements.forEach(el => {
       const computedStyle = window.getComputedStyle(el);
-      if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+      if (
+        computedStyle.display === 'none' ||
+        computedStyle.visibility === 'hidden'
+      ) {
         return;
       }
-      
+
       // Check if element has tabindex
       const tabindex = el.getAttribute('tabindex');
       if (tabindex === '-1') {
-        inaccessible.push(`${el.tagName.toLowerCase()}${el.className ? '.' + el.className : ''}`);
+        inaccessible.push(
+          `${el.tagName.toLowerCase()}${el.className ? '.' + el.className : ''}`
+        );
       }
     });
-    
+
     return inaccessible;
   });
-  
+
   if (interactiveElements.length > 0) {
-    issues.push(`Keyboard inaccessible elements: ${interactiveElements.join(', ')}`);
+    issues.push(
+      `Keyboard inaccessible elements: ${interactiveElements.join(', ')}`
+    );
   }
-  
+
   return issues;
 }
 
@@ -89,32 +93,35 @@ export async function testKeyboardNavigation(page: Page) {
 export async function testColorContrast(page: Page) {
   return await page.evaluate(() => {
     const issues: string[] = [];
-    
+
     // Get all text elements
     const textElements = document.querySelectorAll('*');
-    
-    textElements.forEach((element) => {
+
+    textElements.forEach(element => {
       const text = element.textContent?.trim();
       if (!text || text.length === 0) return;
-      
+
       const style = window.getComputedStyle(element);
       const backgroundColor = style.backgroundColor;
       const color = style.color;
-      
+
       // Skip if transparent
-      if (backgroundColor === 'rgba(0, 0, 0, 0)' || backgroundColor === 'transparent') {
+      if (
+        backgroundColor === 'rgba(0, 0, 0, 0)' ||
+        backgroundColor === 'transparent'
+      ) {
         return;
       }
-      
+
       // Simple contrast check (would need proper WCAG calculation in production)
       const rgb = (str: string) => {
         const match = str.match(/\d+/g);
         return match ? match.map(Number) : [0, 0, 0];
       };
-      
+
       const [r1, g1, b1] = rgb(backgroundColor);
       const [r2, g2, b2] = rgb(color);
-      
+
       // Calculate relative luminance
       const luminance = (r: number, g: number, b: number) => {
         const [rs, gs, bs] = [r, g, b].map(c => {
@@ -123,21 +130,23 @@ export async function testColorContrast(page: Page) {
         });
         return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
       };
-      
+
       const l1 = luminance(r1, g1, b1);
       const l2 = luminance(r2, g2, b2);
-      
+
       const contrast = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-      
+
       // WCAG AA requires 4.5:1 for normal text, 3:1 for large text
       const fontSize = parseFloat(style.fontSize);
       const requiredContrast = fontSize >= 18 ? 3 : 4.5;
-      
+
       if (contrast < requiredContrast) {
-        issues.push(`Low contrast (${contrast.toFixed(2)}:1) on element with text "${text.substring(0, 20)}..."`);
+        issues.push(
+          `Low contrast (${contrast.toFixed(2)}:1) on element with text "${text.substring(0, 20)}..."`
+        );
       }
     });
-    
+
     return issues;
   });
 }
@@ -147,7 +156,7 @@ export async function testColorContrast(page: Page) {
  */
 export async function testFocusIndicators(page: Page) {
   const issues: string[] = [];
-  
+
   // Tab through all focusable elements and check for visible focus indicators
   const focusableSelectors = [
     'a[href]',
@@ -155,19 +164,19 @@ export async function testFocusIndicators(page: Page) {
     'input:not([disabled])',
     'select:not([disabled])',
     'textarea:not([disabled])',
-    '[tabindex]:not([tabindex="-1"])'
+    '[tabindex]:not([tabindex="-1"])',
   ];
-  
+
   for (const selector of focusableSelectors) {
     const elements = await page.locator(selector).all();
-    
+
     for (const element of elements) {
       await element.focus();
-      
-      const hasFocusIndicator = await element.evaluate((el) => {
+
+      const hasFocusIndicator = await element.evaluate(el => {
         const style = window.getComputedStyle(el);
         const focusStyle = window.getComputedStyle(el, ':focus');
-        
+
         // Check if there's a visible focus indicator
         return (
           style.outline !== 'none' ||
@@ -176,14 +185,16 @@ export async function testFocusIndicators(page: Page) {
           style.backgroundColor !== focusStyle.backgroundColor
         );
       });
-      
+
       if (!hasFocusIndicator) {
         const text = await element.textContent();
-        issues.push(`Missing focus indicator on ${selector}: "${text?.substring(0, 20)}..."`);
+        issues.push(
+          `Missing focus indicator on ${selector}: "${text?.substring(0, 20)}..."`
+        );
       }
     }
   }
-  
+
   return issues;
 }
 
@@ -193,14 +204,16 @@ export async function testFocusIndicators(page: Page) {
 export async function testAriaAttributes(page: Page) {
   return await page.evaluate(() => {
     const issues: string[] = [];
-    
+
     // Check for invalid ARIA attributes
-    const elementsWithAria = document.querySelectorAll('[aria-labelledby], [aria-describedby]');
-    
-    elementsWithAria.forEach((element) => {
+    const elementsWithAria = document.querySelectorAll(
+      '[aria-labelledby], [aria-describedby]'
+    );
+
+    elementsWithAria.forEach(element => {
       const labelledBy = element.getAttribute('aria-labelledby');
       const describedBy = element.getAttribute('aria-describedby');
-      
+
       if (labelledBy) {
         const ids = labelledBy.split(' ');
         ids.forEach(id => {
@@ -209,7 +222,7 @@ export async function testAriaAttributes(page: Page) {
           }
         });
       }
-      
+
       if (describedBy) {
         const ids = describedBy.split(' ');
         ids.forEach(id => {
@@ -219,23 +232,30 @@ export async function testAriaAttributes(page: Page) {
         });
       }
     });
-    
+
     // Check for missing required ARIA attributes
-    const rolesRequiringLabel = ['button', 'link', 'checkbox', 'radio', 'textbox'];
-    
+    const rolesRequiringLabel = [
+      'button',
+      'link',
+      'checkbox',
+      'radio',
+      'textbox',
+    ];
+
     rolesRequiringLabel.forEach(role => {
       const elements = document.querySelectorAll(`[role="${role}"]`);
-      elements.forEach((element) => {
-        const hasLabel = element.getAttribute('aria-label') || 
-                        element.getAttribute('aria-labelledby') ||
-                        element.textContent?.trim();
-        
+      elements.forEach(element => {
+        const hasLabel =
+          element.getAttribute('aria-label') ||
+          element.getAttribute('aria-labelledby') ||
+          element.textContent?.trim();
+
         if (!hasLabel) {
           issues.push(`Element with role="${role}" missing accessible label`);
         }
       });
     });
-    
+
     return issues;
   });
 }
@@ -249,9 +269,9 @@ export async function runA11yAudit(page: Page) {
     keyboardIssues: [] as string[],
     contrastIssues: [] as string[],
     focusIssues: [] as string[],
-    ariaIssues: [] as string[]
+    ariaIssues: [] as string[],
   };
-  
+
   try {
     // Run axe-core tests
     await testAccessibility(page, { skipFailures: true });
@@ -259,12 +279,12 @@ export async function runA11yAudit(page: Page) {
     const error = e as { violations?: unknown[] };
     results.axeViolations = (error.violations as never[]) || [];
   }
-  
+
   // Run custom tests
   results.keyboardIssues = await testKeyboardNavigation(page);
   results.contrastIssues = await testColorContrast(page);
   results.focusIssues = await testFocusIndicators(page);
   results.ariaIssues = await testAriaAttributes(page);
-  
+
   return results;
 }
