@@ -1,19 +1,21 @@
 import { Howl } from 'howler';
 import type { LucideIcon } from 'lucide-react';
 import {
-  AlertTriangle,
-  Ban,
-  Castle,
   Clock,
-  Crown,
+  Flag,
   Handshake,
-  Mail,
-  Move,
-  Play,
+  Shield,
   Swords,
   Trophy,
   Users,
+  UserPlus,
 } from 'lucide-react';
+import {
+  ChessBan,
+  ChessCastle,
+  ChessKnight,
+  ChessPromotion,
+} from '@/components/icons/ChessIcons';
 
 // Define all possible event types in the game
 export const eventTypes = [
@@ -38,15 +40,15 @@ export const eventMetadata: Record<
   EventType,
   { name: string; icon: LucideIcon }
 > = {
-  'game-invite': { name: 'Game Invite', icon: Mail },
-  'game-start': { name: 'Game Start', icon: Play },
-  ban: { name: 'Ban', icon: Ban },
-  move: { name: 'Move', icon: Move },
+  'game-invite': { name: 'Game Invite', icon: UserPlus },
+  'game-start': { name: 'Game Start', icon: Flag },
+  ban: { name: 'Ban', icon: ChessBan as unknown as LucideIcon },
+  move: { name: 'Move', icon: ChessKnight as unknown as LucideIcon },
   'opponent-move': { name: 'Opponent Move', icon: Users },
   capture: { name: 'Capture', icon: Swords },
-  castle: { name: 'Castle', icon: Castle },
-  check: { name: 'Check', icon: AlertTriangle },
-  promote: { name: 'Promote', icon: Crown },
+  castle: { name: 'Castle', icon: ChessCastle as unknown as LucideIcon },
+  check: { name: 'Check', icon: Shield },
+  promote: { name: 'Promote', icon: ChessPromotion as unknown as LucideIcon },
   'draw-offer': { name: 'Draw Offer', icon: Handshake },
   'time-warning': { name: 'Time Warning', icon: Clock },
   'game-end': { name: 'Game End', icon: Trophy },
@@ -168,14 +170,41 @@ class SoundManager {
 
     // If it's a new sound file we haven't loaded yet, load it
     if (soundFile && !this.sounds.has(soundFile)) {
-      this.sounds.set(
-        soundFile,
-        new Howl({
-          src: [soundFile],
-          volume: this.volume,
-          preload: true,
-        })
-      );
+      // For blob URLs and data URLs, use native Audio instead of Howl
+      if (soundFile.startsWith('blob:') || soundFile.startsWith('data:')) {
+        // Create a simple wrapper that mimics Howl's interface
+        const audio = new Audio(soundFile);
+        audio.volume = this.volume;
+
+        const howlLike = {
+          play: () => {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+          },
+          stop: () => {
+            audio.pause();
+            audio.currentTime = 0;
+          },
+          volume: (v?: number) => {
+            if (v !== undefined) audio.volume = v;
+            return audio.volume;
+          },
+          state: () => 'loaded' as const,
+          load: () => {},
+        };
+
+        this.sounds.set(soundFile, howlLike as unknown as Howl);
+      } else {
+        // Regular files use Howl
+        this.sounds.set(
+          soundFile,
+          new Howl({
+            src: [soundFile],
+            volume: this.volume,
+            preload: true,
+          })
+        );
+      }
     }
 
     this.savePreferences();
@@ -239,8 +268,52 @@ class SoundManager {
     return this.volume;
   }
 
+  // Set global volume (0-1 scale)
+  setGlobalVolume(volume: number) {
+    this.setVolume(volume);
+  }
+
   toggleMute() {
     this.setEnabled(!this.enabled);
+  }
+
+  // Load a preset sound configuration
+  loadPreset(preset: 'classic' | 'modern' | 'minimal') {
+    const presets: Record<string, Partial<Record<EventType, string | null>>> = {
+      classic: {
+        'game-start': '/sounds/game-start.mp3',
+        move: '/sounds/move.mp3',
+        capture: '/sounds/capture.mp3',
+        castle: '/sounds/castle.mp3',
+        check: '/sounds/check.mp3',
+        'game-end': '/sounds/game-end.mp3',
+      },
+      modern: {
+        'game-start': '/sounds/digital-start.mp3',
+        move: '/sounds/digital-move.mp3',
+        capture: '/sounds/digital-capture.mp3',
+        check: '/sounds/digital-check.mp3',
+        'game-end': '/sounds/digital-end.mp3',
+      },
+      minimal: {
+        move: '/sounds/soft-click.mp3',
+        capture: '/sounds/soft-capture.mp3',
+        check: '/sounds/soft-alert.mp3',
+      },
+    };
+
+    const selectedPreset = presets[preset];
+    if (selectedPreset) {
+      // Reset all sounds first
+      eventTypes.forEach(eventType => {
+        this.eventSoundMap[eventType] = null;
+      });
+
+      // Apply preset
+      Object.entries(selectedPreset).forEach(([event, sound]) => {
+        this.setEventSound(event as EventType, sound);
+      });
+    }
   }
 
   preloadAll() {
