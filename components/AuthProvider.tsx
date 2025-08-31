@@ -6,7 +6,8 @@ import type { AuthProvider as AuthProviderType } from '../types/auth';
 
 interface AuthContextType {
   user: {
-    userId: string;
+    userId: string; // This will be dbUserId if available, otherwise providerId
+    dbUserId?: string;
     username: string;
     provider: AuthProviderType;
   } | null;
@@ -19,10 +20,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function AuthContextProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
 
-  // Cast to our extended user type
+  // Cast to our extended user type, now including dbUserId
   const extendedUser = session?.user as
     | {
         providerId?: string;
+        dbUserId?: string;
         username?: string;
         provider?: AuthProviderType;
         name?: string | null;
@@ -34,7 +36,8 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   const user =
     extendedUser?.providerId && extendedUser?.username && extendedUser?.provider
       ? {
-          userId: extendedUser.providerId,
+          userId: extendedUser.dbUserId || extendedUser.providerId, // Prioritize dbUserId
+          dbUserId: extendedUser.dbUserId,
           username: extendedUser.username,
           provider: extendedUser.provider,
         }

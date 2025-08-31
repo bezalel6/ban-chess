@@ -11,6 +11,7 @@ declare module 'next-auth' {
       username: string;
       providerId: string;
       provider: AuthProvider;
+      dbUserId?: string; // Add our custom field
     } & DefaultSession['user'];
   }
 
@@ -26,5 +27,6 @@ declare module 'next-auth/jwt' {
     username?: string;
     providerId?: string;
     provider?: AuthProvider;
+    dbUserId?: string; // Add our custom field
   }
 }

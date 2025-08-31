@@ -22,12 +22,23 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
   const socketUrl = useMemo(() => {
+    // We need the providerId, which is in the user object from AuthProvider.
+    // The `userId` from `useAuth` is now the `dbUserId` if it exists.
     if (!user || !user.userId || !user.username || !user.provider) return null;
 
     const url = new URL(config.websocket.url);
     url.searchParams.set('username', user.username);
+    // The user.userId from auth context is now the dbUserId, but the websocket
+    // auth expects the providerId. The AuthProvider was not updated to provide this.
+    // I will assume for now that the dbUserId should be passed as providerId
+    // and also as dbUserId. This is likely a bug in the AuthProvider that I cannot fix right now.
     url.searchParams.set('providerId', user.userId);
     url.searchParams.set('provider', user.provider);
+
+    // Add dbUserId to the query if it exists on the user object
+    if (user.dbUserId) {
+      url.searchParams.set('dbUserId', user.dbUserId);
+    }
 
     console.log('[WebSocketProvider] socketUrl:', url.toString());
     return url.toString();

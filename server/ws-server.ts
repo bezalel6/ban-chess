@@ -1129,8 +1129,22 @@ wss.on('connection', (ws: WebSocket, request) => {
           });
 
           // Ensure user exists in PostgreSQL
+          const dbId = authToken?.dbUserId;
+          if (!dbId) {
+            console.error(
+              `[create-solo-game] User ${currentPlayer.username} has no dbUserId. Cannot create game.`
+            );
+            ws.send(
+              JSON.stringify({
+                type: 'error',
+                message:
+                  'Internal server error: User account not fully configured.',
+              } as SimpleServerMsg)
+            );
+            return;
+          }
           await bufferedPersistence.upsertUser(
-            currentPlayer.userId,
+            dbId,
             currentPlayer.username
           );
 
