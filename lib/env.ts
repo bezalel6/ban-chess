@@ -125,7 +125,9 @@ class EnvConfig {
   getDatabaseConfig() {
     return {
       url: this.get('DATABASE_URL'),
-      ssl: this.isProduction(),
+      // Disable SSL for Coolify's internal PostgreSQL
+      // Coolify uses Docker internal networking without SSL
+      ssl: false,
       maxConnections: this.getNumber('DB_MAX_CONNECTIONS', 20),
       connectionTimeout: this.getNumber('DB_CONNECTION_TIMEOUT', 5000),
     };
