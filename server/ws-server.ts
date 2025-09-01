@@ -939,6 +939,13 @@ wss.on('connection', async (ws: WebSocket, request) => {
         await syncPlayerPresence(currentPlayer.userId, 'online');
       }
 
+      // Ensure user exists in PostgreSQL for authenticated users
+      // This handles OAuth users who may not have been synced yet
+      await bufferedPersistence.upsertUser(userId, authToken.username);
+
+      // Update authToken with dbUserId for future operations
+      authToken.dbUserId = userId;
+
       // Save player session to Redis
       await savePlayerSession(currentPlayer.userId, {
         userId: currentPlayer.userId,
@@ -1046,6 +1053,9 @@ wss.on('connection', async (ws: WebSocket, request) => {
 
           currentPlayer = { userId, username, ws };
           authenticatedPlayers.set(ws, currentPlayer);
+
+          // Ensure user exists in PostgreSQL
+          await bufferedPersistence.upsertUser(userId, username);
 
           // Sync connection to database
           const socketId = (ws as ExtendedWebSocket).socketId;

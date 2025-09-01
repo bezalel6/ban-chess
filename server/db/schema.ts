@@ -12,6 +12,7 @@ import {
   real,
   inet,
   uniqueIndex,
+  sql,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -307,12 +308,9 @@ export const playerPresence = pgTable(
       onDelete: 'set null',
     }),
     lastHeartbeat: timestamp('last_heartbeat').defaultNow().notNull(),
-    clientInfo: jsonb('client_info')
-      .$type<{
-        version?: string;
-        platform?: string;
-      }>()
-      .default({}),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   table => ({
@@ -389,8 +387,12 @@ export const connections = pgTable(
     connectedAt: timestamp('connected_at').defaultNow().notNull(),
     disconnectedAt: timestamp('disconnected_at'),
     ipAddress: inet('ip_address'),
-    transport: varchar('transport', { length: 20 }), // 'websocket', 'polling'
-    clientVersion: varchar('client_version', { length: 20 }),
+    transport: varchar('transport', { length: 20 })
+      .default('websocket')
+      .notNull(),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`),
   },
   table => ({
     userIdx: index('idx_conn_user').on(table.userId),
