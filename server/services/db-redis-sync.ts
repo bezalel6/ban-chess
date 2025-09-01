@@ -21,6 +21,7 @@ import {
 } from '../redis';
 import { eq, and, isNull, lt } from 'drizzle-orm';
 import type { TimeControl } from '../../lib/game-types';
+import { toUUID } from '../utils/uuid-converter';
 
 // Sync status types
 type SyncStatus = 'pending' | 'synced' | 'failed' | 'stale';
@@ -214,11 +215,14 @@ export async function syncPlayerPresence(
   status: 'online' | 'offline' | 'in_game' | 'away'
 ): Promise<void> {
   try {
+    // Use centralized UUID converter
+    const validUserId = toUUID(userId);
+
     // Update database
     await db
       .insert(playerPresence)
       .values({
-        userId,
+        userId: validUserId,
         status,
         lastHeartbeat: new Date(),
         updatedAt: new Date(),
@@ -313,9 +317,12 @@ export async function syncConnection(
 ): Promise<void> {
   try {
     if (action === 'connect') {
+      // Convert userId to UUID if provided
+      const validUserId = userId ? toUUID(userId) : null;
+
       await db.insert(connections).values({
         socketId,
-        userId,
+        userId: validUserId,
         connectedAt: new Date(),
         transport: 'websocket',
       });
