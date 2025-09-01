@@ -1,5 +1,6 @@
 import { db, games, moves, gameEvents, users } from '../db';
 import { eq, and, sql } from 'drizzle-orm';
+import { v5 as uuidv5 } from 'uuid';
 
 interface BufferedMove {
   gameId: string;
@@ -205,12 +206,21 @@ export class BufferedPersistenceService {
     username: string,
     email?: string
   ): Promise<void> {
+    // Check if userId is a valid UUID, if not generate one deterministically from username
+    const UUID_REGEX =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = UUID_REGEX.test(userId)
+      ? userId
+      : uuidv5(userId, uuidv5.URL); // Generate deterministic UUID from non-UUID userId
+
     await db
       .insert(users)
       .values({
-        id: userId,
+        id: validUserId,
         username,
         email,
+        provider: UUID_REGEX.test(userId) ? 'oauth' : 'guest',
+        providerId: !UUID_REGEX.test(userId) ? userId : undefined,
       })
       .onConflictDoUpdate({
         target: users.id,
@@ -230,10 +240,26 @@ export class BufferedPersistenceService {
     isSoloGame: boolean;
     timeControl?: { initial: number; increment: number };
   }): Promise<void> {
+    const UUID_REGEX =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Convert non-UUID player IDs to UUIDs
+    const whiteId = gameData.whitePlayerId
+      ? UUID_REGEX.test(gameData.whitePlayerId)
+        ? gameData.whitePlayerId
+        : uuidv5(gameData.whitePlayerId, uuidv5.URL)
+      : undefined;
+
+    const blackId = gameData.blackPlayerId
+      ? UUID_REGEX.test(gameData.blackPlayerId)
+        ? gameData.blackPlayerId
+        : uuidv5(gameData.blackPlayerId, uuidv5.URL)
+      : undefined;
+
     await db.insert(games).values({
       id: gameData.id,
-      whitePlayerId: gameData.whitePlayerId,
-      blackPlayerId: gameData.blackPlayerId,
+      whitePlayerId: whiteId,
+      blackPlayerId: blackId,
       isSoloGame: gameData.isSoloGame,
       timeControl: gameData.timeControl,
     });
