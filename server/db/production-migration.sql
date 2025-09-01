@@ -140,7 +140,39 @@ CREATE TABLE IF NOT EXISTS system_settings (
     modified_by UUID REFERENCES users(id)
 );
 
--- Create move_buffer table
+-- Create moves table (for game history)
+CREATE TABLE IF NOT EXISTS moves (
+    id SERIAL PRIMARY KEY,
+    game_id UUID REFERENCES games(id) ON DELETE CASCADE NOT NULL,
+    move_number INTEGER NOT NULL,
+    color VARCHAR(5) NOT NULL,
+    notation VARCHAR(10) NOT NULL,
+    uci VARCHAR(10),
+    fen_after VARCHAR(100) NOT NULL,
+    clock_white INTEGER,
+    clock_black INTEGER,
+    is_ban BOOLEAN DEFAULT false NOT NULL,
+    evaluation REAL,
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL
+);
+
+-- Create game_events table
+CREATE TABLE IF NOT EXISTS game_events (
+    id SERIAL PRIMARY KEY,
+    game_id UUID REFERENCES games(id) ON DELETE CASCADE NOT NULL,
+    player_id UUID REFERENCES users(id),
+    event_type VARCHAR(50) NOT NULL,
+    event_data JSONB NOT NULL,
+    move_number INTEGER,
+    fen_after VARCHAR(150),
+    time_remaining_white INTEGER,
+    time_remaining_black INTEGER,
+    is_critical BOOLEAN DEFAULT false NOT NULL,
+    acknowledged BOOLEAN DEFAULT false NOT NULL,
+    timestamp TIMESTAMP DEFAULT NOW() NOT NULL
+);
+
+-- Create move_buffer table (for buffered persistence)
 CREATE TABLE IF NOT EXISTS move_buffer (
     id SERIAL PRIMARY KEY,
     game_id UUID NOT NULL,
@@ -191,6 +223,14 @@ CREATE INDEX IF NOT EXISTS idx_admin_actions_timestamp ON admin_actions(timestam
 CREATE INDEX IF NOT EXISTS idx_admin_actions_action ON admin_actions(action);
 
 CREATE INDEX IF NOT EXISTS idx_system_settings_modified ON system_settings(last_modified);
+
+CREATE INDEX IF NOT EXISTS idx_moves_game_id ON moves(game_id);
+CREATE INDEX IF NOT EXISTS idx_moves_move_number ON moves(game_id, move_number);
+
+CREATE INDEX IF NOT EXISTS idx_game_events_game_id ON game_events(game_id);
+CREATE INDEX IF NOT EXISTS idx_game_events_player_id ON game_events(player_id);
+CREATE INDEX IF NOT EXISTS idx_game_events_timestamp ON game_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_game_events_type ON game_events(event_type);
 
 CREATE INDEX IF NOT EXISTS idx_move_buffer_game_id ON move_buffer(game_id);
 CREATE INDEX IF NOT EXISTS idx_move_buffer_created_at ON move_buffer(created_at);
