@@ -89,7 +89,7 @@ export async function upsertUserFromOAuth(
       );
     } else {
       // Check if user exists by email (for account linking)
-      let existingUser = null;
+      let existingUser;
       if (oauthUser.email) {
         existingUser = await db.query.users.findFirst({
           where: eq(users.email, oauthUser.email),
