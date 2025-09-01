@@ -23,6 +23,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Install PostgreSQL client for migrations
+RUN apk add --no-cache postgresql-client bash
+
 # Create a non-root user for security.
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S wsuser -u 1001
@@ -35,13 +38,17 @@ RUN npm install --only=production --legacy-peer-deps
 # Copy the built server from the builder stage.
 COPY --from=builder --chown=wsuser:nodejs /app/server/dist ./server/dist
 
-USER wsuser
+# Copy migration scripts (as root for execution permissions)
+COPY --chown=root:root ./server/db/production-migration.sql ./server/db/
+COPY --chown=root:root ./scripts/ensure-db.sh ./scripts/
+RUN chmod +x ./scripts/ensure-db.sh
+
+# Run migrations as root, then switch to wsuser
+USER root
+ENTRYPOINT ["/bin/sh", "-c", "./scripts/ensure-db.sh && su wsuser -c 'node server/dist/ws-server.js'"]
 
 EXPOSE 3001
 
 # Health check for WebSocket server
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3002/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})" || exit 1
-
-# Run the built WebSocket server
-CMD ["node", "server/dist/ws-server.js"]
