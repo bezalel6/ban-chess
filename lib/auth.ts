@@ -5,6 +5,7 @@ import {
   upsertUserFromOAuth,
   getUserByEmail,
   canUserLogin,
+  createGuestUser,
 } from '../server/auth/nextauth-db-sync';
 import { generateUniqueUsername } from '../server/auth/username-validator';
 import { generateChessGuestName } from './chess-guest-names';
@@ -123,11 +124,21 @@ export const authOptions = {
             throw new Error(sanitizedReason);
           }
         } else if (account?.provider === 'guest') {
-          // Create guest user with unique username
+          // Create guest user with unique username and database entry
           const guestUsername = await generateUniqueUsername(
             user.name || 'Guest'
           );
           user.name = guestUsername; // Update the guest name to be unique
+
+          // Create database entry for guest user
+          const dbUser = await createGuestUser({
+            guestId: user.id,
+            username: guestUsername,
+            email: user.email || undefined,
+          });
+
+          // Store the database ID for later use
+          user.dbUserId = dbUser.id;
         }
 
         return true; // Allow sign in
@@ -182,10 +193,13 @@ export const authOptions = {
           }
           // Handle Guest login (CredentialsProvider)
           else if (account.provider === 'guest' && user) {
+            // For guests, we need to retrieve the dbUserId that was set during signIn
+            // Since user.dbUserId is set in signIn callback, we can use it here
             token.username = user.name;
             token.providerId = user.id;
             token.provider = 'guest';
             token.role = 'guest';
+            token.dbUserId = user.dbUserId; // This was set in the signIn callback
           }
         }
         return token;

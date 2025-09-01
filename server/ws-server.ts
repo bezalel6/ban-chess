@@ -33,11 +33,21 @@ import {
 } from './redis';
 import { bufferedPersistence } from './persistence/buffered-persistence';
 import { gameArchiver } from './persistence/game-archiver';
+import {
+  initializeSyncService,
+  syncConnection,
+  syncPlayerPresence,
+} from './services/db-redis-sync';
 
 interface Player {
   userId: string;
   username: string;
   ws: WebSocket;
+}
+
+// Extend WebSocket type to include our custom properties
+interface ExtendedWebSocket extends WebSocket {
+  socketId?: string;
 }
 
 // In-memory cache for active connections and time managers
@@ -880,12 +890,16 @@ setInterval(() => {
   });
 }, PING_INTERVAL);
 
-wss.on('connection', (ws: WebSocket, request) => {
+wss.on('connection', async (ws: WebSocket, request) => {
   // Only log if debug mode is enabled
   // console.log('New client connected');
   // Initialize with current time so they don't get disconnected immediately
   lastPong.set(ws, Date.now());
   lastPing.set(ws, Date.now());
+
+  // Track connection in database
+  const socketId = uuidv4();
+  (ws as ExtendedWebSocket).socketId = socketId;
 
   ws.on('pong', () => {
     // Update last pong time when we receive a pong
@@ -917,6 +931,13 @@ wss.on('connection', (ws: WebSocket, request) => {
         ws,
       };
       authenticatedPlayers.set(ws, currentPlayer);
+
+      // Sync connection to database
+      const socketId = (ws as ExtendedWebSocket).socketId;
+      if (socketId) {
+        await syncConnection(socketId, currentPlayer.userId, 'connect');
+        await syncPlayerPresence(currentPlayer.userId, 'online');
+      }
 
       // Save player session to Redis
       await savePlayerSession(currentPlayer.userId, {
@@ -1025,6 +1046,13 @@ wss.on('connection', (ws: WebSocket, request) => {
 
           currentPlayer = { userId, username, ws };
           authenticatedPlayers.set(ws, currentPlayer);
+
+          // Sync connection to database
+          const socketId = (ws as ExtendedWebSocket).socketId;
+          if (socketId) {
+            await syncConnection(socketId, userId, 'connect');
+            await syncPlayerPresence(userId, 'online');
+          }
 
           // Save player session to Redis
           await savePlayerSession(userId, {
@@ -1143,10 +1171,7 @@ wss.on('connection', (ws: WebSocket, request) => {
             );
             return;
           }
-          await bufferedPersistence.upsertUser(
-            dbId,
-            currentPlayer.username
-          );
+          await bufferedPersistence.upsertUser(dbId, currentPlayer.username);
 
           // Create time manager
           if (timeControl) {
@@ -1545,10 +1570,20 @@ wss.on('connection', (ws: WebSocket, request) => {
   ws.on('close', async () => {
     // Only log if debug mode is enabled
     // console.log('Client disconnected');
+
+    // Sync connection disconnect to database
+    const socketId = (ws as ExtendedWebSocket).socketId;
+    if (socketId && currentPlayer) {
+      await syncConnection(socketId, currentPlayer.userId, 'disconnect');
+    } else if (socketId) {
+      await syncConnection(socketId, null, 'disconnect');
+    }
+
     if (currentPlayer) {
       authenticatedPlayers.delete(ws);
       await removeFromQueue(currentPlayer.userId);
       await removePlayerSession(currentPlayer.userId);
+      await syncPlayerPresence(currentPlayer.userId, 'offline');
 
       const gameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
       if (gameId) {
@@ -1596,6 +1631,9 @@ const healthServer = createServer((req, res) => {
     res.end('Not Found');
   }
 });
+
+// Initialize database-Redis sync service
+initializeSyncService();
 
 // Start health check server on port 3002
 healthServer.listen(3002, () => {
