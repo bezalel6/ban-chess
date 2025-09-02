@@ -41,6 +41,13 @@ export function useGameState() {
   // Connection status - use centralized authentication
   const connected = readyState === ReadyState.OPEN && wsAuthenticated;
 
+  // Helper to check if current game is a local/solo game
+  const isLocalGame = useMemo(() => {
+    if (!gameState || !gameState.players) return false;
+    // Solo games have both white and black player IDs set to the same user
+    return gameState.players.white?.id === gameState.players.black?.id;
+  }, [gameState]);
+
   // Get current state from BanChess instance
   const _fen = game?.fen() || null; // Used for debugging, not directly returned
   const activePlayer = game?.getActivePlayer();
@@ -379,19 +386,35 @@ export function useGameState() {
 
   const createSoloGame = useCallback(() => {
     if (connected) {
+      // Clear any existing local game state before creating new solo game
+      if (isLocalGame) {
+        setCurrentGameId(null);
+        setGameState(null);
+        setGame(null);
+        setGameEvents([]);
+        console.log("[GameState] Cleared old local game state before creating new solo game");
+      }
       send({ type: "create-solo-game" });
     } else {
       setError("Not connected to server. Please wait...");
     }
-  }, [connected, send]);
+  }, [connected, send, isLocalGame]);
 
   const joinQueue = useCallback(() => {
     if (connected) {
+      // Clear any existing local game state before joining online queue
+      if (isLocalGame) {
+        setCurrentGameId(null);
+        setGameState(null);
+        setGame(null);
+        setGameEvents([]);
+        console.log("[GameState] Cleared old local game state before joining online queue");
+      }
       send({ type: "join-queue" });
     } else {
       setError("Not connected to server. Please wait...");
     }
-  }, [connected, send]);
+  }, [connected, send, isLocalGame]);
 
   const leaveQueue = useCallback(() => {
     if (connected) {
@@ -428,11 +451,8 @@ export function useGameState() {
     if (currentGameId && connected) {
       send({ type: "resign", gameId: currentGameId });
       console.log("[GameState] Resigning game:", currentGameId);
-      // Clear game state immediately on resignation
-      setCurrentGameId(null);
-      setGameState(null);
-      setGame(null);
-      setGameEvents([]);
+      // Don't clear state immediately - let server confirmation handle cleanup
+      // This prevents stuttering and race conditions during resignation
     } else {
       console.warn(
         "[GameState] Cannot resign: not in game or not connected",
@@ -453,6 +473,7 @@ export function useGameState() {
     isAuthenticated: wsAuthenticated,
     currentGameId,
     gameEvents,
+    isLocalGame, // Helper to identify solo/practice games
 
     // Actions
     sendAction,
