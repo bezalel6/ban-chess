@@ -215,9 +215,20 @@ a {
     width: 100% !important;
     height: 100% !important;
     display: block !important;
-    position: relative !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
     /* Optimize for smooth piece animations */
     transform: translateZ(0);
+  }
+  
+  /* Force cg-container to align at top-right 0,0 */
+  .chess-board-inner cg-container {
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
   }
 
   /* Smooth resize container for performance - Lichess-inspired */
