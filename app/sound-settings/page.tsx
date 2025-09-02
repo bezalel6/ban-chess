@@ -12,6 +12,6 @@ export default async function SettingsPage() {
     redirect("/auth/signin");
   }
   
-  // Render the client component with the session
-  return <SettingsClient session={session} />;
+  // Render the client component (no longer needs session)
+  return <SettingsClient />;
 }

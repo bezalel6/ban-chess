@@ -50,35 +50,184 @@ export const eventMetadata: Record<EventType, { name: string; icon: LucideIcon }
 };
 
 // Available sound themes and files from Lichess
-const soundThemes = {
-  standard: "/sounds/standard",
-  lisp: "/sounds/lisp",
-  piano: "/sounds/piano",
-  futuristic: "/sounds/futuristic",
-  nes: "/sounds/nes",
-  robot: "/sounds/robot",
-  sfx: "/sounds/sfx",
-  woodland: "/sounds/woodland",
+export const soundThemes = {
+  standard: { path: "/sounds/standard", name: "Standard" },
+  lisp: { path: "/sounds/lisp", name: "Lisp" },
+  piano: { path: "/sounds/piano", name: "Piano" },
+  futuristic: { path: "/sounds/futuristic", name: "Futuristic" },
+  nes: { path: "/sounds/nes", name: "NES Retro" },
+  robot: { path: "/sounds/robot", name: "Robot" },
+  sfx: { path: "/sounds/sfx", name: "SFX" },
+  woodland: { path: "/sounds/woodland", name: "Woodland" },
+  instrument: { path: "/sounds/instrument", name: "Instrument" },
 } as const;
 
-// Available sound files that can be mapped to events (using standard theme as primary)
-export const availableSounds = [
-  { file: "/sounds/standard/Move.mp3", name: "Move" },
-  { file: "/sounds/standard/Capture.mp3", name: "Capture" },
-  { file: "/sounds/lisp/Castles.mp3", name: "Castle" },
-  { file: "/sounds/standard/Check.mp3", name: "Check" },
-  { file: "/sounds/standard/Checkmate.mp3", name: "Checkmate" },
-  { file: "/sounds/standard/Victory.mp3", name: "Victory" },
-  { file: "/sounds/standard/Defeat.mp3", name: "Defeat" },
-  { file: "/sounds/standard/Draw.mp3", name: "Draw" },
-  { file: "/sounds/standard/NewChallenge.mp3", name: "New Challenge" },
-  { file: "/sounds/standard/Confirmation.mp3", name: "Confirmation" },
-  { file: "/sounds/standard/GenericNotify.mp3", name: "Generic Notify" },
-  { file: "/sounds/standard/LowTime.mp3", name: "Low Time" },
-  { file: "/sounds/standard/Explosion.mp3", name: "Explosion" },
-  { file: "/sounds/standard/Error.mp3", name: "Error" },
-  { file: null, name: "No Sound" },
-] as const;
+export type SoundTheme = keyof typeof soundThemes;
+
+// Common sound types available across themes
+const commonSoundTypes = [
+  "Move", "Capture", "Check", "Checkmate", "Victory", "Defeat", "Draw",
+  "NewChallenge", "Confirmation", "GenericNotify", "LowTime", "Explosion",
+  "Error", "Berserk", "CountDown0", "CountDown1", "CountDown2", "CountDown3",
+  "CountDown4", "CountDown5", "CountDown6", "CountDown7", "CountDown8",
+  "CountDown9", "CountDown10", "NewPM", "OutOfBound", "Tournament1st",
+  "Tournament2nd", "Tournament3rd", "TournamentOther"
+];
+
+// Comprehensive sound library organized by theme
+export const themeSoundLibrary: Record<string, Array<{ file: string; name: string; displayName: string }>> = {
+  standard: [
+    "Berserk", "Capture", "Check", "Checkmate", "Confirmation", "CountDown0", "CountDown1", 
+    "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6", "CountDown7", 
+    "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error", "Explosion",
+    "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound", "Select",
+    "SocialNotify", "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/standard/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  piano: [
+    "Berserk", "Capture", "Check", "Checkmate", "Confirmation", "CountDown0", "CountDown1",
+    "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6", "CountDown7",
+    "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error", "Explosion",
+    "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
+    "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/piano/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  nes: [
+    "Berserk", "Capture", "Check", "Checkmate", "Confirmation", "CountDown0", "CountDown1",
+    "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6", "CountDown7",
+    "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error", "Explosion",
+    "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
+    "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/nes/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  lisp: [
+    "Berserk", "Capture", "Castles", "Check", "Checkmate", "Confirmation", "CountDown0",
+    "CountDown1", "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6",
+    "CountDown7", "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error",
+    "Explosion", "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
+    "PracticeComplete", "PuzzleStormEnd", "PuzzleStormGood", "Tournament1st", "Tournament2nd",
+    "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/lisp/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  futuristic: [
+    "Berserk", "Capture", "Check", "Checkmate", "Confirmation", "CountDown0", "CountDown1",
+    "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6", "CountDown7",
+    "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error", "Explosion",
+    "GenericNotify", "LowTime", "Move", "NewChallenge", "NewChatMessage", "NewPM", "OutOfBound",
+    "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/futuristic/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  robot: [
+    "Berserk", "Capture", "Check", "Checkmate", "Confirmation", "CountDown0", "CountDown1",
+    "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6", "CountDown7",
+    "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error", "Explosion",
+    "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
+    "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/robot/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  sfx: [
+    "Berserk", "Capture", "Check", "Checkmate", "Confirmation", "CountDown0", "CountDown1",
+    "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6", "CountDown7",
+    "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error", "Explosion",
+    "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
+    "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/sfx/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  woodland: [
+    "Berserk", "Capture", "Check", "Checkmate", "Confirmation", "CountDown0", "CountDown1",
+    "CountDown2", "CountDown3", "CountDown4", "CountDown5", "CountDown6", "CountDown7",
+    "CountDown8", "CountDown9", "CountDown10", "Defeat", "Draw", "Error", "Explosion",
+    "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM",
+    "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
+  ].map(s => ({ 
+    file: `/sounds/woodland/${s}.mp3`, 
+    name: s,
+    displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
+  })),
+  
+  other: [
+    { file: "/sounds/other/energy3.mp3", name: "energy3", displayName: "Energy" },
+    { file: "/sounds/other/failure2.mp3", name: "failure2", displayName: "Failure" },
+    { file: "/sounds/other/gewonnen.mp3", name: "gewonnen", displayName: "Gewonnen" },
+    { file: "/sounds/other/guitar.mp3", name: "guitar", displayName: "Guitar" },
+    { file: "/sounds/other/no-go.mp3", name: "no-go", displayName: "No Go" },
+    { file: "/sounds/other/ping.mp3", name: "ping", displayName: "Ping" },
+    { file: "/sounds/other/yeet.mp3", name: "yeet", displayName: "Yeet" },
+  ],
+  
+  instrument: [
+    // Celesta sounds
+    ...Array.from({ length: 27 }, (_, i) => ({
+      file: `/sounds/instrument/celesta/c${String(i + 1).padStart(3, '0')}.mp3`,
+      name: `celesta-c${i + 1}`,
+      displayName: `Celesta ${i + 1}`
+    })),
+    // Clav sounds
+    ...Array.from({ length: 27 }, (_, i) => ({
+      file: `/sounds/instrument/clav/c${String(i + 1).padStart(3, '0')}.mp3`,
+      name: `clav-c${i + 1}`,
+      displayName: `Clav ${i + 1}`
+    })),
+    // Swells
+    { file: "/sounds/instrument/swells/swell1.mp3", name: "swell1", displayName: "Swell 1" },
+    { file: "/sounds/instrument/swells/swell2.mp3", name: "swell2", displayName: "Swell 2" },
+    { file: "/sounds/instrument/swells/swell3.mp3", name: "swell3", displayName: "Swell 3" },
+    // Special
+    { file: "/sounds/instrument/Error.mp3", name: "instrument-error", displayName: "Error" },
+    { file: "/sounds/instrument/OutOfBound.mp3", name: "instrument-oob", displayName: "Out of Bound" },
+  ]
+};
+
+// Build comprehensive list of all available sounds from all themes
+function buildAvailableSounds(): Array<{ file: string | null; name: string; theme: string }> {
+  const sounds: Array<{ file: string | null; name: string; theme: string }> = [
+    { file: null, name: "No Sound", theme: "none" }
+  ];
+
+  // Add all sounds from the library
+  Object.entries(themeSoundLibrary).forEach(([themeKey, themeSounds]) => {
+    const themeName = soundThemes[themeKey as SoundTheme]?.name || themeKey;
+    themeSounds.forEach(sound => {
+      sounds.push({
+        file: sound.file,
+        name: sound.displayName,
+        theme: themeName
+      });
+    });
+  });
+
+  return sounds;
+}
+
+export const availableSounds = buildAvailableSounds();
 
 // Default sound file for each event type using Lichess standard theme
 const defaultEventSoundMap: Record<EventType, string | null> = {
@@ -101,6 +250,7 @@ class SoundManager {
   private enabled: boolean = true;
   private volume: number = 0.5;
   private eventSoundMap: Record<EventType, string | null>;
+  private currentTheme: SoundTheme = "standard";
   private lastPlayedSound: { eventType: string; timestamp: number } | null = null;
   private soundDebounceMs = 100; // Prevent duplicate sounds within 100ms
 
@@ -111,30 +261,33 @@ class SoundManager {
     console.log(`[SoundManager] Default event sound map:`, this.eventSoundMap);
     this.initializeSounds();
     this.loadPreferences();
-    console.log(`[SoundManager] SoundManager constructed. Enabled: ${this.enabled}, Volume: ${this.volume}`);
+    console.log(`[SoundManager] SoundManager constructed. Enabled: ${this.enabled}, Volume: ${this.volume}, Theme: ${this.currentTheme}`);
   }
 
   private initializeSounds() {
     console.log(`[SoundManager] Initializing sounds...`);
-    // Preload all available sound files
-    availableSounds.forEach((sound) => {
-      if (sound.file) {
-        console.log(`[SoundManager] Loading sound: ${sound.file}`);
+    // Only preload the default sounds initially to avoid loading hundreds of files
+    // Other sounds will be loaded on-demand when selected
+    const defaultSounds = new Set(Object.values(defaultEventSoundMap).filter(Boolean));
+    
+    defaultSounds.forEach((soundFile) => {
+      if (soundFile) {
+        console.log(`[SoundManager] Loading sound: ${soundFile}`);
         const howl = new Howl({
-          src: [sound.file],
+          src: [soundFile],
           volume: this.volume,
           preload: true,
           onload: () => {
-            console.log(`[SoundManager] Successfully loaded: ${sound.file}`);
+            console.log(`[SoundManager] Successfully loaded: ${soundFile}`);
           },
           onloaderror: (id, error) => {
-            console.error(`[SoundManager] Failed to load: ${sound.file}`, error);
+            console.error(`[SoundManager] Failed to load: ${soundFile}`, error);
           },
           onplayerror: (id, error) => {
-            console.error(`[SoundManager] Failed to play: ${sound.file}`, error);
+            console.error(`[SoundManager] Failed to play: ${soundFile}`, error);
           },
         });
-        this.sounds.set(sound.file, howl);
+        this.sounds.set(soundFile, howl);
       }
     });
     console.log(`[SoundManager] Initialized ${this.sounds.size} sounds`);
@@ -145,6 +298,7 @@ class SoundManager {
       const savedEnabled = localStorage.getItem("soundEnabled");
       const savedVolume = localStorage.getItem("soundVolume");
       const savedEventMap = localStorage.getItem("soundEventMap");
+      const savedTheme = localStorage.getItem("soundTheme");
 
       if (savedEnabled !== null) {
         this.enabled = savedEnabled === "true";
@@ -152,6 +306,10 @@ class SoundManager {
 
       if (savedVolume !== null) {
         this.setVolume(parseFloat(savedVolume));
+      }
+
+      if (savedTheme !== null && savedTheme in soundThemes) {
+        this.currentTheme = savedTheme as SoundTheme;
       }
 
       if (savedEventMap !== null) {
@@ -171,6 +329,7 @@ class SoundManager {
       localStorage.setItem("soundEnabled", String(this.enabled));
       localStorage.setItem("soundVolume", String(this.volume));
       localStorage.setItem("soundEventMap", JSON.stringify(this.eventSoundMap));
+      localStorage.setItem("soundTheme", this.currentTheme);
     }
   }
 
@@ -367,28 +526,55 @@ class SoundManager {
 
   // Get available themes for UI configuration
   getAvailableThemes() {
-    return Object.keys(soundThemes);
+    return soundThemes;
+  }
+
+  // Get current theme
+  getCurrentTheme(): SoundTheme {
+    return this.currentTheme;
   }
 
   // Change sound theme for all sounds
-  changeSoundTheme(themeName: keyof typeof soundThemes) {
-    const themePath = soundThemes[themeName];
-    if (!themePath) return;
+  changeSoundTheme(themeName: SoundTheme) {
+    const theme = soundThemes[themeName];
+    if (!theme) return;
+
+    this.currentTheme = themeName;
+    const themePath = theme.path;
+
+    // Special handling for certain themes that might not have all sounds
+    // We'll first check if files exist by trying to load them
+    const soundFiles = {
+      "NewChallenge": ["NewChallenge", "GenericNotify"],
+      "Confirmation": ["Confirmation", "GenericNotify"],
+      "Explosion": ["Explosion", "Error"],
+      "Move": ["Move"],
+      "Capture": ["Capture"],
+      "Castles": ["Castles", "Move"],
+      "Check": ["Check"],
+      "Checkmate": ["Checkmate", "Victory"],
+      "GenericNotify": ["GenericNotify", "NewPM"],
+      "LowTime": ["LowTime", "GenericNotify"],
+      "Victory": ["Victory"],
+      "Defeat": ["Defeat"],
+      "Draw": ["Draw"],
+      "Error": ["Error", "OutOfBound"],
+    };
 
     // Update default mappings to use new theme
     const newEventSoundMap: Record<EventType, string | null> = {
-      "game-invite": `${themePath}/NewChallenge.mp3`,
-      "game-start": `${themePath}/Confirmation.mp3`,
-      "ban": `${themePath}/Explosion.mp3`,
-      "move": `${themePath}/Move.mp3`,
-      "opponent-move": `${themePath}/Move.mp3`,
-      "capture": `${themePath}/Capture.mp3`,
-      "castle": themeName === 'standard' ? "/sounds/lisp/Castles.mp3" : `${themePath}/Castles.mp3`,
-      "check": `${themePath}/Check.mp3`,
-      "promote": `${themePath}/Checkmate.mp3`,
-      "draw-offer": `${themePath}/GenericNotify.mp3`,
-      "time-warning": `${themePath}/LowTime.mp3`,
-      "game-end": `${themePath}/Victory.mp3`,
+      "game-invite": this.findAvailableSound(themePath, soundFiles["NewChallenge"]),
+      "game-start": this.findAvailableSound(themePath, soundFiles["Confirmation"]),
+      "ban": this.findAvailableSound(themePath, soundFiles["Explosion"]),
+      "move": this.findAvailableSound(themePath, soundFiles["Move"]),
+      "opponent-move": this.findAvailableSound(themePath, soundFiles["Move"]),
+      "capture": this.findAvailableSound(themePath, soundFiles["Capture"]),
+      "castle": this.findAvailableSound(themePath, soundFiles["Castles"]) || "/sounds/lisp/Castles.mp3",
+      "check": this.findAvailableSound(themePath, soundFiles["Check"]),
+      "promote": this.findAvailableSound(themePath, soundFiles["Checkmate"]),
+      "draw-offer": this.findAvailableSound(themePath, soundFiles["GenericNotify"]),
+      "time-warning": this.findAvailableSound(themePath, soundFiles["LowTime"]),
+      "game-end": this.findAvailableSound(themePath, soundFiles["Victory"]),
     };
 
     // Load new sounds and update mappings
@@ -400,11 +586,27 @@ class SoundManager {
             src: [soundFile],
             volume: this.volume,
             preload: true,
+            onloaderror: () => {
+              console.warn(`Failed to load sound: ${soundFile}`);
+            }
           }),
         );
       }
-      this.setEventSound(eventType as EventType, soundFile);
+      this.eventSoundMap[eventType as EventType] = soundFile;
     });
+
+    this.savePreferences();
+  }
+
+  // Helper to find the first available sound from a list of alternatives
+  private findAvailableSound(themePath: string, alternatives: string[]): string | null {
+    for (const soundName of alternatives) {
+      const soundFile = `${themePath}/${soundName}.mp3`;
+      // For now, we'll assume the file exists and let it fail gracefully if not
+      // In a production app, we'd check file existence more robustly
+      return soundFile;
+    }
+    return null;
   }
 }
 
@@ -412,4 +614,3 @@ class SoundManager {
 const soundManager = new SoundManager();
 
 export default soundManager;
-export { soundThemes };

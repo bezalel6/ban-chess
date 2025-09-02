@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (!username) {
       return NextResponse.json(
         { error: "Username parameter is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (validationError) {
       return NextResponse.json(
         { available: false, error: validationError },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     console.error("[API] Username check error:", error);
     return NextResponse.json(
       { error: "Failed to check username availability" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (!session?.user) {
       return NextResponse.json(
         { error: "Authentication required" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           error:
             "Guest users cannot change usernames. Please sign in with Lichess or Google.",
         },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
 
     if (lastChange) {
       const timeSinceLastChange = Date.now() - parseInt(lastChange);
-      const cooldownPeriod = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+      const cooldownPeriod = 15 * 60 * 1000; //15 minutes for now
+      // const cooldownPeriod = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
       if (timeSinceLastChange < cooldownPeriod) {
         const remainingTime = cooldownPeriod - timeSinceLastChange;
@@ -84,10 +85,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(
           {
-            error: `You can only change your username once every 7 days. Please wait ${daysRemaining} more day${daysRemaining === 1 ? "" : "s"}.`,
+            // TODO these should not be hard coded but generate according to centralized settings
+            error: `You can only change your username once every 7 days. Please wait ${daysRemaining} more day${
+              daysRemaining === 1 ? "" : "s"
+            }.`,
             nextChangeAvailable: Date.now() + remainingTime,
           },
-          { status: 429 },
+          { status: 429 }
         );
       }
     }
@@ -98,7 +102,7 @@ export async function POST(request: NextRequest) {
     if (!newUsername) {
       return NextResponse.json(
         { error: "New username is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -106,7 +110,7 @@ export async function POST(request: NextRequest) {
     if (newUsername.toLowerCase() === session.user.username.toLowerCase()) {
       return NextResponse.json(
         { error: "This is already your username" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -116,7 +120,7 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || "Failed to change username" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     // Update player session in Redis with new username
     const playerSession = await redis.get(
-      KEYS.PLAYER_SESSION(session.user.providerId),
+      KEYS.PLAYER_SESSION(session.user.providerId)
     );
     if (playerSession) {
       const sessionData = JSON.parse(playerSession);
@@ -134,7 +138,7 @@ export async function POST(request: NextRequest) {
       sessionData.usernameChangedAt = Date.now();
       await redis.set(
         KEYS.PLAYER_SESSION(session.user.providerId),
-        JSON.stringify(sessionData),
+        JSON.stringify(sessionData)
       );
     }
 
@@ -147,7 +151,7 @@ export async function POST(request: NextRequest) {
         oldUsername: session.user.username,
         newUsername: newUsername,
         timestamp: Date.now(),
-      }),
+      })
     );
 
     return NextResponse.json({
@@ -161,7 +165,7 @@ export async function POST(request: NextRequest) {
     console.error("[API] Username update error:", error);
     return NextResponse.json(
       { error: "Failed to update username" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

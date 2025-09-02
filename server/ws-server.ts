@@ -101,14 +101,31 @@ const wss = new WebSocketServer({
   },
 });
 
-console.log(`[WebSocket] Server started on port 3001`);
-console.log(
-  `[WebSocket] Environment: ${process.env.NODE_ENV || "development"}`,
-);
-console.log(`[WebSocket] Allowed origins: ${allowedOrigins.join(", ")}`);
-console.log(
-  `[WebSocket] Redis URL: ${process.env.REDIS_URL || "redis://localhost:6379"}`,
-);
+// Enhanced startup logging with environment validation
+console.log("\n" + "=".repeat(60));
+console.log("🎮 BanChess WebSocket Server Starting...");
+console.log("=".repeat(60));
+console.log(`📍 Port: 3001`);
+console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+console.log(`🔗 Allowed origins: ${allowedOrigins.join(", ")}`);
+console.log(`📦 Redis URL: ${process.env.REDIS_URL || "redis://localhost:6379"}`);
+
+// Check Redis connection on startup
+redis.ping().then(() => {
+  console.log("✅ Redis connection: OK");
+}).catch((err) => {
+  console.error("❌ Redis connection FAILED:", err.message);
+  console.error("🔍 Troubleshooting:");
+  console.error("   1. Check if Redis is running: docker ps");
+  console.error("   2. Start Redis: docker run -d -p 6379:6379 redis");
+  console.error("   3. Verify connection: redis-cli ping");
+});
+
+console.log("\n📝 Quick Reference:");
+console.log("   • Health check: http://localhost:3002/health");
+console.log("   • WebSocket URL: ws://localhost:3001");
+console.log("   • Graceful shutdown: Ctrl+C");
+console.log("=".repeat(60) + "\n");
 console.log(
   `[WebSocket] NEXTAUTH_SECRET loaded: ${!!process.env.NEXTAUTH_SECRET}`,
 );

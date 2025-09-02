@@ -280,11 +280,12 @@ export async function reserveUsername(
 }
 
 /**
- * Attempt to change a user's username with full validation
+ * Attempt to change a user's username with full validation and database update
  */
 export async function changeUsername(
   currentUsername: string,
   newUsername: string,
+  userId?: string,
 ): Promise<{ success: boolean; error?: string }> {
   // Validate the new username
   const validationError = validateUsername(newUsername);
@@ -296,6 +297,25 @@ export async function changeUsername(
   const available = await isUsernameAvailable(newUsername);
   if (!available) {
     return { success: false, error: "This username is not available" };
+  }
+
+  // Update the username in the database if userId is provided
+  if (userId) {
+    try {
+      // Import prisma only when needed to avoid circular dependencies
+      const { default: prisma } = await import('./prisma');
+      
+      await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          username: newUsername,
+          updatedAt: new Date()
+        }
+      });
+    } catch (error) {
+      console.error("[Username] Failed to update username in database:", error);
+      return { success: false, error: "Failed to update username in database" };
+    }
   }
 
   // Reserve the old username to prevent immediate reuse

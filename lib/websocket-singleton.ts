@@ -55,10 +55,20 @@ class WebSocketSingleton {
     // Create new connection
     const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:3001';
     console.log('[WS Singleton] Creating new connection for', user.username, 'to', wsUrl);
-    this.ws = new WebSocket(wsUrl);
+    
+    try {
+      this.ws = new WebSocket(wsUrl);
+    } catch (error) {
+      console.error('[WS Singleton] ❌ Failed to create WebSocket connection:', error);
+      console.error('[WS Singleton] 🔍 Check that:');
+      console.error('  1. WebSocket server is running on', wsUrl);
+      console.error('  2. NEXT_PUBLIC_WEBSOCKET_URL is set correctly');
+      throw error;
+    }
 
     this.ws.onopen = () => {
-      console.log('[WS Singleton] Connected, authenticating...');
+      console.log('[WS Singleton] ✅ Connected to', wsUrl);
+      console.log('[WS Singleton] 🔐 Authenticating as', user.username);
       this.send({ 
         type: 'authenticate', 
         userId: user.userId || '', 
@@ -69,28 +79,46 @@ class WebSocketSingleton {
     this.ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data) as SimpleServerMsg;
-        console.log('[WS Singleton] Received:', msg.type);
+        console.log('[WS Singleton] 📥 Received:', msg.type);
         
         if (msg.type === 'authenticated') {
           this.isAuthenticated = true;
-          console.log('[WS Singleton] Authenticated successfully');
+          console.log('[WS Singleton] ✅ Authenticated successfully');
+        } else if (msg.type === 'error') {
+          console.error('[WS Singleton] ❌ Server error:', msg.message);
         }
         
         // Notify all listeners
         this.listeners.forEach(listener => listener(msg));
       } catch (error) {
-        console.error('[WS Singleton] Parse error:', error);
+        console.error('[WS Singleton] ❌ Parse error:', error);
+        console.error('[WS Singleton] Raw message:', event.data);
       }
     };
 
-    this.ws.onclose = () => {
-      console.log('[WS Singleton] Connection closed');
+    this.ws.onclose = (event) => {
+      console.log('[WS Singleton] 🔌 Connection closed');
+      console.log('[WS Singleton] Close code:', event.code, 'Reason:', event.reason || 'No reason provided');
+      
+      if (event.code === 1006) {
+        console.error('[WS Singleton] ❌ Abnormal closure - likely server crashed or network issue');
+        console.error('[WS Singleton] 🔍 Check:');
+        console.error('  1. WebSocket server logs for crashes');
+        console.error('  2. Redis is running (docker ps or redis-cli ping)');
+        console.error('  3. Network connectivity');
+      }
+      
       this.isAuthenticated = false;
       // Don't set ws to null here - let reconnect handle it
     };
 
     this.ws.onerror = (error) => {
-      console.error('[WS Singleton] Error:', error);
+      console.error('[WS Singleton] ❌ WebSocket error:', error);
+      console.error('[WS Singleton] 🔍 Common causes:');
+      console.error('  1. WebSocket server not running');
+      console.error('  2. Wrong URL:', wsUrl);
+      console.error('  3. CORS/Authentication issues');
+      console.error('  4. Check browser console network tab for details');
     };
   }
 

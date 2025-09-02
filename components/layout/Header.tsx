@@ -50,12 +50,12 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
                 Profile
               </Link>
               <Link
-                href="/settings"
+                href="/sound-settings"
                 className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
                 <Settings className="h-4 w-4 mr-2" />
-                Settings
+                Sound Settings
               </Link>
               <div className="border-t border-border my-1"></div>
             </>

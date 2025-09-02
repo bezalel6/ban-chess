@@ -191,24 +191,34 @@ a {
   .text-section { @apply text-2xl font-bold leading-tight; }
   .text-card-title { @apply text-xl font-semibold leading-tight; }
 
-  /* Volume slider custom styling */
-  input[type="range"]::-webkit-slider-thumb {
+  /* Volume slider custom styling with orange knob */
+  .volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #4ade80;
+    width: 12px;
+    height: 12px;
+    background: rgb(251, 127, 36); /* Same orange as track */
     border-radius: 50%;
     cursor: pointer;
+    transition: transform 0.15s ease;
   }
 
-  input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: #4ade80;
+  .volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: rgb(251, 127, 36); /* Same orange as track */
     border-radius: 50%;
     cursor: pointer;
     border: none;
+    transition: transform 0.15s ease;
+  }
+  
+  .volume-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+  
+  .volume-slider::-moz-range-thumb:hover {
+    transform: scale(1.15);
   }
 
   /* Outer container for styling - padding gives space for coordinates */
