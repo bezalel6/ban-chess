@@ -105,8 +105,7 @@ const ChessBoard = memo(function ChessBoard({
   // Extract values - ban from FEN, action from context
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
   const nextAction = currentAction; // From GameRoleContext which gets it from BanChess
-  const isInCheck = false; // TODO: Get from BanChess instance if needed for UI
-
+  const isInCheck = game?.inCheck() || false; // Get actual check state from BanChess instance
   // Delay ban visualization to avoid NaN errors when board is not ready
   const [visibleBan, setVisibleBan] = useState<typeof currentBan>(null);
 
