@@ -8,6 +8,7 @@ import type { Move, Ban } from "@/lib/game-types";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 import WebSocketStats from "./WebSocketStats";
+import DebugPanel from "./game/DebugPanel";
 
 const ResizableBoard = dynamic(
   () =>
@@ -249,6 +250,13 @@ export default function GameClient({ gameId }: GameClientProps) {
         />
       </div>
       <WebSocketStats />
+      {debugMode && (
+        <DebugPanel 
+          gameState={gameState} 
+          game={game} 
+          dests={dests}
+        />
+      )}
     </>
   );
 }

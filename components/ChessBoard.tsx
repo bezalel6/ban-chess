@@ -73,15 +73,6 @@ const ChessBoard = memo(function ChessBoard({
     to: string;
   } | null>(null);
 
-  // Debug panel freeze state - frozen by default
-  const [frozen, setFrozen] = useState(true);
-  const [frozenConfig, setFrozenConfig] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
-
-  // Manual refresh state for forcing board remount
-  const [refreshKey, setRefreshKey] = useState(0);
 
   // Parse FEN data
   const fenData = useMemo(() => {
@@ -171,8 +162,8 @@ const ChessBoard = memo(function ChessBoard({
     [gameState, fenData, nextAction, onMove, onBan]
   );
 
-  // Simple board key - only remount on manual refresh
-  const boardKey = useMemo(() => `board-${refreshKey}`, [refreshKey]);
+  // Simple board key - stable to prevent unnecessary remounts
+  const boardKey = useMemo(() => `board-stable`, []);
 
   // Memoize config early to comply with Rules of Hooks
   const config: ReactChessGroundProps = useMemo(
@@ -251,86 +242,12 @@ const ChessBoard = memo(function ChessBoard({
     );
   }
 
-  // Create the debug config object
-  const debugConfig = {
-    fen: config.fen,
-    orientation: config.orientation,
-    movable: {
-      color: config.movable?.color,
-      dests: config.movable?.dests
-        ? Array.from(config.movable.dests.entries()).map(([k, v]) => [k, v])
-        : [],
-    },
-    drawable: config.drawable,
-    check: config.check,
-    lastMove: config.lastMove,
-    gameState: {
-      role,
-      turn: fenData?.turn,
-      activePlayer: currentActivePlayer,
-      action: currentAction,
-      canMove,
-      canBan,
-      visibleBan,
-    },
-  };
-
-  // Capture config when freezing
-  const handleFreeze = () => {
-    if (!frozen) {
-      // Freezing - capture current state
-      setFrozenConfig(debugConfig);
-    }
-    setFrozen(!frozen);
-  };
-
-  // Use frozen config if frozen and available, otherwise live config
-  const displayConfig = frozen && frozenConfig ? frozenConfig : debugConfig;
-
   return (
-    <>
-      <div className="chess-board-outer">
-        <div className="chess-board-inner">
-          <Chessground key={boardKey} {...config} />
-        </div>
+    <div className="chess-board-outer">
+      <div className="chess-board-inner">
+        <Chessground key={boardKey} {...config} />
       </div>
-      
-      {/* Debug JSON Panel - Fixed position in bottom right corner */}
-      <div className="fixed bottom-4 right-4 w-96 bg-gray-900 text-green-400 max-h-48 overflow-y-auto border-2 border-gray-700 rounded-lg z-[9999]">
-        <details className="p-2">
-          <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
-            <span>Board Config JSON (click to expand)</span>
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRefreshKey((prev) => prev + 1);
-                }}
-                className="px-2 py-1 text-xs rounded bg-yellow-600 text-white hover:bg-yellow-700"
-              >
-                🔄 Refresh Board
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFreeze();
-                }}
-                className={`px-2 py-1 text-xs rounded ${
-                  frozen
-                    ? "bg-blue-600 text-white"
-                    : "bg-green-600 text-white"
-                }`}
-              >
-                {frozen ? "❄️ Frozen" : "🔴 Live"}
-              </button>
-            </div>
-          </summary>
-          <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
-            {JSON.stringify(displayConfig, null, 2)}
-          </pre>
-        </details>
-      </div>
-    </>
+    </div>
   );
 });
 
