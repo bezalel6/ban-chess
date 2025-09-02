@@ -317,48 +317,48 @@ const ChessBoard = memo(function ChessBoard({
   const displayConfig = frozen && frozenConfig ? frozenConfig : debugConfig;
 
   return (
-    <>
+    <div className="relative">
       <div className="chess-board-outer">
         <div className="chess-board-inner">
           <Chessground key={boardKey} {...config} />
         </div>
+        {/* Debug JSON Panel - Below the board */}
+        <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 text-green-400 max-h-48 overflow-y-auto z-50 border-2 border-gray-700 rounded-lg">
+          <details className="p-2">
+            <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
+              <span>Board Config JSON (click to expand)</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRefreshKey(prev => prev + 1);
+                  }}
+                  className="px-2 py-1 text-xs rounded bg-yellow-600 text-white hover:bg-yellow-700"
+                >
+                  🔄 Refresh Board
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFreeze();
+                  }}
+                  className={`px-2 py-1 text-xs rounded ${
+                    frozen 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-green-600 text-white'
+                  }`}
+                >
+                  {frozen ? '❄️ Frozen' : '🔴 Live'}
+                </button>
+              </div>
+            </summary>
+            <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
+              {JSON.stringify(displayConfig, null, 2)}
+            </pre>
+          </details>
+        </div>
       </div>
-      {/* Debug JSON Panel - At the very bottom of the page */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-green-400 max-h-48 overflow-y-auto z-40 border-t-2 border-gray-700">
-        <details className="p-2">
-          <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
-            <span>Board Config JSON (click to expand)</span>
-            <div className="flex gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRefreshKey(prev => prev + 1);
-                }}
-                className="px-2 py-1 text-xs rounded bg-yellow-600 text-white hover:bg-yellow-700"
-              >
-                🔄 Refresh Board
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleFreeze();
-                }}
-                className={`px-2 py-1 text-xs rounded ${
-                  frozen 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-green-600 text-white'
-                }`}
-              >
-                {frozen ? '❄️ Frozen' : '🔴 Live'}
-              </button>
-            </div>
-          </summary>
-          <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
-            {JSON.stringify(displayConfig, null, 2)}
-          </pre>
-        </details>
-      </div>
-    </>
+    </div>
   );
 });
 
