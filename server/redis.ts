@@ -33,20 +33,35 @@ interface QueuePlayerData {
   joinedAt: number;
 }
 
+// Check if we're in a build environment where Redis shouldn't connect
+const isBuildTime = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
+const isStaticGeneration = process.env.NEXT_IS_STATIC_GENERATION === 'true';
+const shouldSkipRedis = isBuildTime || isStaticGeneration;
+
 // Redis connection configuration
 // Use REDIS_URL if provided, otherwise default to localhost
 // This allows both local development and production deployments to work
 const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-console.log("[Redis] Connecting to:", redisUrl.replace(/:[^:@]*@/, ":***@")); // Log URL with password hidden
+
+if (!shouldSkipRedis) {
+  console.log("[Redis] Connecting to:", redisUrl.replace(/:[^:@]*@/, ":***@")); // Log URL with password hidden
+} else {
+  console.log("[Redis] Skipping connection during build phase");
+}
 
 // Create main Redis client for general operations
 export const redis = new Redis(redisUrl, {
   retryStrategy: (times) => {
+    // Don't retry during build time
+    if (shouldSkipRedis) return null;
+    
     const delay = Math.min(times * 50, 2000);
     console.log(`[Redis] Reconnecting attempt ${times}, delay: ${delay}ms`);
     return delay;
   },
   reconnectOnError: (err) => {
+    if (shouldSkipRedis) return false;
+    
     const targetError = "READONLY";
     if (err.message.includes(targetError)) {
       console.log("[Redis] Reconnecting due to READONLY error");
@@ -54,9 +69,9 @@ export const redis = new Redis(redisUrl, {
     }
     return false;
   },
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  lazyConnect: false,
+  maxRetriesPerRequest: shouldSkipRedis ? 0 : 3,
+  enableReadyCheck: !shouldSkipRedis,
+  lazyConnect: true, // Enable lazy connection to prevent immediate connection during imports
 });
 
 // Create separate client for pub/sub (required by ioredis)
@@ -91,40 +106,70 @@ export const KEYS = {
   TIMER: (id: string) => `timer:${id}`,
 } as const;
 
-// Connection event handlers
-redis.on("connect", () => {
-  console.log("[Redis] ✅ Connected to Redis server");
-});
+// Connection event handlers - only set up if not in build mode
+if (!shouldSkipRedis) {
+  redis.on("connect", () => {
+    console.log("[Redis] ✅ Connected to Redis server");
+  });
 
-redis.on("ready", () => {
-  console.log("[Redis] ✅ Redis client ready");
-});
+  redis.on("ready", () => {
+    console.log("[Redis] ✅ Redis client ready");
+  });
 
-redis.on("error", (err) => {
-  // Check for authentication error
-  if (err.message && err.message.includes("NOAUTH")) {
-    console.error(
-      "[Redis] ❌ Authentication failed - Redis requires a password",
-    );
-    console.error(
-      "[Redis] Set REDIS_URL with password in environment: redis://:password@host:port",
-    );
-  } else {
-    console.error("[Redis] ❌ Redis connection error:", err);
+  redis.on("error", (err) => {
+    // Check for authentication error
+    if (err.message && err.message.includes("NOAUTH")) {
+      console.error(
+        "[Redis] ❌ Authentication failed - Redis requires a password",
+      );
+      console.error(
+        "[Redis] Set REDIS_URL with password in environment: redis://:password@host:port",
+      );
+    } else {
+      console.error("[Redis] ❌ Redis connection error:", err);
+    }
+  });
+
+  redis.on("close", () => {
+    console.log("[Redis] Connection closed");
+  });
+
+  redisSub.on("connect", () => {
+    console.log("[Redis] ✅ Subscriber connected");
+  });
+
+  redisPub.on("connect", () => {
+    console.log("[Redis] ✅ Publisher connected");
+  });
+} else {
+  // During build time, suppress error events to prevent build failures
+  redis.on("error", () => {
+    // Silently ignore Redis errors during build
+  });
+  redisPub.on("error", () => {
+    // Silently ignore Redis errors during build
+  });
+  redisSub.on("error", () => {
+    // Silently ignore Redis errors during build
+  });
+}
+
+// Helper function to safely execute Redis operations during build time
+async function safeRedisOperation<T>(
+  operation: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  if (shouldSkipRedis) {
+    return fallback;
   }
-});
-
-redis.on("close", () => {
-  console.log("[Redis] Connection closed");
-});
-
-redisSub.on("connect", () => {
-  console.log("[Redis] ✅ Subscriber connected");
-});
-
-redisPub.on("connect", () => {
-  console.log("[Redis] ✅ Publisher connected");
-});
+  
+  try {
+    return await operation();
+  } catch (error) {
+    console.error("[Redis] Operation failed:", error);
+    return fallback;
+  }
+}
 
 // Helper functions for common operations
 

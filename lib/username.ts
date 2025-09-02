@@ -1,6 +1,11 @@
 import { Filter } from "bad-words";
 import { redis, KEYS } from "../server/redis";
 
+// Check if we're in build mode to avoid Redis calls
+const isBuildTime = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
+const isStaticGeneration = process.env.NEXT_IS_STATIC_GENERATION === 'true';
+const shouldSkipRedis = isBuildTime || isStaticGeneration;
+
 // Initialize profanity filter
 const filter = new Filter();
 
@@ -122,6 +127,11 @@ export function generateChessUsername(): string {
  * Check if username is available (not in use by active players)
  */
 export async function isUsernameAvailable(username: string): Promise<boolean> {
+  // During build time, assume usernames are available to prevent build failures
+  if (shouldSkipRedis) {
+    return true;
+  }
+
   try {
     const normalizedUsername = username.toLowerCase();
 
@@ -249,6 +259,11 @@ export async function reserveUsername(
   username: string,
   duration = 30 * 24 * 60 * 60,
 ): Promise<void> {
+  // Skip Redis operations during build time
+  if (shouldSkipRedis) {
+    return;
+  }
+
   try {
     const normalizedUsername = username.toLowerCase();
 
