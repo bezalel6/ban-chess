@@ -193,26 +193,41 @@ export function parseFEN(fen: string) {
     enPassant: parts[3],
     halfMove: parseInt(parts[4]),
     fullMove: parseInt(parts[5]),
-    banState: parts[6], // 7th field: "b:ban", "w:ban", "b:e2e4", etc
+    banState: parts[6], // 7th field: ply number and optional ban (e.g., "1", "2:e2e4", "3", "4:e7e5")
   };
 }
 
 export function getNextAction(fen: string): "move" | "ban" {
   const { banState } = parseFEN(fen);
-  return banState && banState.includes(":ban") ? "ban" : "move";
+  if (!banState) return "move";
+  
+  // Extract ply number from ban state (it's either just a number like "1" or "number:move" like "2:e2e4")
+  const ply = parseInt(banState.split(":")[0]);
+  
+  // Odd plies are ban phases, even plies are move phases
+  return ply % 2 === 1 ? "ban" : "move";
 }
 
-// Get who is currently doing the banning (b:ban = black bans, w:ban = white bans)
+// Get who is currently doing the banning based on ply number
 export function getWhoBans(fen: string): "white" | "black" | null {
   const { banState } = parseFEN(fen);
-  if (!banState || !banState.includes(":ban")) return null;
-  return banState.startsWith("w") ? "white" : "black";
+  if (!banState) return null;
+  
+  // Extract ply number
+  const ply = parseInt(banState.split(":")[0]);
+  
+  // Only odd plies are ban phases
+  if (ply % 2 !== 1) return null;
+  
+  // Ply 1,5,9... = Black bans
+  // Ply 3,7,11... = White bans
+  return ((ply - 1) / 2) % 2 === 0 ? "black" : "white";
 }
 
 export function getCurrentBan(fen: string): Ban | null {
   const { banState } = parseFEN(fen);
-  // Check if there's a ban state and it contains a move (not just ":ban")
-  if (banState && banState.includes(":") && !banState.includes(":ban")) {
+  // Check if there's a ban state with a move (format: "ply:move" like "2:e2e4")
+  if (banState && banState.includes(":")) {
     const banStr = banState.split(":")[1];
     if (banStr && banStr.length >= 4) {
       return {

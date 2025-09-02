@@ -569,7 +569,9 @@ function checkForImmediateCheckmate(game: BanChess): boolean {
   const fen = game.fen();
   const fenParts = fen.split(" ");
   const banState = fenParts[6];
-  const isNextActionBan = banState && banState.includes(":ban");
+  // Check if next action is ban by checking if ply is odd
+  const ply = banState ? parseInt(banState.split(":")[0]) : 0;
+  const isNextActionBan = ply % 2 === 1;
 
   // If it's time for a ban, we need to check if the player who would ban
   // is already in checkmate (can't escape even without a ban)
