@@ -1,5 +1,4 @@
-import { Suspense } from 'react';
-import GameClient from '@/components/GameClient';
+import { redirect } from "next/navigation";
 
 interface GamePageProps {
   params: Promise<{ id: string }>;
@@ -8,13 +7,7 @@ interface GamePageProps {
 export default async function GamePage({ params }: GamePageProps) {
   const { id: gameId } = await params;
 
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="loading-spinner" />
-      </div>
-    }>
-      <GameClient gameId={gameId} />
-    </Suspense>
-  );
+  // Redirect to spectator view by default
+  // In the future, we could check if the user is a player and redirect to their color
+  redirect(`/game/${gameId}/spectator`);
 }

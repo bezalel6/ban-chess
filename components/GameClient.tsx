@@ -5,32 +5,38 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
 import type { Move, Ban } from "@/lib/game-types";
+import { GameRoleProvider, type PlayerRole } from "@/contexts/GameRoleContext";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 
 const ResizableBoard = dynamic(
-  () => import("@/components/game/ResizableBoard").catch((err) => {
-    console.error("Failed to load chess board:", err);
-    // Return a fallback component
-    return {
-      default: () => (
-        <div className="chess-board-wrapper">
-          <div className="chess-board-container flex items-center justify-center">
-            <div className="bg-background-secondary rounded-lg p-8 text-center">
-              <p className="text-foreground-muted mb-4">Chess board failed to load</p>
-              <p className="text-sm text-foreground-muted mb-4">This may be a compatibility issue with React 19</p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600"
-              >
-                Reload Page
-              </button>
+  () =>
+    import("@/components/game/ResizableBoard").catch((err) => {
+      console.error("Failed to load chess board:", err);
+      // Return a fallback component
+      return {
+        default: () => (
+          <div className="chess-board-wrapper">
+            <div className="chess-board-container flex items-center justify-center">
+              <div className="bg-background-secondary rounded-lg p-8 text-center">
+                <p className="text-foreground-muted mb-4">
+                  Chess board failed to load
+                </p>
+                <p className="text-sm text-foreground-muted mb-4">
+                  This may be a compatibility issue with React 19
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600"
+                >
+                  Reload Page
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )
-    };
-  }),
+        ),
+      };
+    }),
   {
     ssr: false,
     loading: () => (
@@ -40,14 +46,15 @@ const ResizableBoard = dynamic(
         </div>
       </div>
     ),
-  }
+  },
 );
 
 interface GameClientProps {
   gameId: string;
+  urlRole?: PlayerRole;
 }
 
-export default function GameClient({ gameId }: GameClientProps) {
+export default function GameClient({ gameId, urlRole }: GameClientProps) {
   const {
     gameState,
     error,
@@ -79,7 +86,7 @@ export default function GameClient({ gameId }: GameClientProps) {
       joinedGameId.current = gameId;
       setHasJoined(true);
     }
-    
+
     // Reset join state if disconnected
     if (!connected && hasJoined) {
       setHasJoined(false);
@@ -129,7 +136,7 @@ export default function GameClient({ gameId }: GameClientProps) {
   }
 
   return (
-    <>
+    <GameRoleProvider gameState={gameState} urlRole={urlRole}>
       {/* Desktop Layout - Three column layout with centered board */}
       <div
         className={`hidden md:flex justify-center items-center p-2 ${
@@ -181,7 +188,6 @@ export default function GameClient({ gameId }: GameClientProps) {
               gameState={gameState}
               onMove={handleMove}
               onBan={handleBan}
-              playerColor={gameState.playerColor}
             />
           </div>
 
@@ -200,7 +206,6 @@ export default function GameClient({ gameId }: GameClientProps) {
               gameState={gameState}
               gameEvents={gameEvents}
               onGiveTime={giveTime}
-              playerColor={gameState.playerColor}
             />
           </div>
         </div>
@@ -224,17 +229,15 @@ export default function GameClient({ gameId }: GameClientProps) {
           gameState={gameState}
           onMove={handleMove}
           onBan={handleBan}
-          playerColor={gameState.playerColor}
         />
         <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
         <GameSidebar
           gameState={gameState}
           gameEvents={gameEvents}
           onGiveTime={giveTime}
-          playerColor={gameState.playerColor}
         />
       </div>
-    </>
+    </GameRoleProvider>
   );
 }
 
