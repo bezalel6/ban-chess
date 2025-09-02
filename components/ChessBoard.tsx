@@ -10,8 +10,7 @@ import type {
 } from "@bezalel6/react-chessground";
 import type { Ban, Move, SimpleGameState, Square } from "@/lib/game-types";
 import { getCurrentBan, parseFEN } from "@/lib/game-types";
-import { getUserRole } from "@/lib/game-utils";
-import { useAuth } from "@/components/AuthProvider";
+import { useUserRole } from "@/contexts/UserRoleContext";
 import { BanChess } from "ban-chess.ts";
 
 interface ChessBoardProps {
@@ -55,11 +54,8 @@ const ChessBoard = memo(function ChessBoard({
   onMove,
   onBan,
 }: ChessBoardProps) {
-  const { user } = useAuth();
-  
-  // Get user role (what color they're playing)
-  const userRole = getUserRole(gameState, user?.userId);
-  const { role, orientation } = userRole;
+  // Get user role from context (already memoized)
+  const { role, orientation } = useUserRole();
   
   // Get game state from BanChess instance
   const currentActivePlayer = activePlayer || game?.getActivePlayer() || "white";

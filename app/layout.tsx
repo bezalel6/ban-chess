@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import React from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
+import { UserRoleProvider } from "@/contexts/UserRoleContext";
 import Header from "@/components/layout/Header";
 import ConnectionStatusOverlay from "@/components/ConnectionStatusOverlay";
 import WebSocketStatusWidget from "@/components/WebSocketStatusWidget";
@@ -46,14 +47,16 @@ export default function RootLayout({
       <body className="bg-background text-foreground min-h-screen">
         <AuthProvider>
           <WebSocketProvider>
-            <ConnectionStatusOverlay />
-            <WebSocketStatusWidget />
-            <Header />
+            <UserRoleProvider>
+              <ConnectionStatusOverlay />
+              <WebSocketStatusWidget />
+              <Header />
 
-            {/* Main content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              {children}
-            </main>
+              {/* Main content */}
+              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                {children}
+              </main>
+            </UserRoleProvider>
           </WebSocketProvider>
         </AuthProvider>
       </body>
