@@ -128,9 +128,7 @@ export default function GameStatusPanel({
                 }`}
               >
                 {nextAction === "ban"
-                  ? isMyTurn
-                    ? "🎯 Select a move to ban"
-                    : "⏳ Opponent banning..."
+                  ? `${currentActivePlayer.charAt(0).toUpperCase() + currentActivePlayer.slice(1)} is banning...`
                   : isMyTurn
                     ? "🎯 Your turn"
                     : "⏳ Opponent's turn"}

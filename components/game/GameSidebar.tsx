@@ -12,12 +12,14 @@ interface GameSidebarProps {
   gameState: SimpleGameState;
   gameEvents?: GameEvent[];
   onGiveTime?: () => void;
+  onResign?: () => void;
 }
 
 export default function GameSidebar({
   gameState,
   gameEvents = [],
   onGiveTime,
+  onResign,
 }: GameSidebarProps) {
   const { activePlayer } = useGameState();
   const { role, orientation } = useUserRole();
@@ -100,6 +102,15 @@ export default function GameSidebar({
         }
         onGiveTime={onGiveTime}
       />
+      <div className="my-2 border-t border-border"></div>
+      {onResign && !gameState.gameOver && isPlayer && (
+        <button
+          onClick={onResign}
+          className="w-full px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors font-medium text-sm"
+        >
+          Resign
+        </button>
+      )}
     </div>
   );
 }

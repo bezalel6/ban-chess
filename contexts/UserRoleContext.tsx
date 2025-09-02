@@ -1,6 +1,12 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useGameState } from "@/hooks/useGameState";
@@ -8,7 +14,7 @@ import { getUserRole as computeUserRole } from "@/lib/game-utils";
 import type { UserRole } from "@/lib/game-utils";
 
 interface UserRoleContextValue extends UserRole {
-  // Additional context methods could go here if needed
+  flipBoard: () => void;
 }
 
 const UserRoleContext = createContext<UserRoleContextValue | null>(null);
@@ -16,17 +22,30 @@ const UserRoleContext = createContext<UserRoleContextValue | null>(null);
 export function UserRoleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { gameState } = useGameState();
+  const [spectatorOrientation, setSpectatorOrientation] = useState<"white" | "black">("white");
 
-  // Memoize the user role computation
-  // Only recomputes when gameState or userId changes
   const userRole = useMemo(() => {
     return computeUserRole(gameState, user?.userId);
   }, [gameState, user?.userId]);
 
-  // Memoize the context value to prevent unnecessary re-renders
+  const flipBoard = useCallback(() => {
+    if (userRole.role === null) { // Only allow spectators to flip
+      setSpectatorOrientation(prev => prev === "white" ? "black" : "white");
+    }
+  }, [userRole.role]);
+
+  const orientation = useMemo(() => {
+    if (userRole.role === null) {
+      return spectatorOrientation;
+    }
+    return userRole.orientation;
+  }, [userRole.role, userRole.orientation, spectatorOrientation]);
+
   const contextValue = useMemo<UserRoleContextValue>(() => ({
     ...userRole,
-  }), [userRole]);
+    orientation,
+    flipBoard,
+  }), [userRole, orientation, flipBoard]);
 
   return (
     <UserRoleContext.Provider value={contextValue}>
@@ -38,12 +57,11 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
 export function useUserRole(): UserRoleContextValue {
   const context = useContext(UserRoleContext);
   if (!context) {
-    // Return default values when outside provider
-    // This allows components to render before game state is loaded
     return {
       role: null,
       orientation: "white",
       isLocalGame: false,
+      flipBoard: () => {},
     };
   }
   return context;
