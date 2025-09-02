@@ -1,7 +1,6 @@
 "use client";
 
 import type { SimpleGameState, GameEvent } from "@/lib/game-types";
-import { parseFEN, getNextAction, getWhoBans } from "@/lib/game-types";
 import { getGamePermissions } from "@/lib/game-utils";
 import { useAuth } from "@/components/AuthProvider";
 import { useGameState } from "@/hooks/useGameState";
@@ -22,24 +21,14 @@ export default function GameSidebar({
 }: GameSidebarProps) {
   const { user } = useAuth();
   const { game } = useGameState();
-  const permissions = getGamePermissions(gameState, game, user?.userId);
+  const permissions = getGamePermissions(gameState, game, user?.userId, gameState.activePlayer);
   const { role, orientation, isPlayer } = permissions;
-  const { turn } = parseFEN(gameState.fen);
-  const nextAction = getNextAction(gameState.fen);
-  const whoBans = getWhoBans(gameState.fen);
 
   const whitePlayer = gameState.players.white?.username || "Waiting...";
   const blackPlayer = gameState.players.black?.username || "Waiting...";
 
-  // Determine who is active based on game phase
-  let activeColor: "white" | "black";
-  if (nextAction === "ban" && whoBans) {
-    // During ban phase, the banning player's clock runs
-    activeColor = whoBans;
-  } else {
-    // During move phase, the current turn player's clock runs
-    activeColor = turn;
-  }
+  // Use the activePlayer from server state (which comes from ban-chess.ts v3.0.0 APIs)
+  const activeColor = gameState.activePlayer || "white";
 
   // For players, show active color based on the game state
   // For spectators, default behavior applies
