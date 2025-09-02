@@ -14,8 +14,12 @@ export default function SignOutButton({
   showIcon = true,
   redirectTo = '/'
 }: SignOutButtonProps) {
-  const handleSignOut = () => {
-    signOut({ callbackUrl: redirectTo });
+  const handleSignOut = async () => {
+    // First clear cookies with proper domain configuration
+    await fetch('/api/auth/signout', { method: 'POST' });
+    
+    // Then use NextAuth signOut
+    await signOut({ callbackUrl: redirectTo });
   };
 
   return (
