@@ -101,28 +101,43 @@ class SoundManager {
   private enabled: boolean = true;
   private volume: number = 0.5;
   private eventSoundMap: Record<EventType, string | null>;
+  private lastPlayedSound: { eventType: string; timestamp: number } | null = null;
+  private soundDebounceMs = 100; // Prevent duplicate sounds within 100ms
 
   constructor() {
+    console.log(`[SoundManager] Constructing SoundManager...`);
     this.sounds = new Map();
     this.eventSoundMap = { ...defaultEventSoundMap };
+    console.log(`[SoundManager] Default event sound map:`, this.eventSoundMap);
     this.initializeSounds();
     this.loadPreferences();
+    console.log(`[SoundManager] SoundManager constructed. Enabled: ${this.enabled}, Volume: ${this.volume}`);
   }
 
   private initializeSounds() {
+    console.log(`[SoundManager] Initializing sounds...`);
     // Preload all available sound files
     availableSounds.forEach((sound) => {
       if (sound.file) {
-        this.sounds.set(
-          sound.file,
-          new Howl({
-            src: [sound.file],
-            volume: this.volume,
-            preload: true,
-          }),
-        );
+        console.log(`[SoundManager] Loading sound: ${sound.file}`);
+        const howl = new Howl({
+          src: [sound.file],
+          volume: this.volume,
+          preload: true,
+          onload: () => {
+            console.log(`[SoundManager] Successfully loaded: ${sound.file}`);
+          },
+          onloaderror: (id, error) => {
+            console.error(`[SoundManager] Failed to load: ${sound.file}`, error);
+          },
+          onplayerror: (id, error) => {
+            console.error(`[SoundManager] Failed to play: ${sound.file}`, error);
+          },
+        });
+        this.sounds.set(sound.file, howl);
       }
     });
+    console.log(`[SoundManager] Initialized ${this.sounds.size} sounds`);
   }
 
   private loadPreferences() {
@@ -161,21 +176,49 @@ class SoundManager {
 
   // Play sound for a specific event type
   playEvent(eventType: EventType, context?: { result?: string; playerRole?: "white" | "black" | null }) {
-    if (!this.enabled) return;
+    console.log(`[SoundManager] playEvent called: ${eventType}, enabled: ${this.enabled}`);
+    
+    if (!this.enabled) {
+      console.log(`[SoundManager] Sound disabled, skipping ${eventType}`);
+      return;
+    }
+
+    // Debounce to prevent rapid duplicate sounds
+    const now = Date.now();
+    if (this.lastPlayedSound && 
+        this.lastPlayedSound.eventType === eventType && 
+        (now - this.lastPlayedSound.timestamp) < this.soundDebounceMs) {
+      console.log(`[SoundManager] Debouncing duplicate ${eventType} sound`);
+      return;
+    }
+    this.lastPlayedSound = { eventType, timestamp: now };
 
     // Special handling for game-end sounds
     if (eventType === "game-end" && context?.result) {
+      console.log(`[SoundManager] Playing game-end sound for result: ${context.result}, role: ${context.playerRole}`);
       this.playGameEndSoundSmart(context.result, context.playerRole || null);
       return;
     }
 
     const soundFile = this.eventSoundMap[eventType];
-    if (!soundFile) return; // No sound mapped for this event
+    console.log(`[SoundManager] Sound file for ${eventType}: ${soundFile}`);
+    
+    if (!soundFile) {
+      console.warn(`[SoundManager] No sound mapped for event: ${eventType}`);
+      return; // No sound mapped for this event
+    }
 
     const sound = this.sounds.get(soundFile);
     if (sound) {
+      console.log(`[SoundManager] Playing sound: ${soundFile}`);
       sound.stop(); // Stop any currently playing instance
-      sound.play();
+      try {
+        sound.play();
+      } catch (error) {
+        console.error(`[SoundManager] Failed to play sound ${soundFile}:`, error);
+      }
+    } else {
+      console.error(`[SoundManager] Sound not found in cache: ${soundFile}`);
     }
   }
 
@@ -215,20 +258,31 @@ class SoundManager {
     promotion?: boolean;
     isOpponent?: boolean;
   }) {
-    if (!this.enabled) return;
+    console.log(`[SoundManager] playMoveSound called:`, moveDetails, `enabled: ${this.enabled}`);
+    
+    if (!this.enabled) {
+      console.log(`[SoundManager] Sound disabled, skipping move sound`);
+      return;
+    }
 
     // Priority order for sounds - play the most specific event
     if (moveDetails.check) {
+      console.log(`[SoundManager] Playing check sound`);
       this.playEvent("check");
     } else if (moveDetails.castle) {
+      console.log(`[SoundManager] Playing castle sound`);
       this.playEvent("castle");
     } else if (moveDetails.promotion) {
+      console.log(`[SoundManager] Playing promotion sound`);
       this.playEvent("promote");
     } else if (moveDetails.capture) {
+      console.log(`[SoundManager] Playing capture sound`);
       this.playEvent("capture");
     } else if (moveDetails.isOpponent) {
+      console.log(`[SoundManager] Playing opponent move sound`);
       this.playEvent("opponent-move");
     } else {
+      console.log(`[SoundManager] Playing regular move sound`);
       this.playEvent("move");
     }
   }
