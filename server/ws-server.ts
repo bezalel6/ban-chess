@@ -371,7 +371,11 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     players: await getPlayerInfo(gameState),
     gameOver: true,
     result: gameState.result,
-    history: game.history() as HistoryEntry[],
+    history: game.history().map((entry) => ({
+      ...entry,
+      turnNumber: Math.floor(entry.ply / 4) + 1,  // Calculate turn number from ply
+      bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
+    })),
     timeControl: gameState.timeControl,
     clocks: timeManager ? timeManager.getClocks() : undefined,
   };
@@ -515,6 +519,7 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     // Convert ban-chess.ts HistoryEntry to our HistoryEntry type
     history = reconstructedGame.history().map((entry) => ({
       ...entry,
+      turnNumber: Math.floor(entry.ply / 4) + 1,  // Calculate turn number from ply
       bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
     }));
   }
@@ -1207,7 +1212,7 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           // BanChess handles ALL validation
           // Action comes serialized from client (e.g., "b:d2d4" or "m:e2e4")
-          const result = game.playSerializedAction(action as string);
+          const result = game.playSerializedAction(action);
 
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);
@@ -1505,8 +1510,8 @@ wss.on("connection", (ws: WebSocket, request) => {
           const event: GameEvent = {
             type: "resignation",
             timestamp: Date.now(),
-            playerId: currentPlayer.userId,
-            color: loser,
+            message: `${loser === "white" ? "White" : "Black"} resigned`,
+            player: loser,
           };
           await addGameEvent(gameId, event);
 

@@ -121,6 +121,7 @@ export class GameService {
 
     return game.history().map((entry) => ({
       ...entry,
+      turnNumber: Math.floor(entry.ply / 4) + 1,  // Calculate turn number from ply
       bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
     }));
   }

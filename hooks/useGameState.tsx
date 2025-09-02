@@ -161,14 +161,17 @@ export function useGameState() {
             setGameState((prev) => {
               // Preserve history if not provided (incremental updates)
               // Only use msg.history if it's a full state update (e.g., on join)
-              let history = prev?.history || [];
+              let history: HistoryEntry[] | string[] = prev?.history || [];
               
               if (msg.history) {
                 // Full history provided - use it
                 history = msg.history;
-              } else if (msg.lastMove) {
+              } else if (msg.lastMove && Array.isArray(history)) {
                 // Incremental update - append to existing history
-                history = [...history, msg.lastMove];
+                // Only append if history is HistoryEntry[] (not string[])
+                if (history.length === 0 || typeof history[0] !== 'string') {
+                  history = [...(history as HistoryEntry[]), msg.lastMove];
+                }
               }
               
               return {
@@ -362,7 +365,7 @@ export function useGameState() {
         send({ 
           type: "action", 
           gameId: currentGameId, 
-          action: serializedAction as unknown as Action // Type compatibility during migration
+          action: serializedAction
         });
         console.log("[GameState] Sending serialized action:", serializedAction);
       } else {

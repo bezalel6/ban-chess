@@ -178,7 +178,7 @@ export type SimpleClientMsg =
   | { type: "join-queue"; timeControl?: TimeControl }
   | { type: "leave-queue" }
   | { type: "create-solo-game"; timeControl?: TimeControl }
-  | { type: "action"; gameId: string; action: Action } // Combined move and ban
+  | { type: "action"; gameId: string; action: string } // Serialized action in BCN format (e.g., "b:e2e4" or "m:d2d4")
   | { type: "give-time"; gameId: string; amount: number } // Give time to opponent
   | { type: "resign"; gameId: string } // Resign the current game
   | { type: "ping" }; // Heartbeat ping from client
