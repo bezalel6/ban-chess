@@ -68,6 +68,23 @@ const ResizableBoard = dynamic(
   },
 );
 
+// Mobile board component - responsive sizing
+const MobileBoard = dynamic(
+  () => import("@/components/game/MobileBoard"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full" style={{ maxWidth: 'min(100vw - 2rem, 600px)' }}>
+        <div className="relative w-full" style={{ paddingBottom: '100%' }}>
+          <div className="absolute inset-0 flex items-center justify-center bg-background-tertiary rounded-lg">
+            <div className="loading-spinner" />
+          </div>
+        </div>
+      </div>
+    ),
+  },
+);
+
 interface GameClientProps {
   gameId: string;
 }
@@ -232,7 +249,7 @@ export default function GameClient({ gameId }: GameClientProps) {
 
       {/* Mobile Layout */}
       <div className="md:hidden flex flex-col gap-4 p-4">
-        <ResizableBoard
+        <MobileBoard
           gameState={gameState}
           game={game}
           dests={dests}

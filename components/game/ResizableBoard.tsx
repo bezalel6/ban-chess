@@ -200,6 +200,10 @@ const ResizableBoard = memo(function ResizableBoard({
   // Add resize observer to fix piece positions when board size changes
   useEffect(() => {
     if (!boardRef.current) return;
+    
+    // Check if the element is visible (not hidden by parent's display:none)
+    const isVisible = boardRef.current.offsetParent !== null;
+    if (!isVisible) return;
 
     const resizeObserver = new ResizeObserver(() => {
       // Fix piece positions after any size change

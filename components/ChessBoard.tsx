@@ -174,6 +174,7 @@ const ChessBoard = memo(function ChessBoard({
       orientation,
       coordinates: false,
       autoCastle: true,
+      disableContextMenu: true,
       highlight: {
         lastMove: true,
       },
