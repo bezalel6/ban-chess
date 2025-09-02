@@ -329,7 +329,7 @@ class SoundManager {
       "move": `${themePath}/Move.mp3`,
       "opponent-move": `${themePath}/Move.mp3`,
       "capture": `${themePath}/Capture.mp3`,
-      "castle": themeName === 'standard' ? "/sounds/lisp/Castles.mp3" : `${themePath}/Castles.mp3` || `${themePath}/Move.mp3`,
+      "castle": themeName === 'standard' ? "/sounds/lisp/Castles.mp3" : `${themePath}/Castles.mp3`,
       "check": `${themePath}/Check.mp3`,
       "promote": `${themePath}/Checkmate.mp3`,
       "draw-offer": `${themePath}/GenericNotify.mp3`,
