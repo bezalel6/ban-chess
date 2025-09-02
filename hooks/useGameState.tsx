@@ -36,6 +36,7 @@ export function useGameState() {
   const [error, setError] = useState<string | null>(null);
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   const [gameEvents, setGameEvents] = useState<GameEvent[]>([]);
+  const [notification, setNotification] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
 
   // Refs for tracking
   const previousFen = useRef<string | null>(null);
@@ -101,6 +102,11 @@ export function useGameState() {
     },
     [readyState, sendMessage],
   );
+
+  const showNotification = useCallback((message: string, type: 'info' | 'error' | 'success' = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000); // Clear after 3 seconds
+  }, []);
 
   // Authentication is now handled centrally in WebSocketContext
 
@@ -217,6 +223,7 @@ export function useGameState() {
                 check: msg.inCheck === true,
                 capture: currentPieces < prevPieces,
               });
+              showNotification("Move made!", "info");
             }
             previousFen.current = msg.fen;
 
@@ -227,6 +234,7 @@ export function useGameState() {
                 result: msg.result,
                 playerRole: userRole.role,
               });
+              showNotification("Game Over!", "info");
             }
           }
           break;
@@ -238,6 +246,7 @@ export function useGameState() {
           moveHistory.current = [];
           // Server will send a full state message next
           soundManager.playEvent("game-start");
+          showNotification(`Joined game ${msg.gameId}`, "success");
           break;
 
         case "game-created":
@@ -245,6 +254,7 @@ export function useGameState() {
           // Don't set currentGameId here - let GameClient handle it when joining
           // Navigate immediately - the game page will handle joining
           router.push(`/game/${msg.gameId}`);
+          showNotification(`Game created: ${msg.gameId}`, "success");
           break;
 
         case "matched":
@@ -252,6 +262,7 @@ export function useGameState() {
           // Don't set currentGameId here - let GameClient handle it when joining
           // Navigate immediately - the game page will handle joining
           router.push(`/game/${msg.gameId}`);
+          showNotification(`Matched with ${msg.opponent}`, "success");
           break;
 
         case "queued":
@@ -301,6 +312,7 @@ export function useGameState() {
             result: resultText,
             playerRole: userRole.role,
           }); // Play sound only when server confirms timeout
+          showNotification(`${msg.winner === "white" ? "White" : "Black"} wins on time!`, "info");
           break;
 
         case "game-event":
@@ -313,6 +325,7 @@ export function useGameState() {
         case "error":
           console.error("[GameState] Server error:", msg.message);
           setError(msg.message);
+          showNotification(`Error: ${msg.message}`, "error");
           setTimeout(() => setError(null), 5000);
           break;
 
@@ -357,6 +370,20 @@ export function useGameState() {
             }
             return { ...prev, players: updatedPlayers };
           });
+          break;
+
+        case "sync-complete":
+          console.log("[GameState] Sync complete, board is up to date.");
+          showNotification("Board is up to date.", "success");
+          break;
+
+        case "actions-since":
+          if (game) {
+            const newGame = BanChess.replayFromActions(game.history().concat(msg.actions));
+            setGame(newGame);
+            console.log(`[GameState] Synced ${msg.actions.length} actions.`);
+            showNotification(`Synced ${msg.actions.length} actions.`, "success");
+          }
           break;
 
         default: {
@@ -440,12 +467,13 @@ export function useGameState() {
     (gameId: string) => {
       if (connected) {
         setCurrentGameId(gameId);
-        send({ type: "join-game", gameId });
+        const currentPly = game ? game.getPly() : 0;
+        send({ type: "join-game", gameId, ply: currentPly });
       } else {
         setError("Not connected to server. Please wait...");
       }
     },
-    [connected, send],
+    [connected, send, game],
   );
 
   const giveTime = useCallback(
@@ -488,6 +516,7 @@ export function useGameState() {
     currentGameId,
     gameEvents,
     isLocalGame, // Helper to identify solo/practice games
+    notification,
 
     // Actions
     sendAction,

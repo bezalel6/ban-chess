@@ -169,12 +169,14 @@ export type SimpleServerMsg =
       oldUsername: string;
       newUsername: string;
       playerId: string;
-    };
+    }
+  | { type: "sync-complete"; gameId: string }
+  | { type: "actions-since"; gameId: string; actions: SerializedAction[] };
 
 // Client messages - simplified
 export type SimpleClientMsg =
   | { type: "authenticate"; userId: string; username: string }
-  | { type: "join-game"; gameId: string }
+  | { type: "join-game"; gameId: string; ply?: number }
   | { type: "join-queue"; timeControl?: TimeControl }
   | { type: "leave-queue" }
   | { type: "create-solo-game"; timeControl?: TimeControl }

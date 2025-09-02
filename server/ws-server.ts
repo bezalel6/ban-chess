@@ -1147,20 +1147,7 @@ wss.on("connection", (ws: WebSocket, request) => {
             return;
           }
 
-          const { gameId } = msg;
-
-          // Check if already in this game
-          const currentGameId = await redis.get(
-            KEYS.PLAYER_GAME(currentPlayer.userId),
-          );
-          if (currentGameId === gameId) {
-            console.log(
-              `Player ${currentPlayer.username} already in game ${gameId}, sending current state`,
-            );
-            await sendFullGameState(gameId, ws);
-            break;
-          }
-
+          const { gameId, ply: clientPly } = msg;
           const gameState = await getGameState(gameId);
 
           if (!gameState) {
@@ -1173,15 +1160,31 @@ wss.on("connection", (ws: WebSocket, request) => {
             return;
           }
 
-          // Update player's current game
           await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
-
-          // Subscribe to game channel
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
 
-          // Send full state with history when joining a game
-          await sendFullGameState(gameId, ws);
-          console.log(`Player ${currentPlayer.username} joined game ${gameId}`);
+          const game = new BanChess(gameState.fen);
+          const serverPly = game.getPly();
+
+          if (clientPly !== undefined && clientPly < serverPly) {
+            const history = await getActionHistory(gameId);
+            const missingActions = history.slice(clientPly);
+            ws.send(JSON.stringify({
+              type: "actions-since",
+              gameId,
+              actions: missingActions,
+            } as SimpleServerMsg));
+            console.log(`Player ${currentPlayer.username} synced with ${missingActions.length} actions`);
+          } else if (clientPly === serverPly) {
+            ws.send(JSON.stringify({
+              type: "sync-complete",
+              gameId,
+            } as SimpleServerMsg));
+            console.log(`Player ${currentPlayer.username} is already in sync`);
+          } else {
+            await sendFullGameState(gameId, ws);
+            console.log(`Player ${currentPlayer.username} joined game ${gameId}, sent full state`);
+          }
           break;
         }
 
@@ -1204,6 +1207,17 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Game not found",
+              } as SimpleServerMsg),
+            );
+            return;
+          }
+
+          // NEW CHECK: Ensure the player is part of the game
+          if (currentPlayer.userId !== gameState.whitePlayerId && currentPlayer.userId !== gameState.blackPlayerId) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "You are a spectator and cannot make moves.",
               } as SimpleServerMsg),
             );
             return;

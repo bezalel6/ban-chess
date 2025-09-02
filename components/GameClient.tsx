@@ -68,7 +68,6 @@ export default function GameClient({ gameId }: GameClientProps) {
     gameEvents,
     giveTime,
     resignGame,
-    notification,
   } = useGameState();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
@@ -144,14 +143,6 @@ export default function GameClient({ gameId }: GameClientProps) {
 
   return (
     <>
-      {notification && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-white
-          ${notification.type === 'success' ? 'bg-green-500' :
-            notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`
-        }>
-          {notification.message}
-        </div>
-      )}
       {/* Desktop Layout - Three column layout with centered board */}
       <div
         className={`hidden md:flex justify-center items-center p-2 ${
