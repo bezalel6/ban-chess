@@ -242,8 +242,11 @@ const ChessBoard = memo(function ChessBoard({
   if (!gameState || !gameState.fen || !fenData) {
     return (
       <div className="chess-board-outer">
-        <div className="chess-board-inner flex items-center justify-center">
-          <div className="loading-spinner" />
+        <div className="chess-board-inner">
+          {/* Maintain square aspect ratio with absolute positioning */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="loading-spinner" />
+          </div>
         </div>
       </div>
     );

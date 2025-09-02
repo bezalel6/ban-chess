@@ -11,7 +11,7 @@ interface State {
   error: Error | null;
 }
 
-// Error boundary to catch React 19 compatibility issues
+// Error boundary to catch any rendering issues
 class ChessBoardErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -32,15 +32,13 @@ class ChessBoardErrorBoundary extends Component<Props, State> {
         <div className="flex items-center justify-center h-full min-h-[400px] bg-background-secondary rounded-lg p-8">
           <div className="text-center max-w-md">
             <h3 className="text-lg font-semibold mb-2">
-              Chess Board Loading Issue
+              Unable to Load Chess Board
             </h3>
             <p className="text-foreground-muted mb-4">
-              The chess board component encountered a compatibility issue with
-              React 19.
+              Something went wrong while loading the chess board.
             </p>
             <p className="text-sm text-foreground-muted mb-4">
-              This is a known issue with the chess library. Try refreshing the
-              page.
+              Please try refreshing the page to resolve this issue.
             </p>
             <button
               onClick={() => window.location.reload()}
