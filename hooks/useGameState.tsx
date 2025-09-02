@@ -275,13 +275,10 @@ export function useGameState() {
               if (msg.lastMove) {
                 wasBan = msg.lastMove.actionType === "ban";
                 if (msg.lastMove.actionType === "move") {
-                  // Handle move action - could be either { move: Move } or direct Move
+                  // Handle move action - should always be { move: Move }
                   let move;
                   if ("move" in msg.lastMove.action) {
                     move = msg.lastMove.action.move;
-                  } else {
-                    // Direct move object (legacy format)
-                    move = msg.lastMove.action as Move;
                   }
                   
                   if (move) {
