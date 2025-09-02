@@ -2,6 +2,9 @@
   "name": "2ban-2chess",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "concurrently --kill-others --kill-others-on-fail -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
     "dev:win": "node scripts/dev-windows.js",
@@ -15,6 +18,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "analyze": "npm run type-check && npm run lint",
+    "db:reset": "npx prisma migrate reset --force",
+    "db:seed": "npx prisma db seed",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",

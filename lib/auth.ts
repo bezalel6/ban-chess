@@ -15,7 +15,70 @@ export const authOptions = {
   adapter: CustomPrismaAdapter(),
   secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production",
   session: {
-    strategy: "jwt" as const,  // JWT strategy with database adapter for hybrid approach
+    strategy: "jwt" as const, // JWT strategy with database adapter for hybrid approach
+  },
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined // Share cookies across subdomains in production
+      }
+    },
+    callbackUrl: {
+      name: `__Secure-next-auth.callback-url`,
+      options: {
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
+      }
+    },
+    csrfToken: {
+      name: `__Host-next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
+      }
+    },
+    pkceCodeVerifier: {
+      name: `__Secure-next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+        maxAge: 60 * 15, // 15 minutes
+        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
+      }
+    },
+    state: {
+      name: `__Secure-next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+        maxAge: 60 * 15, // 15 minutes
+        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
+      }
+    },
+    nonce: {
+      name: `__Secure-next-auth.nonce`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: true,
+        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
+      }
+    }
   },
   providers: [
     // Guest login provider
@@ -44,7 +107,7 @@ export const authOptions = {
         params: {
           // Request email:read scope to get user's email if available
           // Also keep preference:read for potential future features
-          scope: "email:read preference:read",
+          scope: "email:read",
         },
       },
       token: "https://lichess.org/api/token",
@@ -101,7 +164,7 @@ export const authOptions = {
         else if (account.provider === "guest" && user) {
           // Guest users: no email, just temporary ID
           const guestId = user.name; // Already using generateGuestId() from authorize()
-          
+
           // Create guest user in database (no email!)
           const guestUser = await prisma.user.create({
             data: {
@@ -109,9 +172,9 @@ export const authOptions = {
               username: guestId, // Guest ID format, not chess username
               isGuest: true,
               // No email for guest users
-            }
+            },
           });
-          
+
           token.userId = guestUser.id;
           token.username = guestId; // Keep guest ID format
           token.providerId = user.id;
@@ -119,14 +182,14 @@ export const authOptions = {
           token.isGuest = true; // Flag for guest users
         }
       }
-      
+
       // Load user data from database on subsequent requests
       if (!account && token.userId) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.userId },
-          select: { username: true, isGuest: true }
+          select: { username: true, isGuest: true },
         });
-        
+
         if (dbUser) {
           token.username = dbUser.username;
           token.isGuest = dbUser.isGuest;
