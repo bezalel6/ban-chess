@@ -3,15 +3,6 @@ import { authOptions } from "@/lib/auth";
 import type { AuthSession } from "@/types/auth";
 import ProfilePageClient from "./ProfilePageClient";
 
-interface GameRecord {
-  id: string;
-  opponent: string;
-  result: "win" | "loss" | "draw";
-  playerColor: "white" | "black";
-  duration: string;
-  date: string;
-}
-
 interface UserProfilePageProps {
   params: Promise<{ username: string }>;
 }
@@ -50,51 +41,6 @@ export default async function UserProfilePage({
   const isOwnProfile = user?.username === username && !isGuest;
   const canChangeUsername = isOwnProfile && user?.provider !== "guest";
 
-  // Mock data - in production this would come from an API
-  // Generate pseudo-random but consistent stats based on username
-  const userHash = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const gamesPlayed = 50 + (userHash % 200);
-  const wins = Math.floor(gamesPlayed * (0.4 + (userHash % 30) / 100));
-  const losses = Math.floor(gamesPlayed * (0.35 + ((userHash * 7) % 20) / 100));
-  const draws = gamesPlayed - wins - losses;
-  
-  const stats = {
-    rating: 1200 + (userHash % 600), // Rating between 1200-1800
-    gamesPlayed,
-    wins,
-    losses,
-    draws,
-    winRate: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
-    currentStreak: (userHash % 7) - 3, // Streak between -3 and 3
-  };
-
-  // Mock data - in production this would come from an API
-  const recentGames: GameRecord[] = [
-    {
-      id: "1",
-      opponent: "DragonMaster",
-      result: "win",
-      playerColor: "white",
-      duration: "15:23",
-      date: "2 hours ago",
-    },
-    {
-      id: "2",
-      opponent: "ChessWizard99",
-      result: "loss",
-      playerColor: "black",
-      duration: "08:45",
-      date: "5 hours ago",
-    },
-    {
-      id: "3",
-      opponent: "TacticalGenius",
-      result: "draw",
-      playerColor: "white",
-      duration: "22:10",
-      date: "Yesterday",
-    },
-  ];
 
   // Pass data to client component for interactivity
   return (
@@ -103,8 +49,6 @@ export default async function UserProfilePage({
       user={user}
       isOwnProfile={isOwnProfile}
       canChangeUsername={canChangeUsername}
-      stats={stats}
-      recentGames={recentGames}
     />
   );
 }
