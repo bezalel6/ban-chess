@@ -15,37 +15,65 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 
 ---
 
-## 🚀 Features (MVP)
+## 🚀 Features
 
-- Create a Ban Chess game and share link with opponent
-- Join existing games via URL
+### Core Gameplay
+- Create solo practice games or find opponents online
 - Real-time move + ban synchronization with WebSockets
 - Interactive chessboard powered by **react-chessground**
-- Game logic enforced by **ban-chess.ts**
-- State broadcasted to both players (FEN, PGN, next action)
+- Game logic enforced by **ban-chess.ts** with BCN (Ban Chess Notation) serialization
+- Support for 15+10 time control (15 minutes + 10 second increment)
+
+### User Experience
+- Guest authentication with automatic username generation
+- Active game detection on home page with continue/resign options
+- Clean resignation flow with inline confirmation (no browser prompts)
+- Resizable game board with persistent size preference
+- Mobile-responsive design
+
+### Technical Features
+- Efficient BCN serialization for moves/bans (50% bandwidth reduction)
+- Automatic game cleanup after completion (2-second archival delay)
+- WebSocket connection resilience with automatic reconnection
+- Redis-backed game state for persistence across server restarts
+- Separated concerns: WebSocket server for live games only
 
 ---
 
 ## 🛠️ Project Structure
 
 ```
-ban-chess-web/
+2ban-2chess/
 ├─ app/
-│  ├─ page.tsx               # Landing page (create new game)
-│  └─ game/[id]/page.tsx     # Game board page
+│  ├─ page.tsx               # Landing page with game status
+│  ├─ game/[id]/page.tsx     # Dynamic game board page
+│  └─ play/
+│     ├─ local/page.tsx      # Solo practice mode
+│     └─ online/page.tsx     # Online matchmaking
 │
 ├─ components/
-│  └─ ChessBoard.tsx         # React Chessground wrapper
+│  ├─ ChessBoard.tsx         # React Chessground wrapper
+│  ├─ GameClient.tsx         # Main game UI controller
+│  ├─ ActiveGameCard.tsx     # Active game status display
+│  └─ game/
+│     ├─ GameSidebar.tsx     # Player info & move history
+│     ├─ GameStatusPanel.tsx # Game state & controls
+│     └─ ResizableBoard.tsx  # Resizable chess board wrapper
+│
+├─ hooks/
+│  └─ useGameState.tsx       # WebSocket game state management
 │
 ├─ lib/
-│  ├─ ws-client.ts           # WebSocket client hook
-│  └─ game-types.ts          # Shared WS message types
+│  ├─ game-types.ts          # TypeScript types & messages
+│  └─ game-utils.ts          # Game permission utilities
 │
 ├─ server/
-│  └─ ws-server.ts           # Node WebSocket server with ban-chess.ts
+│  └─ ws-server.ts           # WebSocket server with Redis
 │
-├─ package.json
-└─ tsconfig.json
+├─ contexts/
+│  └─ WebSocketContext.tsx   # WebSocket connection provider
+│
+└─ package.json
 ```
 
 ---
