@@ -49,14 +49,6 @@ export function getUserRole(
     ? (gameState.activePlayer || "white")  // Flip board based on who's playing
     : (playerColor || "white");  // Fixed perspective in online games
 
-  console.log("[game-utils] User role:", {
-    userId,
-    playerColor,
-    role,
-    isLocalGame,
-    orientation,
-  });
-
   return {
     role,
     orientation,

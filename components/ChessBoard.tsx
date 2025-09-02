@@ -170,15 +170,10 @@ const ChessBoard = memo(function ChessBoard({
     [gameState, fenData, nextAction, onMove, onBan],
   );
 
-  // Board key that includes ban state to force remount when game phase changes
+  // Simple board key - only remount on manual refresh
   const boardKey = useMemo(
-    () =>
-      `${fenData?.position || "initial"}-${fenData?.turn || "w"}-${
-        fenData?.banState || "no-ban"
-      }-${movableColor || "none"}-${
-        gameState?.gameOver ? "over" : "active"
-      }-refresh-${refreshKey}`,
-    [fenData?.position, fenData?.turn, fenData?.banState, movableColor, gameState?.gameOver, refreshKey],
+    () => `board-${refreshKey}`,
+    [refreshKey],
   );
 
   // Memoize config early to comply with Rules of Hooks
