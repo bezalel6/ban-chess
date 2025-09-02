@@ -126,7 +126,10 @@ This platform features comprehensive authentication, real-time multiplayer, soun
 └─ docs/                     # Documentation
    ├─ DEVELOPMENT.md         # Development guide
    ├─ ARCHITECTURE.md        # Architecture documentation
-   └─ DEPLOYMENT.md          # Deployment instructions
+   ├─ DEPLOYMENT.md          # Production deployment guide
+   ├─ API_REFERENCE.md       # API documentation
+   ├─ OAUTH_SETUP.md         # OAuth configuration
+   └─ ban-chess-api.md       # BCN format specifications
 ```
 
 ---
@@ -337,7 +340,7 @@ For more detailed information, check out the comprehensive documentation:
 
 - **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)** - Development setup, debugging, and best practices
 - **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Technical architecture and design decisions  
-- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Production deployment instructions
+- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Comprehensive production deployment guide
 - **[OAUTH_SETUP.md](./docs/OAUTH_SETUP.md)** - OAuth provider configuration
 - **[RULES.md](./RULES.md)** - Complete Ban Chess game rules
 
