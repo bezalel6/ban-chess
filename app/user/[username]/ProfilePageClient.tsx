@@ -4,7 +4,6 @@ import { useState } from "react";
 import { User, Edit2, Info } from "lucide-react";
 import UsernameChangeModal from "@/components/UsernameChangeModal";
 import type { User as AuthUser } from "@/types/auth";
-import { useRouter } from "next/navigation";
 
 interface ProfilePageClientProps {
   username: string;
@@ -21,12 +20,10 @@ export default function ProfilePageClient({
 }: ProfilePageClientProps) {
   const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
   const [username, setUsername] = useState(initialUsername);
-  const router = useRouter();
 
   const handleUsernameChange = (newUsername: string) => {
     setUsername(newUsername);
-    // Redirect to the new profile URL
-    router.push(`/user/${newUsername}`);
+    // The modal will handle signing out and redirecting
   };
 
   return (

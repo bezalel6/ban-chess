@@ -8,6 +8,7 @@ import {
 } from "@/lib/username";
 import { redis, KEYS } from "@/server/redis";
 import type { AuthSession } from "@/types/auth";
+import { getToken } from "next-auth/jwt";
 
 // Check username availability
 export async function GET(request: NextRequest) {
@@ -114,8 +115,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Attempt to change username
-    const result = await changeUsername(session.user.username, newUsername);
+    // Get the user's database ID from the JWT token
+    // The JWT callback stores userId in the token
+    const token = await getToken({ 
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production"
+    });
+    
+    const userId = token?.userId as string | undefined;
+    
+    if (!userId) {
+      console.error("[API] No userId found in token:", token);
+      return NextResponse.json(
+        { error: "Unable to identify user account" },
+        { status: 500 }
+      );
+    }
+
+    // Attempt to change username - now with database update
+    const result = await changeUsername(session.user.username, newUsername, userId);
 
     if (!result.success) {
       return NextResponse.json(

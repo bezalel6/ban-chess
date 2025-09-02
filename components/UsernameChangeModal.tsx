@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { X, AlertCircle, Check, Loader2, Info } from "lucide-react";
+import { useToast } from "@/lib/toast/toast-context";
+import { signOut } from "next-auth/react";
 
 interface UsernameChangeModalProps {
   isOpen: boolean;
@@ -9,7 +11,7 @@ interface UsernameChangeModalProps {
   currentUsername: string;
   provider: string;
   originalName?: string;
-  onSuccess: (newUsername: string) => void;
+  onSuccess?: (newUsername: string) => void;
 }
 
 export default function UsernameChangeModal({
@@ -22,20 +24,20 @@ export default function UsernameChangeModal({
 }: UsernameChangeModalProps) {
   const [newUsername, setNewUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkTimeout, setCheckTimeout] = useState<ReturnType<
     typeof setTimeout
   > | null>(null);
+  
+  const { showToast } = useToast();
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
       setNewUsername("");
       setError(null);
-      setInfo(null);
       setIsAvailable(null);
       setIsChecking(false);
     }
@@ -114,24 +116,38 @@ export default function UsernameChangeModal({
       const data = await response.json();
 
       if (response.ok && data.success) {
-        onSuccess(data.newUsername);
-        setInfo(
-          "Username changed successfully! Please sign out and back in for changes to take effect.",
+        // Close modal immediately to prevent error flash
+        onClose();
+        
+        // Show success toast
+        showToast(
+          "Username changed successfully! Signing you out for the changes to take effect...",
+          "success",
+          5000
         );
-
-        // Auto close after 3 seconds
+        
+        // Call the onSuccess callback if provided
+        if (onSuccess) {
+          onSuccess(data.newUsername);
+        }
+        
+        // Wait a moment for the toast to be visible, then sign out
         setTimeout(() => {
-          onClose();
-        }, 3000);
+          signOut({ 
+            callbackUrl: '/auth/signin',
+            redirect: true 
+          });
+        }, 2000);
+        
       } else if (response.status === 429) {
         // Rate limit error
-        setError(data.error);
-        if (data.nextChangeAvailable) {
-          const nextDate = new Date(data.nextChangeAvailable);
-          setInfo(
-            `You can change your username again on ${nextDate.toLocaleDateString()}`,
-          );
-        }
+        const nextDate = data.nextChangeAvailable 
+          ? new Date(data.nextChangeAvailable).toLocaleDateString()
+          : null;
+        const errorMessage = nextDate 
+          ? `${data.error}. You can change your username again on ${nextDate}`
+          : data.error;
+        setError(errorMessage);
       } else {
         setError(data.error || "Failed to change username");
       }
@@ -242,13 +258,6 @@ export default function UsernameChangeModal({
             </div>
           )}
 
-          {/* Info message */}
-          {info && (
-            <div className="mb-4 p-3 bg-green-900/20 border border-green-900/50 rounded-lg flex items-start gap-2">
-              <Check className="h-4 w-4 text-green-500 mt-0.5" />
-              <p className="text-sm text-green-400">{info}</p>
-            </div>
-          )}
 
           {/* Action buttons */}
           <div className="flex gap-3">
