@@ -175,6 +175,7 @@ export type SimpleClientMsg =
   | { type: "create-solo-game"; timeControl?: TimeControl }
   | { type: "action"; gameId: string; action: Action } // Combined move and ban
   | { type: "give-time"; gameId: string; amount: number } // Give time to opponent
+  | { type: "resign"; gameId: string } // Resign the current game
   | { type: "ping" }; // Heartbeat ping from client
 
 // Helper functions to parse FEN

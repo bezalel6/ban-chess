@@ -272,6 +272,50 @@ async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
   return players;
 }
 
+// Clean up all game data when a game ends
+async function cleanupFinishedGame(gameId: string) {
+  console.log(`[cleanupFinishedGame] Cleaning up game ${gameId}`);
+  console.log("At this point, we would be archiving this game for later fetching. Now though, we'll just get rid of it.");
+  
+  // Stop and remove the timer
+  const timeManager = timeManagers.get(gameId);
+  if (timeManager) {
+    timeManager.stop();
+    timeManagers.delete(gameId);
+  }
+  
+  // Remove game state from Redis after a short delay to ensure final state is sent
+  setTimeout(async () => {
+    try {
+      // Get game state before deletion for player cleanup
+      const gameState = await getGameState(gameId);
+      
+      // Delete game state
+      await redis.del(KEYS.GAME_STATE(gameId));
+      
+      // Delete game events
+      await redis.del(KEYS.GAME_EVENTS(gameId));
+      
+      // Delete action history
+      await redis.del(KEYS.GAME_ACTIONS(gameId));
+      
+      // Remove players from game mapping
+      if (gameState) {
+        if (gameState.whitePlayerId) {
+          await redis.del(KEYS.PLAYER_GAME(gameState.whitePlayerId));
+        }
+        if (gameState.blackPlayerId) {
+          await redis.del(KEYS.PLAYER_GAME(gameState.blackPlayerId));
+        }
+      }
+      
+      console.log(`[cleanupFinishedGame] Successfully cleaned up game ${gameId}`);
+    } catch (err) {
+      console.error(`[cleanupFinishedGame] Error cleaning up game ${gameId}:`, err);
+    }
+  }, 2000); // 2 second delay to ensure clients receive the final state
+}
+
 async function handleTimeout(gameId: string, winner: "white" | "black") {
   const gameState = await getGameState(gameId);
   if (!gameState) return;
@@ -331,6 +375,9 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     KEYS.CHANNELS.GAME_STATE(gameId),
     JSON.stringify(stateMsg),
   );
+  
+  // Clean up the finished game
+  await cleanupFinishedGame(gameId);
 }
 
 async function broadcastClockUpdate(gameId: string) {
@@ -454,19 +501,14 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   const isNextActionBan = banState && banState.includes(":ban");
 
   const legalActions = isNextActionBan ? game.legalBans() : game.legalMoves();
+  // Serialize legal actions using BanChess format (e.g., "b:e2e4" for bans, "m:d2d4" for moves)
   const simpleLegalActions = legalActions
-    .map((action: string | { from: string; to: string }) => {
-      if (typeof action === "string") {
-        return action;
-      } else if (
-        action &&
-        typeof action === "object" &&
-        "from" in action &&
-        "to" in action
-      ) {
-        return action.from + action.to;
-      }
-      return null;
+    .map((action) => {
+      // Convert to proper Action type and serialize
+      const actionObj = isNextActionBan 
+        ? { ban: action }
+        : { move: action };
+      return BanChess.serializeAction(actionObj);
     })
     .filter((action): action is string => action !== null);
 
@@ -599,26 +641,21 @@ async function broadcastGameState(gameId: string) {
   const banState = fenParts[6]; // 7th field contains ban state
   const isNextActionBan = banState && banState.includes(":ban");
 
-  // Get legal actions and convert to simple format
+  // Get legal actions and convert to serialized format
   const legalActions = isNextActionBan ? game.legalBans() : game.legalMoves();
   console.log(`[broadcastGameState] FEN: ${fen}`);
   console.log(
     `[broadcastGameState] Chess turn: ${chessTurn}, Next action: ${isNextActionBan ? "ban" : "move"}, Legal actions count: ${legalActions.length}`,
   );
 
+  // Serialize legal actions using BanChess format (e.g., "b:e2e4" for bans, "m:d2d4" for moves)
   const simpleLegalActions = legalActions
-    .map((action: string | { from: string; to: string }) => {
-      if (typeof action === "string") {
-        return action;
-      } else if (
-        action &&
-        typeof action === "object" &&
-        "from" in action &&
-        "to" in action
-      ) {
-        return action.from + action.to;
-      }
-      return null;
+    .map((action) => {
+      // Convert to proper Action type and serialize
+      const actionObj = isNextActionBan 
+        ? { ban: action }
+        : { move: action };
+      return BanChess.serializeAction(actionObj);
     })
     .filter((action): action is string => action !== null);
 
@@ -1182,7 +1219,8 @@ wss.on("connection", (ws: WebSocket, request) => {
           const game = new BanChess(gameState.fen);
 
           // BanChess handles ALL validation
-          const result = game.play(action as Parameters<typeof game.play>[0]);
+          // Action comes serialized from client (e.g., "b:d2d4" or "m:e2e4")
+          const result = game.playSerializedAction(action as string);
 
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);
@@ -1227,6 +1265,8 @@ wss.on("connection", (ws: WebSocket, request) => {
             if (game.gameOver() && timeManager) {
               timeManager.destroy();
               timeManagers.delete(gameId);
+              // Clean up the finished game
+              await cleanupFinishedGame(gameId);
             }
           } else {
             console.log(
@@ -1432,6 +1472,81 @@ wss.on("connection", (ws: WebSocket, request) => {
               } as SimpleServerMsg),
             );
           }
+          break;
+        }
+
+        case "resign": {
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Not authenticated",
+              } as SimpleServerMsg),
+            );
+            return;
+          }
+
+          const { gameId } = msg;
+          const gameState = await getGameState(gameId);
+
+          if (!gameState) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Game not found",
+              } as SimpleServerMsg),
+            );
+            return;
+          }
+
+          // Check if the player is actually in this game
+          const isWhite = currentPlayer.userId === gameState.whitePlayerId;
+          const isBlack = currentPlayer.userId === gameState.blackPlayerId;
+
+          if (!isWhite && !isBlack) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "You are not in this game",
+              } as SimpleServerMsg),
+            );
+            return;
+          }
+
+          // Determine the winner (opposite of the resigning player)
+          const winner = isWhite ? "black" : "white";
+          const loser = isWhite ? "white" : "black";
+
+          // Update game state
+          gameState.gameOver = true;
+          gameState.result = `${winner === "white" ? "White" : "Black"} wins by resignation`;
+          await saveGameState(gameId, gameState);
+
+          // Stop the timer
+          const timeManager = timeManagers.get(gameId);
+          if (timeManager) {
+            timeManager.stop();
+            timeManagers.delete(gameId);
+          }
+
+          // Create and store resignation event
+          const event: GameEvent = {
+            type: "resignation",
+            timestamp: Date.now(),
+            playerId: currentPlayer.userId,
+            color: loser,
+          };
+          await addGameEvent(gameId, event);
+
+          // Broadcast game over state
+          await broadcastGameState(gameId);
+
+          console.log(
+            `[resign] ${currentPlayer.username} (${loser}) resigned in game ${gameId}`,
+          );
+          
+          // Clean up the finished game
+          await cleanupFinishedGame(gameId);
           break;
         }
       }
