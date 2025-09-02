@@ -1,3 +1,10 @@
+// Load environment variables from .env.local
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load .env.local file for environment variables
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+
 import { WebSocketServer, WebSocket } from "ws";
 import { BanChess } from "ban-chess.ts";
 import type {
@@ -97,6 +104,9 @@ console.log(
 console.log(`[WebSocket] Allowed origins: ${allowedOrigins.join(", ")}`);
 console.log(
   `[WebSocket] Redis URL: ${process.env.REDIS_URL || "redis://localhost:6379"}`,
+);
+console.log(
+  `[WebSocket] NEXTAUTH_SECRET loaded: ${!!process.env.NEXTAUTH_SECRET}`,
 );
 console.log(
   `[WebSocket] NEXT_PUBLIC_WEBSOCKET_URL: ${process.env.NEXT_PUBLIC_WEBSOCKET_URL}`,
@@ -910,7 +920,7 @@ wss.on("connection", (ws: WebSocket, request) => {
 
   // Get auth info from the request that was validated during handshake
   const reqWithAuth = request as typeof request & {
-    authToken?: { providerId: string; username: string; provider: string };
+    authToken?: { providerId: string; username: string; provider: string; userId: string; isGuest?: boolean };
   };
   const authToken = reqWithAuth.authToken;
   let currentPlayer: Player | null = null;
@@ -918,34 +928,36 @@ wss.on("connection", (ws: WebSocket, request) => {
   // Auto-authenticate if token present
   (async () => {
     if (authToken) {
+      // Use userId from token (from database) instead of providerId
+      const userId = authToken.userId || authToken.providerId;
       currentPlayer = {
-        userId: authToken.providerId,
+        userId: userId,
         username: authToken.username,
         ws,
       };
       authenticatedPlayers.set(ws, currentPlayer);
 
       // Save player session to Redis
-      await savePlayerSession(currentPlayer.userId, {
-        userId: currentPlayer.userId,
+      await savePlayerSession(userId, {
+        userId: userId,
         username: currentPlayer.username,
         status: "online",
         lastSeen: Date.now(),
       });
 
-      console.log(`Player authenticated via token: ${authToken.username}`);
+      console.log(`Player authenticated via ${authToken.isGuest ? 'guest' : 'session'} token: ${authToken.username}`);
 
       // Send authentication confirmation
       ws.send(
         JSON.stringify({
           type: "authenticated",
-          userId: authToken.providerId,
+          userId: userId,
           username: authToken.username,
         } as SimpleServerMsg),
       );
 
       // Check if player was in a game (reconnection)
-      const gameId = await redis.get(KEYS.PLAYER_GAME(authToken.providerId));
+      const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
       if (gameId) {
         const gameState = await getGameState(gameId);
         if (gameState) {
@@ -953,7 +965,7 @@ wss.on("connection", (ws: WebSocket, request) => {
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
 
           const color: "white" | "black" =
-            gameState.whitePlayerId === authToken.providerId
+            gameState.whitePlayerId === userId
               ? "white"
               : "black";
           console.log(

@@ -33,15 +33,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const authSentRef = useRef(false);
 
   const socketUrl = useMemo(() => {
+    // Only connect if user is authenticated
+    // Cookies will be sent automatically with the WebSocket handshake
     if (!user || !user.userId || !user.username || !user.provider) return null;
 
-    const url = new URL(config.websocket.url);
-    url.searchParams.set("username", user.username);
-    url.searchParams.set("providerId", user.userId);
-    url.searchParams.set("provider", user.provider);
-
-    console.log("[WebSocketProvider] socketUrl:", url.toString());
-    return url.toString();
+    // No need to add auth params to URL - cookies will handle authentication
+    const url = config.websocket.url;
+    console.log("[WebSocketProvider] Connecting with session cookies to:", url);
+    return url;
   }, [user]);
 
   const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
@@ -71,22 +70,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Centralized authentication - only happens once at the context level
+  // Monitor connection state for authentication status
   useEffect(() => {
-    if (readyState === ReadyState.OPEN && user && !authSentRef.current) {
-      authSentRef.current = true;
-      console.log("[WebSocketProvider] Authenticating once:", {
-        userId: user.userId,
-        username: user.username,
-        provider: user.provider,
-      });
-      sendMessage(
-        JSON.stringify({
-          type: "authenticate",
-          userId: user.userId || "",
-          username: user.username || "",
-        })
-      );
+    // Connection is authenticated automatically via cookies during handshake
+    if (readyState === ReadyState.OPEN && user) {
+      console.log("[WebSocketProvider] Connection established with cookie authentication");
+      // No need to send authentication message - server validates cookies automatically
     }
 
     // Reset auth flag when connection closes
@@ -94,7 +83,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       authSentRef.current = false;
       setIsAuthenticated(false);
     }
-  }, [readyState, user, sendMessage]);
+  }, [readyState, user]);
 
   // Listen for authentication confirmation
   useEffect(() => {

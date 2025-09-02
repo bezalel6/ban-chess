@@ -107,3 +107,5 @@ redis-data/
 # Generated documentation
 claudedocs/
 coolify-deployment/
+
+/lib/generated/prisma

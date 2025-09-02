@@ -5,9 +5,11 @@ import React from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { UserRoleProvider } from "@/contexts/UserRoleContext";
+import { ToastProvider } from "@/lib/toast/toast-context";
 import Header from "@/components/layout/Header";
 import ConnectionStatusOverlay from "@/components/ConnectionStatusOverlay";
 import WebSocketStatusWidget from "@/components/WebSocketStatusWidget";
+import ToastContainer from "@/components/ToastContainer";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -46,18 +48,23 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="bg-background text-foreground min-h-screen">
         <AuthProvider>
-          <WebSocketProvider>
-            <UserRoleProvider>
-              <ConnectionStatusOverlay />
-              <WebSocketStatusWidget />
-              <Header />
+          <ToastProvider>
+            <WebSocketProvider>
+              <UserRoleProvider>
+                <ConnectionStatusOverlay />
+                <WebSocketStatusWidget />
+                <Header />
 
-              {/* Main content */}
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {children}
-              </main>
-            </UserRoleProvider>
-          </WebSocketProvider>
+                {/* Main content */}
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                  {children}
+                </main>
+                
+                {/* Toast notifications */}
+                <ToastContainer />
+              </UserRoleProvider>
+            </WebSocketProvider>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

@@ -1,8 +1,10 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { useToast } from "@/lib/toast/toast-context";
 
 interface SignInPanelProps {
   compact?: boolean;
@@ -14,6 +16,63 @@ export default function SignInPanel({
   onSignIn,
 }: SignInPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const { showToast } = useToast();
+
+  // Check for auth errors in URL params
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error) {
+      console.log("[SignInPanel] Auth error:", error); // Dev logging
+      
+      // Handle specific errors with appropriate messages
+      if (error === "OAuthCreateAccount") {
+        // Check if it's an email requirement issue (Lichess without email)
+        // or a duplicate email issue
+        showToast(
+          "Authentication failed. If you're using Lichess, you must grant email access or sign in as a Guest.",
+          "error",
+          7000
+        );
+        
+        setTimeout(() => {
+          showToast(
+            "Lichess users: Enable email access in your Lichess account or use Guest mode to play.",
+            "info",
+            10000
+          );
+        }, 1500);
+      } else if (error === "OAuthAccountNotLinked") {
+        // This occurs when email is already registered with a different provider
+        showToast(
+          "This email is already registered. Please sign in with the provider you originally used.",
+          "error",
+          7000
+        );
+        
+        // Add helpful suggestions without revealing the specific provider
+        setTimeout(() => {
+          showToast(
+            "Try signing in with Google, Lichess, or as a Guest if you're not sure.",
+            "info",
+            10000
+          );
+        }, 1500);
+      } else if (error === "OAuthSignin" || error === "OAuthCallback") {
+        // OAuth provider errors
+        showToast(
+          "Authentication failed. Please try again or use a different sign-in method.",
+          "error"
+        );
+      } else {
+        // Generic error for other cases
+        showToast(
+          "Authentication failed. Please check your credentials and try again.",
+          "error"
+        );
+      }
+    }
+  }, [searchParams, showToast]);
 
   const handleLichessSignIn = () => {
     signIn("lichess", { callbackUrl: "/" });

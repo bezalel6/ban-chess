@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== NextAuth Models ====================
+// These models are required for NextAuth.js with Prisma adapter
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  
+  // Custom fields for our chess application
+  username      String    @unique  // Always required - generated on creation
+  isGuest       Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  
+  // Game relations (prepared for future)
+  gamesAsWhite  Game[]    @relation("WhitePlayer")
+  gamesAsBlack  Game[]    @relation("BlackPlayer")
+  
+  // User preferences and stats
+  preferences   Json?     @default("{}")
+  stats         Json?     @default("{}")
+  
+  @@index([email])
+  @@index([username])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== Game Models (Prepared for future) ====================
+
+model Game {
+  id            String    @id @default(cuid())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Players
+  whitePlayerId String?
+  blackPlayerId String?
+  whitePlayer   User?     @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+  blackPlayer   User?     @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
+  
+  // Game state
+  fen           String    @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+  pgn           String?   @db.Text
+  status        GameStatus @default(ACTIVE)
+  result        String?   // "1-0", "0-1", "1/2-1/2", etc.
+  
+  // Time control
+  timeControl   Json?     // { initial: number, increment: number }
+  
+  // Moves and bans (stored as JSON arrays for now)
+  moves         Json      @default("[]")
+  bans          Json      @default("[]")
+  
+  // Redis sync tracking
+  redisSyncStatus String? 
+  redisSyncAt     DateTime?
+  
+  // Metadata
+  metadata      Json?
+  archived      Boolean   @default(false)
+  
+  @@index([whitePlayerId])
+  @@index([blackPlayerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum GameStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+  ARCHIVED
+}
+
+// ==================== Player Presence (for online status) ====================
+
+model PlayerPresence {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  status        String   // "online", "offline", "in_game"
+  lastHeartbeat DateTime @default(now())
+  gameId        String?
+  
+  @@index([status])
+  @@index([lastHeartbeat])
+}
