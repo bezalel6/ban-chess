@@ -65,7 +65,7 @@ export const soundThemes = {
 export type SoundTheme = keyof typeof soundThemes;
 
 // Common sound types available across themes
-const commonSoundTypes = [
+const _commonSoundTypes = [
   "Move", "Capture", "Check", "Checkmate", "Victory", "Defeat", "Draw",
   "NewChallenge", "Confirmation", "GenericNotify", "LowTime", "Explosion",
   "Error", "Berserk", "CountDown0", "CountDown1", "CountDown2", "CountDown3",

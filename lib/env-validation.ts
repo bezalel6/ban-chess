@@ -144,15 +144,12 @@ export async function checkRedisConnection(): Promise<{
   }
 
   try {
-    // Try to import Redis client
-    const { createClient } = await import("redis");
-    const client = createClient({
-      url: process.env.REDIS_URL || "redis://localhost:6379",
-    });
+    // Try to import Redis client (using ioredis)
+    const Redis = (await import("ioredis")).default;
+    const client = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
 
-    await client.connect();
     await client.ping();
-    await client.disconnect();
+    client.disconnect();
 
     return { connected: true };
   } catch (error) {
