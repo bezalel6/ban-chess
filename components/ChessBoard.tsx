@@ -74,6 +74,10 @@ const ChessBoard = memo(function ChessBoard({
     from: string;
     to: string;
   } | null>(null);
+  
+  // Debug panel freeze state - frozen by default
+  const [frozen, setFrozen] = useState(true);
+  const [frozenConfig, setFrozenConfig] = useState<Record<string, unknown> | null>(null);
 
   // Parse FEN data
   const fenData = useMemo(() => {
@@ -83,40 +87,25 @@ const ChessBoard = memo(function ChessBoard({
 
   // Determine which color pieces can be moved
   const movableColor = useMemo(() => {
-    // Detailed debugging
-    console.log("[ChessBoard] movableColor calculation:", {
-      canMove,
-      canBan,
-      role,
-      currentAction,
-      isSpectator: role === null,
-      gameOver: gameState?.gameOver,
-    });
-    
     if (!canMove && !canBan) {
-      console.log("[ChessBoard] Cannot move or ban - returning undefined");
       return undefined;
     }
     if (role === null) {
-      console.log("[ChessBoard] Spectator - returning undefined");
       return undefined;
     }
     
     // During YOUR ban phase, allow selecting both colors
     // The dests map will restrict to only opponent pieces
     if (canBan && currentAction === "ban") {
-      console.log("[ChessBoard] ✅ Ban phase - player", role, "can select BOTH colors (dests will restrict to opponent)");
       return "both";
     } else if (canMove && currentAction === "move") {
       // When moving, you select YOUR OWN pieces
-      console.log("[ChessBoard] Move phase - player", role, "can select", role, "pieces");
       return role as "white" | "black";
     } else {
       // Not your turn - no pieces selectable
-      console.log("[ChessBoard] ❌ Not your turn - no pieces selectable");
       return undefined;
     }
-  }, [canMove, canBan, role, currentAction, gameState?.gameOver]);
+  }, [canMove, canBan, role, currentAction]);
 
   // Extract values - ban from FEN, action from context
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
@@ -260,7 +249,9 @@ const ChessBoard = memo(function ChessBoard({
     );
   }
 
-  // Debug logging
+  // Debug logging - commented out to reduce console spam
+  // Uncomment when debugging is needed
+  /*
   console.log("[ChessBoard] State:", {
     role,
     turn: fenData.turn,
@@ -274,17 +265,15 @@ const ChessBoard = memo(function ChessBoard({
     players: gameState.players,
     currentBan,
     banState: fenData.banState,
-    isInCheck, // Add check state to debug output
+    isInCheck,
   });
   
-  // Log the actual config being passed to Chessground
   console.log("[ChessBoard] Movable config:", {
     color: movableColor,
     destsSize: dests.size,
     canMoveOrBan: canMove || canBan,
   });
 
-  // Extra debug for ban display
   if (visibleBan) {
     console.log("[ChessBoard] BAN IS VISIBLE:", visibleBan);
   } else if (currentBan) {
@@ -292,31 +281,74 @@ const ChessBoard = memo(function ChessBoard({
   } else {
     console.log("[ChessBoard] No ban to display");
   }
+  */
 
-  // Format destinations for debug display
-  const debugDests = Array.from(dests.entries()).map(([from, tos]) => 
-    `${from}→[${tos.join(',')}]`
-  ).join(' | ');
+  // Create the debug config object
+  const debugConfig = {
+    fen: config.fen,
+    orientation: config.orientation,
+    movable: {
+      color: config.movable?.color,
+      dests: config.movable?.dests ? Array.from(config.movable.dests.entries()).map(([k, v]) => [k, v]) : [],
+    },
+    drawable: config.drawable,
+    check: config.check,
+    lastMove: config.lastMove,
+    gameState: {
+      role,
+      turn: fenData?.turn,
+      activePlayer: currentActivePlayer,
+      action: currentAction,
+      canMove,
+      canBan,
+      visibleBan,
+    }
+  };
+
+  // Capture config when freezing
+  const handleFreeze = () => {
+    if (!frozen) {
+      // Freezing - capture current state
+      setFrozenConfig(debugConfig);
+    }
+    setFrozen(!frozen);
+  };
+
+  // Use frozen config if frozen and available, otherwise live config
+  const displayConfig = frozen && frozenConfig ? frozenConfig : debugConfig;
 
   return (
-    <div className="chess-board-outer">
-      <div className="chess-board-inner">
-        <Chessground key={boardKey} {...config} />
-      </div>
-      {/* Debug Panel - Below board, full width */}
-      <div className="bg-gray-900 text-green-400 text-xs p-3 font-mono border-t border-gray-700">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-          <div>FEN: {gameState?.fen?.substring(0, 50)}...</div>
-          <div>Turn: {fenData?.turn} | Role: {role} | Action: {currentAction}</div>
-          <div>Active: {currentActivePlayer} | CanMove: {String(canMove)} | CanBan: {String(canBan)}</div>
-          <div>MovableColor: {String(movableColor)} | Dests: {dests.size} moves</div>
-          <div className="col-span-2">Moves: {debugDests || 'None'}</div>
-          <div className="col-span-2">Config.fen: {config.fen?.substring(0, 50)}...</div>
-          <div>Config.movable.color: {String(config.movable?.color)}</div>
-          <div>Ban: {visibleBan ? `${visibleBan.from}→${visibleBan.to}` : 'None'}</div>
+    <>
+      <div className="chess-board-outer">
+        <div className="chess-board-inner">
+          <Chessground key={boardKey} {...config} />
         </div>
       </div>
-    </div>
+      {/* Debug JSON Panel - At the very bottom of the page */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-green-400 max-h-48 overflow-y-auto z-40 border-t-2 border-gray-700">
+        <details className="p-2">
+          <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
+            <span>Board Config JSON (click to expand)</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFreeze();
+              }}
+              className={`ml-2 px-2 py-1 text-xs rounded ${
+                frozen 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-green-600 text-white'
+              }`}
+            >
+              {frozen ? '❄️ Frozen' : '🔴 Live'}
+            </button>
+          </summary>
+          <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
+            {JSON.stringify(displayConfig, null, 2)}
+          </pre>
+        </details>
+      </div>
+    </>
   );
 });
 

@@ -7,6 +7,7 @@ import { useGameState } from "@/hooks/useGameState";
 import type { Move, Ban } from "@/lib/game-types";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
+import WebSocketStats from "./WebSocketStats";
 
 const ResizableBoard = dynamic(
   () =>
@@ -247,6 +248,7 @@ export default function GameClient({ gameId }: GameClientProps) {
           onGiveTime={giveTime}
         />
       </div>
+      <WebSocketStats />
     </>
   );
 }
