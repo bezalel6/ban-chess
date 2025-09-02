@@ -4,10 +4,11 @@ import { useAuth } from "@/components/AuthProvider";
 import { useGameState } from "@/hooks/useGameState";
 import { useRouter } from "next/navigation";
 import SignInPanel from "@/components/SignInPanel";
+import ActiveGameCard from "@/components/ActiveGameCard";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
-  const { connected } = useGameState();
+  const { connected, currentGameId, gameState, resignGame } = useGameState();
   const router = useRouter();
 
   const playLocal = () => {
@@ -67,33 +68,46 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">Play</h2>
-          <div className="flex flex-col gap-4 w-full">
-            <button
-              onClick={playLocal}
-              disabled={!connected}
-              className="btn-secondary py-4 text-lg"
-            >
-              Play Solo (Practice)
-            </button>
-            <button
-              onClick={playOnline}
-              disabled={!connected}
-              className="btn-primary py-4 text-lg"
-            >
-              Find Opponent
-            </button>
-          </div>
-          {!connected && (
-            <div className="text-center pt-4">
-              <div className="loading-spinner mb-4"></div>
-              <p className="text-foreground-muted">
-                Connecting to game server...
-              </p>
+        {/* Show active game status if player is in a game */}
+        {currentGameId && gameState && !gameState.gameOver && (
+          <ActiveGameCard
+            gameId={currentGameId}
+            gameState={gameState}
+            userId={user.userId}
+            onResign={resignGame}
+          />
+        )}
+
+        {/* Show play options if no active game */}
+        {(!currentGameId || !gameState || gameState.gameOver) && (
+          <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-bold mb-4">Play</h2>
+            <div className="flex flex-col gap-4 w-full">
+              <button
+                onClick={playLocal}
+                disabled={!connected}
+                className="btn-secondary py-4 text-lg"
+              >
+                Play Solo (Practice)
+              </button>
+              <button
+                onClick={playOnline}
+                disabled={!connected}
+                className="btn-primary py-4 text-lg"
+              >
+                Find Opponent
+              </button>
             </div>
-          )}
-        </div>
+            {!connected && (
+              <div className="text-center pt-4">
+                <div className="loading-spinner mb-4"></div>
+                <p className="text-foreground-muted">
+                  Connecting to game server...
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
