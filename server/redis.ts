@@ -88,6 +88,7 @@ export const KEYS = {
     QUEUE_UPDATE: "channel:queue:update",
   },
   GAME_EVENTS: (id: string) => `game:${id}:events`,
+  TIMER: (id: string) => `timer:${id}`,
 } as const;
 
 // Connection event handlers

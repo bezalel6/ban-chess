@@ -2,7 +2,7 @@
 
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import type {
   Dests,
   Key,
@@ -66,6 +66,56 @@ const ChessBoard = memo(function ChessBoard({
     return role as "white" | "black";
   }, [canMove, role]);
 
+  // Extract values from parsed FEN and game state (needs to be before hook calls)
+  const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
+  const nextAction = gameState?.nextAction || "move";
+  const isInCheck = gameState?.inCheck || false;
+
+  // Build legal moves map from server - memoized to prevent re-creation
+  const dests: Dests = useMemo(() => {
+    const destsMap = new Map<Key, Key[]>();
+    if (gameState?.legalActions) {
+      gameState.legalActions.forEach((action: string) => {
+        const from = action.substring(0, 2) as Key;
+        const to = action.substring(2, 4) as Key;
+
+        if (!destsMap.has(from)) {
+          destsMap.set(from, []);
+        }
+        destsMap.get(from)!.push(to);
+      });
+    }
+    return destsMap;
+  }, [gameState?.legalActions]);
+
+  // Memoize the move handler
+  const handleAfterMove = useCallback(
+    (orig: string, dest: string) => {
+      if (!gameState || !fenData) return;
+
+      if (nextAction === "ban") {
+        onBan({ from: orig, to: dest });
+      } else {
+        // Check if this is a pawn promotion
+        const piece = getPieceAt(fenData.position, orig);
+        const isPromotion = piece === "P" || piece === "p";
+        const destRank = dest[1];
+
+        if (isPromotion && (destRank === "8" || destRank === "1")) {
+          // Store the move and show promotion dialog
+          _setPromotionMove({ from: orig, to: dest });
+        } else {
+          onMove({
+            from: orig,
+            to: dest,
+            promotion: undefined,
+          });
+        }
+      }
+    },
+    [gameState, fenData, nextAction, onMove, onBan],
+  );
+
   // Safety check: If gameState or fenData is invalid, return a placeholder
   if (!gameState || !gameState.fen || !fenData) {
     return (
@@ -75,25 +125,6 @@ const ChessBoard = memo(function ChessBoard({
         </div>
       </div>
     );
-  }
-
-  // Extract values from parsed FEN and game state
-  const currentBan = getCurrentBan(gameState.fen);
-  const nextAction = gameState.nextAction || "move";
-  const isInCheck = gameState.inCheck || false;
-
-  // Build legal moves map from server
-  const dests: Dests = new Map<Key, Key[]>();
-  if (gameState.legalActions) {
-    gameState.legalActions.forEach((action: string) => {
-      const from = action.substring(0, 2) as Key;
-      const to = action.substring(2, 4) as Key;
-
-      if (!dests.has(from)) {
-        dests.set(from, []);
-      }
-      dests.get(from)!.push(to);
-    });
   }
 
   // Debug logging
@@ -123,71 +154,67 @@ const ChessBoard = memo(function ChessBoard({
     gameState.gameOver ? "over" : "active"
   }`;
 
-  const config: ReactChessGroundProps = {
-    fen: fenData.position,
-    orientation,
-    coordinates: false,
-    autoCastle: true,
-    highlight: {
-      lastMove: true,
-    },
-    check: isInCheck ? fenData.turn : undefined,
-    lastMove: undefined,
-    animation: {
-      enabled: true,
-      duration: 200,
-    },
-    movable: {
-      free: false,
-      color: movableColor,
-      dests: canMove ? dests : new Map(),
-      showDests: true,
-      events: {
-        after: (orig: string, dest: string) => {
-          if (nextAction === "ban") {
-            onBan({ from: orig, to: dest });
-          } else {
-            // Check if this is a pawn promotion
-            const piece = getPieceAt(fenData.position, orig);
-            const isPromotion = piece === "P" || piece === "p";
-            const destRank = dest[1];
-
-            if (isPromotion && (destRank === "8" || destRank === "1")) {
-              // Store the move and show promotion dialog
-              _setPromotionMove({ from: orig, to: dest });
-            } else {
-              onMove({
-                from: orig,
-                to: dest,
-                promotion: undefined,
-              });
-            }
-          }
+  const config: ReactChessGroundProps = useMemo(
+    () => ({
+      fen: fenData.position,
+      orientation,
+      coordinates: false,
+      autoCastle: true,
+      highlight: {
+        lastMove: true,
+      },
+      check: isInCheck ? fenData.turn : undefined,
+      lastMove: undefined,
+      animation: {
+        enabled: true,
+        duration: 200,
+      },
+      movable: {
+        free: false,
+        color: movableColor,
+        dests: canMove ? dests : new Map(),
+        showDests: true,
+        events: {
+          after: handleAfterMove,
         },
       },
-    },
-    selectable: {
-      enabled: canMove,
-    },
-    premovable: {
-      enabled: false,
-    },
-    drawable: {
-      enabled: true,
-      visible: true,
-      autoShapes: currentBan
-        ? [
-            {
-              orig: currentBan.from as Key,
-              dest: currentBan.to as Key,
-              brush: "red",
-            },
-          ]
-        : [],
-    },
-  };
-  console.log(config.fen);
-  console.log("[ChessBoard] Check state:", isInCheck);
+      selectable: {
+        enabled: canMove,
+      },
+      premovable: {
+        enabled: false,
+      },
+      drawable: {
+        enabled: true,
+        visible: true,
+        autoShapes: currentBan
+          ? [
+              {
+                orig: currentBan.from as Key,
+                dest: currentBan.to as Key,
+                brush: "red",
+              },
+            ]
+          : [],
+      },
+    }),
+    [
+      fenData,
+      orientation,
+      isInCheck,
+      movableColor,
+      canMove,
+      dests,
+      handleAfterMove,
+      currentBan,
+    ],
+  );
+
+  // Debug logging
+  if (config.fen) {
+    console.log(config.fen);
+    console.log("[ChessBoard] Check state:", isInCheck);
+  }
 
   return (
     <div className="chess-board-outer">
