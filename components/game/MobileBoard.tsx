@@ -28,12 +28,12 @@ const MobileBoard = memo(function MobileBoard({
   refreshKey,
 }: MobileBoardProps) {
   return (
-    <div className="flex flex-col items-center gap-4 w-full">
-      {/* Mobile board container - responsive sizing */}
-      <div className="w-full" style={{ maxWidth: 'min(100vw - 2rem, 600px)' }}>
+    <div className="flex flex-col items-center w-full">
+      {/* Mobile board container - maximize available space */}
+      <div className="w-full" style={{ maxWidth: 'min(100vw - 0.5rem, 600px)' }}>
         {/* Aspect ratio container to maintain square shape */}
         <div className="relative w-full" style={{ paddingBottom: '100%' }}>
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 mobile-board-wrapper">
             <ChessBoardErrorBoundary>
               <ChessBoard 
                 gameState={gameState} 

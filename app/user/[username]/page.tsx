@@ -51,14 +51,21 @@ export default async function UserProfilePage({
   const canChangeUsername = isOwnProfile && user?.provider !== "guest";
 
   // Mock data - in production this would come from an API
+  // Generate pseudo-random but consistent stats based on username
+  const userHash = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const gamesPlayed = 50 + (userHash % 200);
+  const wins = Math.floor(gamesPlayed * (0.4 + (userHash % 30) / 100));
+  const losses = Math.floor(gamesPlayed * (0.35 + ((userHash * 7) % 20) / 100));
+  const draws = gamesPlayed - wins - losses;
+  
   const stats = {
-    rating: 1524,
-    gamesPlayed: 127,
-    wins: 68,
-    losses: 45,
-    draws: 14,
-    winRate: Math.round((68 / 127) * 100),
-    currentStreak: 3,
+    rating: 1200 + (userHash % 600), // Rating between 1200-1800
+    gamesPlayed,
+    wins,
+    losses,
+    draws,
+    winRate: gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0,
+    currentStreak: (userHash % 7) - 3, // Streak between -3 and 3
   };
 
   // Mock data - in production this would come from an API

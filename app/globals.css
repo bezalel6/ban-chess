@@ -224,6 +224,14 @@ a {
     will-change: auto;
   }
   
+  /* Remove padding on mobile for maximum board size */
+  @media (max-width: 767px) {
+    .mobile-board-wrapper .chess-board-outer {
+      padding: 0;
+      @apply rounded-lg; /* Smaller border radius on mobile */
+    }
+  }
+  
   /* Inner container - this is what chessground sees */
   .chess-board-inner {
     width: 100%;

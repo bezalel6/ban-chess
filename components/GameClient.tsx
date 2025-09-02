@@ -107,6 +107,7 @@ export default function GameClient({ gameId }: GameClientProps) {
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [boardRefreshKey, setBoardRefreshKey] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   const joinedGameId = useRef<string | null>(null);
 
@@ -116,6 +117,20 @@ export default function GameClient({ gameId }: GameClientProps) {
     const debugParam = urlParams.get("debug") === "true";
     const debugStorage = localStorage.getItem("debugMode") === "true";
     setDebugMode(debugParam || debugStorage);
+  }, []);
+
+  // Detect mobile screen size for conditional rendering
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    
+    // Check on mount
+    checkMobile();
+    
+    // Listen for resize events
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Join game when component mounts and we're connected
@@ -153,11 +168,47 @@ export default function GameClient({ gameId }: GameClientProps) {
     return <LoadingMessage message="Joining game..." />;
   }
 
+  // Conditionally render based on screen size to prevent duplicate components
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile Layout - Minimal padding to maximize board size */}
+        <div className="flex flex-col gap-2 p-1">
+          <MobileBoard
+            gameState={gameState}
+            game={game}
+            dests={dests}
+            activePlayer={activePlayer}
+            actionType={actionType}
+            onMove={handleMove}
+            onBan={handleBan}
+            refreshKey={boardRefreshKey}
+          />
+          <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
+          <GameSidebar
+            gameState={gameState}
+            gameEvents={gameEvents}
+            onGiveTime={giveTime}
+          />
+        </div>
+        <WebSocketStats />
+        {debugMode && (
+          <DebugPanel 
+            gameState={gameState} 
+            game={game} 
+            dests={dests}
+            onRefreshBoard={() => setBoardRefreshKey(prev => prev + 1)}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       {/* Desktop Layout - Three column layout with centered board */}
       <div
-        className={`hidden md:flex justify-center items-center p-2 ${
+        className={`flex justify-center items-center p-2 ${
           debugMode ? "border-4 border-red-500 relative" : ""
         }`}
       >
@@ -245,26 +296,6 @@ export default function GameClient({ gameId }: GameClientProps) {
         >
           {debugMode ? "Hide" : "Show"} Debug
         </button>
-      </div>
-
-      {/* Mobile Layout */}
-      <div className="md:hidden flex flex-col gap-4 p-4">
-        <MobileBoard
-          gameState={gameState}
-          game={game}
-          dests={dests}
-          activePlayer={activePlayer}
-          actionType={actionType}
-          onMove={handleMove}
-          onBan={handleBan}
-          refreshKey={boardRefreshKey}
-        />
-        <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
-        <GameSidebar
-          gameState={gameState}
-          gameEvents={gameEvents}
-          onGiveTime={giveTime}
-        />
       </div>
       <WebSocketStats />
       {debugMode && (
