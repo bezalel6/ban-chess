@@ -109,3 +109,5 @@ claudedocs/
 coolify-deployment/
 
 /lib/generated/prisma
+# Disabled admin routes
+app/api/admin/
