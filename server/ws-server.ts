@@ -734,7 +734,7 @@ async function matchPlayers() {
 
   const [player1, player2] = players;
   const gameId = uuidv4();
-  const timeControl = { initial: 300, increment: 0 }; // Default 5+0 for matchmaking
+  const timeControl = { initial: 900, increment: 10 }; // Default 15+10 for matchmaking
 
   // Create new game
   const game = new BanChess();
@@ -1060,7 +1060,7 @@ wss.on("connection", (ws: WebSocket, request) => {
           }
 
           const gameId = uuidv4();
-          const timeControl = msg.timeControl || { initial: 300, increment: 0 };
+          const timeControl = msg.timeControl || { initial: 900, increment: 10 };
 
           // Create new game
           const game = new BanChess();
