@@ -619,7 +619,8 @@ async function broadcastGameState(gameId: string) {
     game.inCheckmate() || (game.inCheck() && legalActions.length === 0);
   const isStalemate = game.inStalemate() || (!game.inCheck() && legalActions.length === 0);
 
-  if (isGameOver) {
+  // Only update game over state if it's not already set (e.g., from resignation)
+  if (isGameOver && !gameState.gameOver) {
     console.log(
       `[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}, Legal actions: ${legalActions.length}`,
     );
@@ -642,6 +643,10 @@ async function broadcastGameState(gameId: string) {
     await saveGameState(gameId, gameState);
   }
 
+  // Log game state including game over status
+  if (gameState.gameOver) {
+    console.log(`[broadcastGameState] Game ${gameId} is OVER: ${gameState.result}`);
+  }
   console.log(`[broadcastGameState] FEN: ${fen}`);
   console.log(
     `[broadcastGameState] Ply: ${ply}, Active player: ${activePlayer}, Action type: ${actionType}, Legal actions count: ${legalActions.length}`,
@@ -708,7 +713,8 @@ async function broadcastGameState(gameId: string) {
           : undefined,
       moveNumber: Math.floor(ply / 4) + 1,  // Each full move is 4 plies
     },
-    ...(isGameOver && {
+    // Include game over state if the game is over (either by position or resignation/timeout)
+    ...((isGameOver || gameState.gameOver) && {
       gameOver: true,
       result: gameState.result,
     }),
@@ -1516,6 +1522,9 @@ wss.on("connection", (ws: WebSocket, request) => {
           await addGameEvent(gameId, event);
 
           // Broadcast game over state
+          console.log(
+            `[resign] Broadcasting resignation for game ${gameId}`,
+          );
           await broadcastGameState(gameId);
 
           console.log(
