@@ -8,7 +8,7 @@ import ActiveGameCard from "@/components/ActiveGameCard";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
-  const { connected, currentGameId, gameState, resignGame } = useGameState();
+  const { connected, currentGameId, gameState, resignGame, isLocalGame } = useGameState();
   const router = useRouter();
 
   const playLocal = () => {
@@ -68,8 +68,8 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Show active game status if player is in a game */}
-        {currentGameId && gameState && !gameState.gameOver && (
+        {/* Show active game status if player is in a game (but not local games) */}
+        {currentGameId && gameState && !gameState.gameOver && !isLocalGame && (
           <ActiveGameCard
             gameId={currentGameId}
             gameState={gameState}
@@ -78,8 +78,8 @@ export default function HomePage() {
           />
         )}
 
-        {/* Show play options if no active game */}
-        {(!currentGameId || !gameState || gameState.gameOver) && (
+        {/* Show play options if no active game (or only local game running) */}
+        {(!currentGameId || !gameState || gameState.gameOver || isLocalGame) && (
           <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-4">Play</h2>
             <div className="flex flex-col gap-4 w-full">
