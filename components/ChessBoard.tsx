@@ -203,6 +203,13 @@ const ChessBoard = memo(function ChessBoard({
       drawable: {
         enabled: true,
         visible: true,
+        defaultBrush: canBan && !canMove ? "red" : "green", // Red brush during ban mode
+        brushes: {
+          green: { key: "g", color: "#15781B", opacity: 1, lineWidth: 10 },
+          red: { key: "r", color: "#882020", opacity: 1, lineWidth: 10 },
+          blue: { key: "b", color: "#003088", opacity: 1, lineWidth: 10 },
+          yellow: { key: "y", color: "#e68f00", opacity: 1, lineWidth: 10 },
+        },
         autoShapes:
           visibleBan && visibleBan.from && visibleBan.to
             ? [
