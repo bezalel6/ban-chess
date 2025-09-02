@@ -90,18 +90,17 @@ const ChessBoard = memo(function ChessBoard({
       return undefined;
     }
 
-    // During YOUR ban phase, allow selecting both colors
-    // The dests map will restrict to only opponent pieces
-    if (canBan && currentAction === "ban") {
+    // When the player is allowed to take an action (either ban or move),
+    // always allow selecting both colors. The dests map from the server
+    // contains the correct legal destinations and will restrict accordingly.
+    // This ensures consistent behavior across all game states.
+    if (canBan || canMove) {
       return "both";
-    } else if (canMove && currentAction === "move") {
-      // When moving, you select YOUR OWN pieces
-      return role as "white" | "black";
     } else {
       // Not your turn - no pieces selectable
       return undefined;
     }
-  }, [canMove, canBan, role, currentAction]);
+  }, [canMove, canBan, role]);
 
   // Extract values - ban from FEN, action from context
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
