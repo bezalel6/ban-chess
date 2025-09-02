@@ -37,6 +37,7 @@
     "@bezalel6/react-chessground": "^2.0.3",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/ioredis": "^4.28.10",
+    "bad-words": "^4.0.0",
     "ban-chess.ts": "^1.2.2",
     "howler": "^2.2.4",
     "ioredis": "^5.7.0",
