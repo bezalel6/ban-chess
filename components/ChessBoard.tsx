@@ -10,11 +10,14 @@ import type {
 } from "@bezalel6/react-chessground";
 import type { Ban, Move, SimpleGameState, Square } from "@/lib/game-types";
 import { getCurrentBan, parseFEN } from "@/lib/game-types";
-import { useGameRole } from "@/contexts/GameRoleContext";
+import { getGamePermissions } from "@/lib/game-utils";
+import { useAuth } from "@/components/AuthProvider";
+import { BanChess } from "ban-chess.ts";
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
-  dests: Map<Square, Square[]>;  // NEW: Accept dests from parent
+  game: BanChess | null;
+  dests: Map<Square, Square[]>;
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
 }
@@ -43,11 +46,14 @@ function getPieceAt(fen: string, square: string): string | null {
 
 const ChessBoard = memo(function ChessBoard({
   gameState,
+  game,
   dests: propDests,
   onMove,
   onBan,
 }: ChessBoardProps) {
-  const { role, orientation, canMove, canBan, currentAction } = useGameRole();
+  const { user } = useAuth();
+  const permissions = getGamePermissions(gameState, game, user?.userId);
+  const { role, orientation, canMove, canBan, currentAction } = permissions;
   const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
     to: string;

@@ -62,7 +62,12 @@ export function useGameState() {
       return;
     }
     const newDests = new Map<Square, Square[]>();
-    const moves = game.legalMoves();
+    
+    // During ban phase, get legal bans (opponent's moves to ban)
+    // During move phase, get legal moves (current player's moves)
+    const isNextActionBan = game.nextActionType() === "ban";
+    const moves = isNextActionBan ? game.legalBans() : game.legalMoves();
+    
     moves.forEach((move) => {
       const from = move.from as Square;
       if (!newDests.has(from)) {
@@ -137,6 +142,11 @@ export function useGameState() {
               clocks: msg.clocks,
               startTime: msg.startTime,
             });
+            
+            // Clear currentGameId if game is over
+            if (msg.gameOver) {
+              setCurrentGameId(null);
+            }
 
             // Handle events if provided
             if (msg.events) {
@@ -221,6 +231,10 @@ export function useGameState() {
             }
             return prev;
           });
+          // Clear currentGameId when game ends
+          if (currentGameId === msg.gameId) {
+            setCurrentGameId(null);
+          }
           soundManager.playEvent("game-end"); // Play sound only when server confirms timeout
           break;
 
@@ -291,7 +305,7 @@ export function useGameState() {
     } catch (err) {
       console.error("[GameState] Failed to handle message:", err);
     }
-  }, [lastMessage, router, sendMessage, readyState]);
+  }, [lastMessage, router, sendMessage, readyState, currentGameId]);
 
   // Action handlers - NEW: Uses BanChess serialization
   const sendAction = useCallback(
@@ -363,6 +377,23 @@ export function useGameState() {
     [currentGameId, connected, send],
   );
 
+  const resignGame = useCallback(() => {
+    if (currentGameId && connected) {
+      send({ type: "resign", gameId: currentGameId });
+      console.log("[GameState] Resigning game:", currentGameId);
+      // Clear game state immediately on resignation
+      setCurrentGameId(null);
+      setGameState(null);
+      setFen("");
+      setGameEvents([]);
+      setDests(new Map());
+    } else {
+      console.warn(
+        "[GameState] Cannot resign: not in game or not connected",
+      );
+    }
+  }, [currentGameId, connected, send]);
+
   return {
     // State
     gameState,
@@ -381,6 +412,7 @@ export function useGameState() {
     leaveQueue,
     joinGame,
     giveTime,
+    resignGame,
 
     // Raw access if needed
     readyState,
