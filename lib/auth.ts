@@ -1,6 +1,7 @@
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import type { AuthProvider } from "../types/auth";
+import { generateGuestId, generateUniqueChessUsername } from "./username";
 
 interface LichessProfile {
   id: string;
@@ -9,7 +10,7 @@ interface LichessProfile {
 }
 
 export const authOptions = {
-  secret: process.env.NEXTAUTH_SECRET || 'dev-secret-change-in-production',
+  secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production",
   session: {
     strategy: "jwt" as const,
   },
@@ -20,10 +21,10 @@ export const authOptions = {
       name: "Guest",
       credentials: {},
       async authorize() {
-        // Always succeed for guest login - generate unique guest ID
+        // Always succeed for guest login - use boring Guest ID
+        const guestName = generateGuestId();
         const guestId = `guest_${Math.random().toString(36).substring(2, 10)}`;
-        const guestName = `Guest_${guestId.substring(6)}`;
-        
+
         return {
           id: guestId,
           name: guestName,
@@ -70,23 +71,24 @@ export const authOptions = {
       // On first login, account will be present
       if (account) {
         // Handle Lichess profile
-        if (account.provider === 'lichess' && profile) {
+        if (account.provider === "lichess" && profile) {
           const lichessProfile = profile as LichessProfile;
           token.username = lichessProfile.username;
           token.providerId = lichessProfile.id;
-          token.provider = 'lichess';
+          token.provider = "lichess";
         }
         // Handle Google profile
-        else if (account.provider === 'google' && profile) {
-          token.username = profile.name || profile.email?.split('@')[0] || 'User';
+        else if (account.provider === "google" && profile) {
+          token.username =
+            profile.name || profile.email?.split("@")[0] || "User";
           token.providerId = profile.sub;
-          token.provider = 'google';
+          token.provider = "google";
         }
         // Handle Guest login (CredentialsProvider)
-        else if (account.provider === 'guest' && user) {
+        else if (account.provider === "guest" && user) {
           token.username = user.name;
           token.providerId = user.id;
-          token.provider = 'guest';
+          token.provider = "guest";
         }
       }
       return token;

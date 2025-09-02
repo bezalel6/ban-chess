@@ -37,9 +37,9 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="w-full max-w-md px-4">
-          <div className="bg-background-secondary p-6 rounded-xl shadow-lg">
-            <h2 className="text-lg font-semibold text-center mb-4">
+        <div className="w-full max-w-lg px-4">
+          <div className="bg-background-secondary p-8 rounded-xl shadow-lg">
+            <h2 className="text-lg font-semibold text-center mb-6">
               Choose how to play
             </h2>
             <SignInPanel compact />
