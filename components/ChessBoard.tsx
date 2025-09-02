@@ -8,12 +8,13 @@ import type {
   Key,
   ReactChessGroundProps,
 } from "@bezalel6/react-chessground";
-import type { Ban, Move, SimpleGameState } from "@/lib/game-types";
+import type { Ban, Move, SimpleGameState, Square } from "@/lib/game-types";
 import { getCurrentBan, parseFEN } from "@/lib/game-types";
 import { useGameRole } from "@/contexts/GameRoleContext";
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
+  dests: Map<Square, Square[]>;  // NEW: Accept dests from parent
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
 }
@@ -42,10 +43,11 @@ function getPieceAt(fen: string, square: string): string | null {
 
 const ChessBoard = memo(function ChessBoard({
   gameState,
+  dests: propDests,
   onMove,
   onBan,
 }: ChessBoardProps) {
-  const { role, orientation, canMove } = useGameRole();
+  const { role, orientation, canMove, canBan, currentAction } = useGameRole();
   const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
     to: string;
@@ -59,34 +61,36 @@ const ChessBoard = memo(function ChessBoard({
 
   // Determine which color pieces can be moved
   const movableColor = useMemo(() => {
-    if (!canMove) return undefined;
-
-    // Role determines what pieces can be moved
+    if (!canMove && !canBan) return undefined;
     if (role === "spectator") return undefined;
-    return role as "white" | "black";
-  }, [canMove, role]);
+    
+    // For banning: select opponent's pieces
+    // For moving: select your own pieces
+    if (currentAction === "ban") {
+      // When banning, you select the OPPONENT's pieces
+      return role === "white" ? "black" : "white";
+    } else {
+      // When moving, you select YOUR OWN pieces
+      return role as "white" | "black";
+    }
+  }, [canMove, canBan, role, currentAction]);
 
-  // Extract values from parsed FEN and game state (needs to be before hook calls)
+  // Extract values - ban from FEN, action from context
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
-  const nextAction = gameState?.nextAction || "move";
-  const isInCheck = gameState?.inCheck || false;
+  const nextAction = currentAction; // From GameRoleContext which gets it from BanChess
+  const isInCheck = false; // TODO: Get from BanChess instance if needed for UI
 
-  // Build legal moves map from server - memoized to prevent re-creation
+  // Convert dests from Map<Square, Square[]> to Map<Key, Key[]> for chessground
   const dests: Dests = useMemo(() => {
     const destsMap = new Map<Key, Key[]>();
-    if (gameState?.legalActions) {
-      gameState.legalActions.forEach((action: string) => {
-        const from = action.substring(0, 2) as Key;
-        const to = action.substring(2, 4) as Key;
-
-        if (!destsMap.has(from)) {
-          destsMap.set(from, []);
-        }
-        destsMap.get(from)!.push(to);
-      });
-    }
+    
+    // ONLY use provided dests - no fallbacks
+    propDests.forEach((squares, from) => {
+      destsMap.set(from as Key, squares as Key[]);
+    });
+    
     return destsMap;
-  }, [gameState?.legalActions]);
+  }, [propDests]);
 
   // Memoize the move handler
   const handleAfterMove = useCallback(
@@ -146,14 +150,14 @@ const ChessBoard = memo(function ChessBoard({
       movable: {
         free: false,
         color: movableColor,
-        dests: canMove ? dests : new Map(),
+        dests: (canMove || canBan) ? dests : new Map(),
         showDests: true,
         events: {
           after: handleAfterMove,
         },
       },
       selectable: {
-        enabled: canMove,
+        enabled: canMove || canBan,
       },
       premovable: {
         enabled: false,
@@ -178,6 +182,7 @@ const ChessBoard = memo(function ChessBoard({
       isInCheck,
       movableColor,
       canMove,
+      canBan,
       dests,
       handleAfterMove,
       currentBan,
@@ -203,7 +208,7 @@ const ChessBoard = memo(function ChessBoard({
     orientation,
     movableColor,
     canMove,
-    legalActionCount: gameState.legalActions?.length || 0,
+    destsCount: dests.size,
     players: gameState.players,
     currentBan,
     banState: fenData.banState,
