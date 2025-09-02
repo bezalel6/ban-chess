@@ -1662,21 +1662,7 @@ import { createServer } from "http";
 
 const healthServer = createServer((req, res) => {
   if (req.url === "/health" && req.method === "GET") {
-    // Parse cookies from request
-    const cookieHeader = req.headers.cookie || '';
-    const cookies = cookieHeader.split('; ').reduce((acc, cookie) => {
-      const [name, value] = cookie.split('=');
-      if (name) acc[name] = value;
-      return acc;
-    }, {} as Record<string, string>);
-
-    res.writeHead(200, { 
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": process.env.NODE_ENV === 'production' 
-        ? "https://chess.rndev.site" 
-        : "http://localhost:3000",
-      "Access-Control-Allow-Credentials": "true"
-    });
+    res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
         status: "healthy",
@@ -1684,32 +1670,6 @@ const healthServer = createServer((req, res) => {
         service: "websocket-server",
         connections: wss.clients.size,
         activeManagers: timeManagers.size,
-        cookies: {
-          received: Object.keys(cookies).length,
-          hasTestCookie: 'test-subdomain-cookie' in cookies,
-          testCookieValue: cookies['test-subdomain-cookie']?.substring(0, 20),
-          hasSessionToken: Object.keys(cookies).some(k => k.includes('session-token')),
-          hasState: Object.keys(cookies).some(k => k.includes('state')),
-          cookieNames: Object.keys(cookies)
-        }
-      }),
-    );
-  } else if (req.url === "/test-cookies" && req.method === "GET") {
-    // Additional endpoint specifically for cookie testing
-    const cookieHeader = req.headers.cookie || '';
-    const origin = req.headers.origin || '';
-    
-    res.writeHead(200, { 
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": origin || "*",
-      "Access-Control-Allow-Credentials": "true"
-    });
-    res.end(
-      JSON.stringify({
-        message: "Cookie test from WebSocket server",
-        receivedCookies: cookieHeader,
-        origin: origin,
-        environment: process.env.NODE_ENV
       }),
     );
   } else {
