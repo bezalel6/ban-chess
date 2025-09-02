@@ -53,8 +53,9 @@ class WebSocketSingleton {
     this.currentUser = user;
 
     // Create new connection
-    console.log('[WS Singleton] Creating new connection for', user.username);
-    this.ws = new WebSocket('ws://localhost:3001');
+    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:3001';
+    console.log('[WS Singleton] Creating new connection for', user.username, 'to', wsUrl);
+    this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
       console.log('[WS Singleton] Connected, authenticating...');

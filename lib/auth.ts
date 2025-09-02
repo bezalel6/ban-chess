@@ -19,63 +19,63 @@ export const authOptions = {
   },
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined // Share cookies across subdomains in production
       }
     },
     callbackUrl: {
-      name: `__Secure-next-auth.callback-url`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.callback-url` : `next-auth.callback-url`,
       options: {
         sameSite: 'lax' as const,
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
       }
     },
     csrfToken: {
-      name: `__Host-next-auth.csrf-token`,
+      name: process.env.NODE_ENV === 'production' ? `__Host-next-auth.csrf-token` : `next-auth.csrf-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
       }
     },
     pkceCodeVerifier: {
-      name: `__Secure-next-auth.pkce.code_verifier`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.pkce.code_verifier` : `next-auth.pkce.code_verifier`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 60 * 15, // 15 minutes
         domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
       }
     },
     state: {
-      name: `__Secure-next-auth.state`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.state` : `next-auth.state`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 60 * 15, // 15 minutes
         domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
       }
     },
     nonce: {
-      name: `__Secure-next-auth.nonce`,
+      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.nonce` : `next-auth.nonce`,
       options: {
         httpOnly: true,
         sameSite: 'lax' as const,
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
       }
     }
