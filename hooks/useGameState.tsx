@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ReadyState } from "react-use-websocket";
 import { useGameWebSocket } from "@/contexts/WebSocketContext";
 import { useAuth } from "@/components/AuthProvider";
+import { BanChess } from "ban-chess.ts";
 import type {
   SimpleGameState,
   SimpleServerMsg,
@@ -12,6 +13,7 @@ import type {
   Action,
   HistoryEntry,
   GameEvent,
+  Square,
 } from "@/lib/game-types";
 import soundManager from "@/lib/sound-manager";
 
@@ -27,12 +29,14 @@ export function useGameState() {
 
   const { sendMessage, lastMessage, readyState } = wsContext;
 
-  // State management
-  const [gameState, setGameState] = useState<SimpleGameState | null>(null);
+  // State management - simplified to just FEN
+  const [fen, setFen] = useState<string | null>(null);
+  const [gameState, setGameState] = useState<SimpleGameState | null>(null); // Keep for compatibility during migration
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   const [gameEvents, setGameEvents] = useState<GameEvent[]>([]);
+  const [dests, setDests] = useState<Map<Square, Square[]>>(new Map());
 
   // Refs for tracking
   const previousFen = useRef<string | null>(null);
@@ -41,6 +45,37 @@ export function useGameState() {
 
   // Connection status
   const connected = readyState === ReadyState.OPEN && isAuthenticated;
+
+  // Create BanChess instance from FEN
+  const game = useMemo(() => {
+    if (fen) {
+      try {
+        return new BanChess(fen);
+      } catch (e) {
+        console.error("Error creating BanChess instance from FEN:", fen, e);
+        return null;
+      }
+    }
+    return null;
+  }, [fen]);
+
+  // Calculate dests from game instance
+  useEffect(() => {
+    if (!game) {
+      setDests(new Map());
+      return;
+    }
+    const newDests = new Map<Square, Square[]>();
+    const moves = game.legalMoves();
+    moves.forEach((move) => {
+      const from = move.from as Square;
+      if (!newDests.has(from)) {
+        newDests.set(from, []);
+      }
+      newDests.get(from)!.push(move.to as Square);
+    });
+    setDests(newDests);
+  }, [game]);
 
   // Send helper with JSON stringify
   const send = useCallback(
@@ -57,20 +92,20 @@ export function useGameState() {
 
   // Authenticate when connection opens
   useEffect(() => {
-    if (readyState === ReadyState.OPEN && user) {
-      // Only authenticate if we haven't authenticated in this connection
-      if (!isAuthenticated && !authSent.current) {
-        authSent.current = true;
-        console.log("[GameState] Authenticating:", {
-          userId: user.userId,
-          username: user.username,
-          provider: user.provider,
-        });
-        send({
+    if (readyState === ReadyState.OPEN && user && !authSent.current) {
+      authSent.current = true;
+      console.log("[GameState] Authenticating:", {
+        userId: user.userId,
+        username: user.username,
+        provider: user.provider,
+      });
+      // Send authentication directly without using the send callback
+      if (readyState === ReadyState.OPEN) {
+        sendMessage(JSON.stringify({
           type: "authenticate",
           userId: user.userId || "",
           username: user.username || "",
-        });
+        }));
       }
     }
 
@@ -79,11 +114,20 @@ export function useGameState() {
       authSent.current = false;
       setIsAuthenticated(false);
     }
-  }, [readyState, user, send, isAuthenticated]);
+  }, [readyState, user, sendMessage]);
+
+  // Add a ref to track the last processed message to prevent duplicates
+  const lastProcessedMessage = useRef<string | null>(null);
 
   // Handle incoming messages
   useEffect(() => {
     if (!lastMessage) return;
+    
+    // Check if we've already processed this exact message
+    if (lastProcessedMessage.current === lastMessage.data) {
+      return; // Skip duplicate message
+    }
+    lastProcessedMessage.current = lastMessage.data;
 
     // Parse message first to check type
     let msg: SimpleServerMsg;
@@ -108,63 +152,42 @@ export function useGameState() {
         }
 
         case "state":
-          // Handle history updates
-          if (msg.history) {
-            // Full history received (new connection/spectator)
-            // Check if it's the new format (HistoryEntry[]) or old format (string[])
-            if (msg.history.length > 0 && typeof msg.history[0] === "object") {
-              moveHistory.current = msg.history as HistoryEntry[];
-            } else {
-              // Old format - we'll just clear for now
-              // TODO: Could convert BCN strings to HistoryEntry if needed
-              moveHistory.current = [];
-            }
-          } else if (msg.lastMove) {
-            // Incremental update - append last move to history
-            // Check if this is a new move (not a duplicate)
-            const lastHistoryMove =
-              moveHistory.current[moveHistory.current.length - 1];
-            if (!lastHistoryMove || lastHistoryMove.fen !== msg.lastMove.fen) {
-              moveHistory.current = [...moveHistory.current, msg.lastMove];
-            }
-          }
-
-          // Handle events if provided
-          if (msg.events) {
-            setGameEvents(msg.events);
-          }
-
-          // Update game state with current history
-          console.log("[GameState] Received game state with players:", {
-            white: msg.players?.white,
-            black: msg.players?.black,
-            currentUserId: user?.userId,
-          });
-          setGameState({
-            ...msg,
-            history: moveHistory.current,
-            timeControl: msg.timeControl,
-            clocks: msg.clocks,
-            startTime: msg.startTime,
-          });
-          setCurrentGameId(msg.gameId);
-
-          // Play sound effects for moves
-          if (previousFen.current && msg.fen !== previousFen.current) {
-            const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || [])
-              .length;
-            const currentPieces = (msg.fen.match(/[prnbqk]/gi) || []).length;
-
-            soundManager.playMoveSound({
-              check: msg.inCheck === true,
-              capture: currentPieces < prevPieces,
+          // NEW ARCHITECTURE: Only process FEN string
+          if (msg.fen) {
+            setFen(msg.fen);
+            setCurrentGameId(msg.gameId);
+            
+            // Keep minimal state for compatibility
+            setGameState({
+              ...msg,
+              history: msg.history || [],
+              timeControl: msg.timeControl,
+              clocks: msg.clocks,
+              startTime: msg.startTime,
             });
-          }
-          previousFen.current = msg.fen;
 
-          if (msg.gameOver) {
-            console.log("[GameState] Game Over:", msg.result);
-            soundManager.playEvent("game-end");
+            // Handle events if provided
+            if (msg.events) {
+              setGameEvents(msg.events);
+            }
+
+            // Play sound effects for moves
+            if (previousFen.current && msg.fen !== previousFen.current) {
+              const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || [])
+                .length;
+              const currentPieces = (msg.fen.match(/[prnbqk]/gi) || []).length;
+
+              soundManager.playMoveSound({
+                check: msg.inCheck === true,
+                capture: currentPieces < prevPieces,
+              });
+            }
+            previousFen.current = msg.fen;
+
+            if (msg.gameOver) {
+              console.log("[GameState] Game Over:", msg.result);
+              soundManager.playEvent("game-end");
+            }
           }
           break;
 
@@ -296,13 +319,22 @@ export function useGameState() {
     } catch (err) {
       console.error("[GameState] Failed to handle message:", err);
     }
-  }, [lastMessage, send, router, currentGameId, user?.userId]);
+  }, [lastMessage, router, sendMessage, readyState]);
 
-  // Action handlers
+  // Action handlers - NEW: Uses BanChess serialization
   const sendAction = useCallback(
     (action: Action) => {
       if (currentGameId && connected) {
-        send({ type: "action", gameId: currentGameId, action });
+        // Convert our Action type to BanChess Action type
+        const banChessAction = action as unknown; // Temporary cast for compatibility
+        // Serialize action using BanChess format
+        const serializedAction = BanChess.serializeAction(banChessAction as Parameters<typeof BanChess.serializeAction>[0]);
+        send({ 
+          type: "action", 
+          gameId: currentGameId, 
+          action: serializedAction as unknown as Action // Type compatibility during migration
+        });
+        console.log("[GameState] Sending serialized action:", serializedAction);
       } else {
         console.warn(
           "[GameState] Cannot send action: not in game or not connected",
@@ -362,6 +394,8 @@ export function useGameState() {
   return {
     // State
     gameState,
+    game, // NEW: BanChess instance
+    dests, // NEW: Legal moves map
     error,
     connected,
     isAuthenticated,
