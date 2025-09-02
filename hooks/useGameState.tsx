@@ -61,7 +61,11 @@ export function useGameState() {
       // Only authenticate if we haven't authenticated in this connection
       if (!isAuthenticated && !authSent.current) {
         authSent.current = true;
-        console.log("[GameState] Authenticating:", user.username);
+        console.log("[GameState] Authenticating:", {
+          userId: user.userId,
+          username: user.username,
+          provider: user.provider,
+        });
         send({
           type: "authenticate",
           userId: user.userId || "",
@@ -131,6 +135,11 @@ export function useGameState() {
           }
 
           // Update game state with current history
+          console.log("[GameState] Received game state with players:", {
+            white: msg.players?.white,
+            black: msg.players?.black,
+            currentUserId: user?.userId,
+          });
           setGameState({
             ...msg,
             history: moveHistory.current,
@@ -287,7 +296,7 @@ export function useGameState() {
     } catch (err) {
       console.error("[GameState] Failed to handle message:", err);
     }
-  }, [lastMessage, send, router, currentGameId]);
+  }, [lastMessage, send, router, currentGameId, user?.userId]);
 
   // Action handlers
   const sendAction = useCallback(

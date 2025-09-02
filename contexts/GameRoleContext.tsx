@@ -57,30 +57,101 @@ export function GameRoleProvider({
       };
     }
 
-    // Determine player role based on user ID
-    let role: PlayerRole = "spectator";
-
-    if (user?.userId) {
-      if (gameState.players.white?.id === user.userId) {
-        role = "white";
-      } else if (gameState.players.black?.id === user.userId) {
-        role = "black";
-      }
-    }
-
-    // Override with URL role if provided and valid (for future URL-based routing)
-    if (urlRole && (role === "spectator" || urlRole === role)) {
-      role = urlRole;
-    }
+    // Check if this is a local/solo game (both players have the same ID)
+    const isLocalGame =
+      gameState.players.white?.id === gameState.players.black?.id &&
+      gameState.players.white?.id !== undefined;
 
     // Parse current turn from FEN
     const fenParts = gameState.fen.split(" ");
     const currentTurn = fenParts[1] === "w" ? "white" : "black";
 
+    // Debug logging to understand role assignment
+    console.log("[GameRoleContext] Role determination:", {
+      userId: user?.userId,
+      whitePlayerId: gameState.players.white?.id,
+      blackPlayerId: gameState.players.black?.id,
+      isLocalGame,
+      currentTurn,
+    });
+
+    // Determine player role
+    let role: PlayerRole = "spectator";
+
+    // First check URL role if provided (takes precedence for routing)
+    if (urlRole) {
+      // Validate that the URL role matches the player's actual role
+      if (user?.userId) {
+        const isWhitePlayer = gameState.players.white?.id === user.userId;
+        const isBlackPlayer = gameState.players.black?.id === user.userId;
+
+        if (isLocalGame && (isWhitePlayer || isBlackPlayer)) {
+          // In local games, allow the URL role but switch dynamically for moves
+          role = currentTurn;
+          console.log(
+            "[GameRoleContext] Local game - dynamic role:",
+            currentTurn,
+            "URL role:",
+            urlRole,
+          );
+        } else if (urlRole === "white" && isWhitePlayer) {
+          role = "white";
+          console.log("[GameRoleContext] URL role matches - player is white");
+        } else if (urlRole === "black" && isBlackPlayer) {
+          role = "black";
+          console.log("[GameRoleContext] URL role matches - player is black");
+        } else if (urlRole === "spectator") {
+          role = "spectator";
+          console.log("[GameRoleContext] URL role is spectator");
+        } else {
+          // URL role doesn't match actual role
+          console.log(
+            "[GameRoleContext] URL role mismatch - urlRole:",
+            urlRole,
+            "isWhite:",
+            isWhitePlayer,
+            "isBlack:",
+            isBlackPlayer,
+          );
+          role = "spectator";
+        }
+      } else {
+        // No user, can only spectate
+        role = "spectator";
+        console.log("[GameRoleContext] No user ID - forced spectator");
+      }
+    } else {
+      // No URL role, determine from user ID
+      if (user?.userId) {
+        if (isLocalGame && gameState.players.white?.id === user.userId) {
+          role = currentTurn;
+          console.log(
+            "[GameRoleContext] Local game - setting role to:",
+            currentTurn,
+          );
+        } else if (gameState.players.white?.id === user.userId) {
+          role = "white";
+          console.log("[GameRoleContext] Player is white");
+        } else if (gameState.players.black?.id === user.userId) {
+          role = "black";
+          console.log("[GameRoleContext] Player is black");
+        } else {
+          console.log("[GameRoleContext] No match - spectator");
+        }
+      } else {
+        console.log("[GameRoleContext] No user ID - spectator");
+      }
+    }
+
     // Determine permissions
     const isPlayer = role !== "spectator";
     const isSpectator = role === "spectator";
-    const isMyTurn = isPlayer && role === currentTurn && !gameState.gameOver;
+
+    // In local games, it's always "my turn" if I'm a player
+    const isMyTurn = isLocalGame
+      ? isPlayer && !gameState.gameOver
+      : isPlayer && role === currentTurn && !gameState.gameOver;
+
     const canMove = Boolean(
       isMyTurn &&
         gameState.legalActions !== undefined &&
@@ -89,10 +160,25 @@ export function GameRoleProvider({
     const canInteract = isPlayer && !gameState.gameOver;
 
     // Determine board orientation
-    // Players see from their color's perspective, spectators see from white's perspective
-    const orientation: Orientation = isSpectator
-      ? "white"
-      : (role as Orientation);
+    let orientation: Orientation;
+
+    if (isLocalGame) {
+      // In local games, always show from white's perspective for consistency
+      orientation = "white";
+    } else if (isSpectator) {
+      // Spectators see from white's perspective
+      orientation = "white";
+    } else {
+      // In online games, players see from their assigned color's perspective
+      // Use the actual player assignment, not the dynamic role
+      if (gameState.players.white?.id === user?.userId) {
+        orientation = "white";
+      } else if (gameState.players.black?.id === user?.userId) {
+        orientation = "black";
+      } else {
+        orientation = "white"; // Fallback
+      }
+    }
 
     return {
       role,
