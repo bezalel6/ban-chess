@@ -494,22 +494,19 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     await saveGameState(gameId, gameState);
   }
 
-  // Get legal moves/bans from the game
+  // Get game state using new clean APIs
   const fen = game.fen();
-  const fenParts = fen.split(" ");
-  const banState = fenParts[6];
-  const isNextActionBan = banState && banState.includes(":ban");
-
-  const legalActions = isNextActionBan ? game.legalBans() : game.legalMoves();
-  // Serialize legal actions using BanChess format (e.g., "b:e2e4" for bans, "m:d2d4" for moves)
+  const ply = game.getPly();
+  const activePlayer = game.getActivePlayer();
+  const actionType = game.getActionType();
+  const legalActions = game.getLegalActions();
+  
+  console.log(`[sendFullGameState] FEN: ${fen}`);
+  console.log(`[sendFullGameState] Ply: ${ply}, Active player: ${activePlayer}, Action type: ${actionType}, Legal actions count: ${legalActions.length}`);
+  
+  // Serialize legal actions using BanChess format
   const simpleLegalActions = legalActions
-    .map((action) => {
-      // Convert to proper Action type and serialize
-      const actionObj = isNextActionBan 
-        ? { ban: action }
-        : { move: action };
-      return BanChess.serializeAction(actionObj);
-    })
+    .map((action) => BanChess.serializeAction(action))
     .filter((action): action is string => action !== null);
 
   const timeManager = timeManagers.get(gameId);
@@ -539,7 +536,9 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     gameId,
     players: await getPlayerInfo(gameState),
     legalActions: simpleLegalActions,
-    nextAction: isNextActionBan ? "ban" : "move",
+    nextAction: actionType as "ban" | "move",
+    activePlayer,
+    ply,
     inCheck: isInCheck,
     history, // Include full history from Redis for new joiners
     events: recentEvents, // Include recent events
@@ -634,41 +633,22 @@ async function broadcastGameState(gameId: string) {
     await saveGameState(gameId, gameState);
   }
 
-  // Get legal moves/bans from the game
+  // Get game state using new clean APIs
   const fen = game.fen();
-  const fenParts = fen.split(" ");
-  const chessTurn = fenParts[1] === "w" ? "white" : "black";
-  const banState = fenParts[6]; // 7th field contains ban state
-  const isNextActionBan = banState && banState.includes(":ban");
+  const ply = game.getPly();
+  const activePlayer = game.getActivePlayer();
+  const actionType = game.getActionType();
+  const legalActions = game.getLegalActions();
 
-  // Get legal actions and convert to serialized format
-  const legalActions = isNextActionBan ? game.legalBans() : game.legalMoves();
   console.log(`[broadcastGameState] FEN: ${fen}`);
   console.log(
-    `[broadcastGameState] Chess turn: ${chessTurn}, Next action: ${isNextActionBan ? "ban" : "move"}, Legal actions count: ${legalActions.length}`,
+    `[broadcastGameState] Ply: ${ply}, Active player: ${activePlayer}, Action type: ${actionType}, Legal actions count: ${legalActions.length}`,
   );
 
-  // Serialize legal actions using BanChess format (e.g., "b:e2e4" for bans, "m:d2d4" for moves)
+  // Serialize legal actions using BanChess format
   const simpleLegalActions = legalActions
-    .map((action) => {
-      // Convert to proper Action type and serialize
-      const actionObj = isNextActionBan 
-        ? { ban: action }
-        : { move: action };
-      return BanChess.serializeAction(actionObj);
-    })
+    .map((action) => BanChess.serializeAction(action))
     .filter((action): action is string => action !== null);
-
-  // Determine the acting player
-  // For ban phase, the banning player is the opposite of current turn
-  // For move phase, it's the current turn player
-  const actingPlayer: "white" | "black" = isNextActionBan
-    ? chessTurn === "white"
-      ? "black"
-      : "white"
-    : chessTurn;
-
-  console.log(`[broadcastGameState] Acting player: ${actingPlayer}`);
 
   // Check if the current player is in check
   const isInCheck = game.inCheck();
@@ -709,7 +689,9 @@ async function broadcastGameState(gameId: string) {
     gameId,
     players: await getPlayerInfo(gameState),
     legalActions: simpleLegalActions,
-    nextAction: isNextActionBan ? "ban" : "move",
+    nextAction: actionType as "ban" | "move",
+    activePlayer,
+    ply,
     inCheck: isInCheck,
     // Send only the last move for incremental updates (frontend will append to history)
     lastMove,
@@ -722,7 +704,7 @@ async function broadcastGameState(gameId: string) {
         storedActions.length > 0
           ? storedActions[storedActions.length - 1]
           : undefined,
-      moveNumber: Math.floor(storedActions.length / 2) + 1,
+      moveNumber: Math.floor(ply / 4) + 1,  // Each full move is 4 plies
     },
     ...(isGameOver && {
       gameOver: true,

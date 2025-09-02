@@ -55,28 +55,8 @@ export function useGameState() {
     return null;
   }, [fen]);
 
-  // Calculate dests from game instance
-  useEffect(() => {
-    if (!game) {
-      setDests(new Map());
-      return;
-    }
-    const newDests = new Map<Square, Square[]>();
-    
-    // During ban phase, get legal bans (opponent's moves to ban)
-    // During move phase, get legal moves (current player's moves)
-    const isNextActionBan = game.nextActionType() === "ban";
-    const moves = isNextActionBan ? game.legalBans() : game.legalMoves();
-    
-    moves.forEach((move) => {
-      const from = move.from as Square;
-      if (!newDests.has(from)) {
-        newDests.set(from, []);
-      }
-      newDests.get(from)!.push(move.to as Square);
-    });
-    setDests(newDests);
-  }, [game]);
+  // Note: dests are now updated from server-provided legalActions in the "state" message handler
+  // This ensures client and server are perfectly synchronized for ban/move selections
 
   // Send helper with JSON stringify
   const send = useCallback(
@@ -93,18 +73,24 @@ export function useGameState() {
 
   // Authentication is now handled centrally in WebSocketContext
 
-  // Add a ref to track the last processed message to prevent duplicates
+  // Add refs to track message processing and prevent duplicates
   const lastProcessedMessage = useRef<string | null>(null);
+  const messageCounter = useRef(0);
+  const processingMessage = useRef(false);
 
   // Handle incoming messages
   useEffect(() => {
-    if (!lastMessage) return;
+    if (!lastMessage || processingMessage.current) return;
     
     // Check if we've already processed this exact message
     if (lastProcessedMessage.current === lastMessage.data) {
       return; // Skip duplicate message
     }
+    
+    // Mark as processing to prevent concurrent processing
+    processingMessage.current = true;
     lastProcessedMessage.current = lastMessage.data;
+    messageCounter.current++;
 
     // Parse message first to check type
     let msg: SimpleServerMsg;
@@ -138,6 +124,8 @@ export function useGameState() {
             setGameState({
               ...msg,
               history: msg.history || [],
+              activePlayer: msg.activePlayer,
+              ply: msg.ply,
               timeControl: msg.timeControl,
               clocks: msg.clocks,
               startTime: msg.startTime,
@@ -151,6 +139,34 @@ export function useGameState() {
             // Handle events if provided
             if (msg.events) {
               setGameEvents(msg.events);
+            }
+            
+            // Update dests from server-provided legal actions
+            if (msg.legalActions) {
+              console.log("[GameState] Received legal actions:", msg.legalActions.length, "actions");
+              console.log("[GameState] All actions:", msg.legalActions);
+              
+              const newDests = new Map<Square, Square[]>();
+              msg.legalActions.forEach((action: string) => {
+                // Parse BCN format (e.g., "b:e2e4" or "m:d2d4")
+                const parts = action.split(":");
+                if (parts.length === 2) {
+                  const moveStr = parts[1]; // e.g., "e2e4"
+                  if (moveStr.length >= 4) {
+                    const from = moveStr.substring(0, 2) as Square;
+                    const to = moveStr.substring(2, 4) as Square;
+                    
+                    if (!newDests.has(from)) {
+                      newDests.set(from, []);
+                    }
+                    newDests.get(from)!.push(to);
+                  }
+                }
+              });
+              
+              console.log("[GameState] Created dests map with", newDests.size, "source squares");
+              console.log("[GameState] Dests map:", Array.from(newDests.entries()).map(([from, tos]) => `${from}: ${tos.length} moves`));
+              setDests(newDests);
             }
 
             // Play sound effects for moves
@@ -304,6 +320,9 @@ export function useGameState() {
       }
     } catch (err) {
       console.error("[GameState] Failed to handle message:", err);
+    } finally {
+      // Reset processing flag after handling
+      processingMessage.current = false;
     }
   }, [lastMessage, router, sendMessage, readyState, currentGameId]);
 

@@ -52,7 +52,8 @@ const ChessBoard = memo(function ChessBoard({
   onBan,
 }: ChessBoardProps) {
   const { user } = useAuth();
-  const permissions = getGamePermissions(gameState, game, user?.userId);
+  // Use activePlayer from gameState if available (from server)
+  const permissions = getGamePermissions(gameState, game, user?.userId, gameState?.activePlayer);
   const { role, orientation, canMove, canBan, currentAction } = permissions;
   const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
@@ -70,13 +71,15 @@ const ChessBoard = memo(function ChessBoard({
     if (!canMove && !canBan) return undefined;
     if (role === "spectator") return undefined;
     
-    // For banning: select opponent's pieces
-    // For moving: select your own pieces
+    // During ban phase, we select the OPPONENT's pieces to ban their moves
     if (currentAction === "ban") {
-      // When banning, you select the OPPONENT's pieces
-      return role === "white" ? "black" : "white";
+      // When banning, select the opposite color's pieces
+      const opponentColor = role === "white" ? "black" : "white";
+      console.log("[ChessBoard] Ban phase - player", role, "can select", opponentColor, "pieces to ban");
+      return opponentColor as "white" | "black";
     } else {
       // When moving, you select YOUR OWN pieces
+      console.log("[ChessBoard] Move phase - allowing selection of", role, "pieces");
       return role as "white" | "black";
     }
   }, [canMove, canBan, role, currentAction]);
@@ -158,6 +161,7 @@ const ChessBoard = memo(function ChessBoard({
         color: movableColor,
         dests: (canMove || canBan) ? dests : new Map(),
         showDests: true,
+        rookCastle: false, // Disable castling during ban phase
         events: {
           after: handleAfterMove,
         },
@@ -171,7 +175,7 @@ const ChessBoard = memo(function ChessBoard({
       drawable: {
         enabled: true,
         visible: true,
-        autoShapes: currentBan
+        autoShapes: currentBan && currentBan.from && currentBan.to
           ? [
               {
                 orig: currentBan.from as Key,
@@ -214,11 +218,20 @@ const ChessBoard = memo(function ChessBoard({
     orientation,
     movableColor,
     canMove,
+    canBan,
     destsCount: dests.size,
+    destsKeys: Array.from(dests.keys()),
     players: gameState.players,
     currentBan,
     banState: fenData.banState,
     isInCheck, // Add check state to debug output
+  });
+  
+  // Log the actual config being passed to Chessground
+  console.log("[ChessBoard] Movable config:", {
+    color: movableColor,
+    destsSize: dests.size,
+    canMoveOrBan: canMove || canBan,
   });
 
   // Extra debug for ban display

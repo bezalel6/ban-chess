@@ -18,7 +18,8 @@ export interface GamePermissions {
 export function getGamePermissions(
   gameState: SimpleGameState | null,
   game: BanChess | null,
-  userId: string | undefined
+  userId: string | undefined,
+  activePlayer?: "white" | "black"
 ): GamePermissions {
   // Default values for when game is not available
   if (!game || !gameState) {
@@ -39,9 +40,8 @@ export function getGamePermissions(
     gameState.players.white?.id === gameState.players.black?.id &&
     gameState.players.white?.id !== undefined;
 
-  // Get state from BanChess instance
-  const currentAction = game.nextActionType();
-  const currentTurn = game.turn;
+  // Get action type from game or fallback
+  const currentAction = game.getActionType ? game.getActionType() : game.nextActionType();
 
   // Determine player's role
   let role: PlayerRole = null;
@@ -52,16 +52,23 @@ export function getGamePermissions(
     role = "black";
   }
 
-  // In local games, role switches based on current turn
+  // In local games, role switches based on active player
   if (isLocalGame && role) {
-    role = currentTurn;
+    role = activePlayer || (game.getActivePlayer ? game.getActivePlayer() : game.turn);
   }
 
   // Determine permissions
   const isPlayer = role !== null;
-  const isMyTurn = isLocalGame
-    ? isPlayer && !gameState.gameOver
-    : isPlayer && role === currentTurn && !gameState.gameOver;
+  
+  // Use server-provided activePlayer if available, otherwise use game API
+  const currentActivePlayer = activePlayer || (game.getActivePlayer ? game.getActivePlayer() : game.turn);
+  
+  let isMyTurn: boolean;
+  if (isLocalGame) {
+    isMyTurn = isPlayer && !gameState.gameOver;
+  } else {
+    isMyTurn = isPlayer && role === currentActivePlayer && !gameState.gameOver;
+  }
 
   // Permissions based on turn and action type
   const canMove = isMyTurn && currentAction === "move";

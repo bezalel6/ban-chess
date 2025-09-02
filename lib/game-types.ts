@@ -86,6 +86,9 @@ export interface SimpleGameState {
     white?: { id: string; username: string };
     black?: { id: string; username: string };
   };
+  // Server-provided state from new ban-chess.ts APIs:
+  activePlayer?: "white" | "black";  // Who acts now
+  ply?: number;  // Current ply number
   // These fields are ONLY for display/metadata, NOT game logic:
   gameOver?: boolean;  // For UI display only
   result?: string;     // For UI display only
@@ -111,6 +114,8 @@ export type SimpleServerMsg =
       };
       legalActions?: string[];
       nextAction?: "move" | "ban";
+      activePlayer?: "white" | "black";
+      ply?: number;
       gameOver?: boolean;
       result?: string;
       inCheck?: boolean;

@@ -23,13 +23,15 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 - Interactive chessboard powered by **react-chessground**
 - Game logic enforced by **ban-chess.ts** with BCN (Ban Chess Notation) serialization
 - Support for 15+10 time control (15 minutes + 10 second increment)
+- Proper ban phase mechanics - select opponent's pieces to ban their moves
 
 ### User Experience
 - Guest authentication with automatic username generation
 - Active game detection on home page with continue/resign options
-- Clean resignation flow with inline confirmation (no browser prompts)
+- Clean resignation flow with inline split-button confirmation
 - Resizable game board with persistent size preference
 - Mobile-responsive design
+- Clear game status indicators showing whose turn and what action (ban/move)
 
 ### Technical Features
 - Efficient BCN serialization for moves/bans (50% bandwidth reduction)
@@ -37,6 +39,7 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 - WebSocket connection resilience with automatic reconnection
 - Redis-backed game state for persistence across server restarts
 - Separated concerns: WebSocket server for live games only
+- Simplified architecture without complex role routing
 
 ---
 
@@ -45,16 +48,16 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 ```
 2ban-2chess/
 ├─ app/
-│  ├─ page.tsx               # Landing page with game status
-│  ├─ game/[id]/page.tsx     # Dynamic game board page
+│  ├─ page.tsx               # Landing page with active game detection
+│  ├─ game/[id]/page.tsx     # Dynamic game board page (Client Component)
 │  └─ play/
 │     ├─ local/page.tsx      # Solo practice mode
 │     └─ online/page.tsx     # Online matchmaking
 │
 ├─ components/
-│  ├─ ChessBoard.tsx         # React Chessground wrapper
+│  ├─ ChessBoard.tsx         # React Chessground wrapper with ban/move logic
 │  ├─ GameClient.tsx         # Main game UI controller
-│  ├─ ActiveGameCard.tsx     # Active game status display
+│  ├─ ActiveGameCard.tsx     # Active game card with inline resign
 │  └─ game/
 │     ├─ GameSidebar.tsx     # Player info & move history
 │     ├─ GameStatusPanel.tsx # Game state & controls
@@ -64,14 +67,15 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 │  └─ useGameState.tsx       # WebSocket game state management
 │
 ├─ lib/
-│  ├─ game-types.ts          # TypeScript types & messages
-│  └─ game-utils.ts          # Game permission utilities
+│  ├─ game-types.ts          # TypeScript types & WebSocket messages
+│  ├─ game-utils.ts          # Game permissions & role inference
+│  └─ fen.ts                 # FEN parsing with ban state support
 │
 ├─ server/
-│  └─ ws-server.ts           # WebSocket server with Redis
+│  └─ ws-server.ts           # WebSocket server with Redis & game cleanup
 │
 ├─ contexts/
-│  └─ WebSocketContext.tsx   # WebSocket connection provider
+│  └─ WebSocketContext.tsx   # WebSocket connection & auth provider
 │
 └─ package.json
 ```

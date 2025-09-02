@@ -17,10 +17,14 @@ export default function GameStatusPanel({
 }: GameStatusPanelProps) {
   const { user } = useAuth();
   const { game } = useGameState();
-  const permissions = getGamePermissions(gameState, game, user?.userId);
+  const permissions = getGamePermissions(gameState, game, user?.userId, gameState?.activePlayer);
   const { role, isMyTurn, isPlayer } = permissions;
   const currentBan = getCurrentBan(gameState.fen);
   const nextAction = game ? game.nextActionType() : "move";
+  
+  // Get ply and active player info from gameState (server-provided)
+  const ply = gameState?.ply || 0;
+  const activePlayer = gameState?.activePlayer || "unknown";
 
   // Format time control display
   const formatTimeControl = () => {
@@ -57,6 +61,23 @@ export default function GameStatusPanel({
             <div className="text-xs text-foreground-muted uppercase">Mode</div>
             <div className="text-sm font-semibold text-foreground">
               {gameMode}
+            </div>
+          </div>
+        </div>
+        
+        {/* Debug Ply Info - shows current game state */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2">
+            <div className="text-xs text-blue-400 uppercase">Ply</div>
+            <div className="text-sm font-bold text-blue-500">
+              {ply}
+            </div>
+          </div>
+          
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2">
+            <div className="text-xs text-blue-400 uppercase">Active</div>
+            <div className="text-sm font-bold text-blue-500 capitalize">
+              {activePlayer}
             </div>
           </div>
         </div>
