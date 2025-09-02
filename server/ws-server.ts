@@ -1225,11 +1225,9 @@ wss.on("connection", (ws: WebSocket, request) => {
           if (result.success) {
             console.log(`Action in game ${gameId}:`, action);
 
-            // Use BanChess serialization to store the action
-            const serializedAction = BanChess.serializeAction(
-              action as Parameters<typeof BanChess.serializeAction>[0],
-            );
-            await addActionToHistory(gameId, serializedAction);
+            // Action is already serialized from client (e.g., "b:d2d4" or "m:e2e4")
+            // Just store it directly
+            await addActionToHistory(gameId, action as string);
 
             // Update game state in Redis with PGN for complete game reconstruction
             gameState.fen = game.fen();
