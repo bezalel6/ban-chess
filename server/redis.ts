@@ -69,6 +69,8 @@ export const redisSub = redis.duplicate();
 // Redis key prefixes for organization
 export const KEYS = {
   GAME: (id: string) => `game:${id}`,
+  GAME_STATE: (id: string) => `game:${id}:state`,  // Store full game state
+  GAME_ACTIONS: (id: string) => `game:${id}:actions`,  // Store action history in BCN format
   GAME_PLAYERS: (id: string) => `game:${id}:players`,
   GAME_HISTORY: (id: string) => `game:${id}:history`,
   GAME_TIMERS: (id: string) => `game:${id}:timers`,

@@ -39,6 +39,8 @@ interface Player {
 // These don't need Redis as they're connection-specific
 const authenticatedPlayers = new Map<WebSocket, Player>();
 const timeManagers = new Map<string, TimeManager>();
+// Game state deduplication cache to prevent WebSocket spam
+const lastBroadcastStates = new Map<string, string>();
 
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -293,6 +295,9 @@ async function cleanupFinishedGame(gameId: string) {
       // Delete game state
       await redis.del(KEYS.GAME_STATE(gameId));
       
+      // Clean up deduplication cache
+      lastBroadcastStates.delete(gameId);
+      
       // Delete game events
       await redis.del(KEYS.GAME_EVENTS(gameId));
       
@@ -435,21 +440,9 @@ async function restoreTimeManager(
   // TODO: In production you'd need to track actual time spent per player
   // For now, we just restart the timer for the current player
 
-  // Determine current player based on FEN
+  // Determine current player using ban-chess.ts v3.0.0 APIs
   const game = new BanChess(gameState.fen);
-  const fen = game.fen();
-  const fenParts = fen.split(" ");
-  const chessTurn = fenParts[1] === "w" ? "white" : "black";
-  const banState = fenParts[6];
-  const isNextActionBan = banState && banState.includes(":ban");
-
-  // For ban phase, the banning player is the opposite of current turn
-  // For move phase, it's the current turn player
-  const currentPlayer: "white" | "black" = isNextActionBan
-    ? chessTurn === "white"
-      ? "black"
-      : "white"
-    : chessTurn;
+  const currentPlayer = game.getActivePlayer();
 
   // Start the timer for the current player
   timeManager.start(currentPlayer);
@@ -716,6 +709,14 @@ async function broadcastGameState(gameId: string) {
       startTime: gameState.startTime,
     }),
   };
+
+  // Check for duplicate state to prevent WebSocket spam
+  const stateHash = JSON.stringify(stateMsg);
+  if (lastBroadcastStates.get(gameId) === stateHash) {
+    console.log(`[broadcastGameState] Skipping duplicate state for game ${gameId}`);
+    return;
+  }
+  lastBroadcastStates.set(gameId, stateHash);
 
   // Publish to Redis for all servers
   await redisPub.publish(
@@ -1221,21 +1222,8 @@ wss.on("connection", (ws: WebSocket, request) => {
             // Handle clock switching after successful move/ban
             const timeManager = timeManagers.get(gameId);
             if (timeManager && !game.gameOver()) {
-              const fen = game.fen();
-              const fenParts = fen.split(" ");
-              const chessTurn = fenParts[1] === "w" ? "white" : "black";
-              const banState = fenParts[6];
-              const isNextActionBan = banState && banState.includes(":ban");
-
-              // Determine who acts next
-              // For ban phase, the banning player is the opposite of current turn
-              // For move phase, it's the current turn player
-              const nextPlayer: "white" | "black" = isNextActionBan
-                ? chessTurn === "white"
-                  ? "black"
-                  : "white"
-                : chessTurn;
-
+              // Use ban-chess.ts v3.0.0 API to get the next active player
+              const nextPlayer = game.getActivePlayer();
               timeManager.switchPlayer(nextPlayer);
             }
 

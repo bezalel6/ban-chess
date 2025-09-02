@@ -1,4 +1,4 @@
-# ♟️ Ban Chess Web (MVP)
+# ♟️ Ban Chess Web
 
 An experimental **online platform for playing Ban Chess**, a chess variant where players alternate between banning opponent moves and making their own moves. 
 
@@ -6,12 +6,13 @@ An experimental **online platform for playing Ban Chess**, a chess variant where
 
 Built with:
 
-- [Next.js 14 (App Router)](https://nextjs.org/) — UI & routing
-- [react-chessground](https://github.com/ruilisi/react-chessground) — interactive chessboard
-- [ban-chess.ts](https://github.com/bezalel6/ban-chess.ts) — variant engine
+- [Next.js 15.5.2 (App Router)](https://nextjs.org/) — UI & routing with React 19
+- [@bezalel6/react-chessground](https://www.npmjs.com/package/@bezalel6/react-chessground) — interactive chessboard
+- [ban-chess.ts v3.0.0](https://github.com/bezalel6/ban-chess.ts) — variant engine
 - [WebSockets](https://www.npmjs.com/package/ws) — real-time sync between players
+- [NextAuth.js](https://next-auth.js.org/) — authentication with Google, Lichess & Guest login
 
-This MVP is lightweight, fast to spin up, and ready for rapid iteration.
+This platform features comprehensive authentication, real-time multiplayer, sound effects, and extensive testing.
 
 ---
 
@@ -20,18 +21,27 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 ### Core Gameplay
 - Create solo practice games or find opponents online
 - Real-time move + ban synchronization with WebSockets
-- Interactive chessboard powered by **react-chessground**
-- Game logic enforced by **ban-chess.ts** with BCN (Ban Chess Notation) serialization
-- Support for 15+10 time control (15 minutes + 10 second increment)
+- Interactive chessboard powered by **@bezalel6/react-chessground**
+- Game logic enforced by **ban-chess.ts v3.0.0** with BCN (Ban Chess Notation) serialization
+- Support for timed games with increment timers
 - Proper ban phase mechanics - select opponent's pieces to ban their moves
+- Game sound effects for moves, captures, bans, and game events
+
+### Authentication & User Management
+- **Multiple login options**: Google OAuth, Lichess OAuth, or Guest mode
+- Automatic unique username generation for all auth types
+- Session management with NextAuth.js and JWT tokens
+- User profiles and username customization
+- Secure authentication flow with proper error handling
 
 ### User Experience
-- Guest authentication with automatic username generation
 - Active game detection on home page with continue/resign options
 - Clean resignation flow with inline split-button confirmation
 - Resizable game board with persistent size preference
-- Mobile-responsive design
+- Mobile-responsive design optimized for chess gameplay
 - Clear game status indicators showing whose turn and what action (ban/move)
+- Sound control settings with mute/volume options
+- Comprehensive accessibility features
 
 ### Technical Features
 - Efficient BCN serialization for moves/bans (50% bandwidth reduction)
@@ -39,7 +49,9 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 - WebSocket connection resilience with automatic reconnection
 - Redis-backed game state for persistence across server restarts
 - Separated concerns: WebSocket server for live games only
-- Simplified architecture without complex role routing
+- Comprehensive E2E test coverage with Playwright
+- TypeScript strict mode with complete type safety
+- Performance monitoring and debugging tools
 
 ---
 
@@ -47,37 +59,74 @@ This MVP is lightweight, fast to spin up, and ready for rapid iteration.
 
 ```
 2ban-2chess/
-├─ app/
+├─ app/                      # Next.js 15 App Router
 │  ├─ page.tsx               # Landing page with active game detection
-│  ├─ game/[id]/page.tsx     # Dynamic game board page (Client Component)
-│  └─ play/
-│     ├─ local/page.tsx      # Solo practice mode
-│     └─ online/page.tsx     # Online matchmaking
+│  ├─ game/[id]/page.tsx     # Dynamic game board page
+│  ├─ auth/                  # Authentication pages
+│  │  ├─ signin/page.tsx     # Sign-in page with provider options
+│  │  ├─ error/page.tsx      # Auth error handling
+│  │  └─ logout/page.tsx     # Logout page
+│  ├─ play/
+│  │  ├─ local/page.tsx      # Solo practice mode
+│  │  └─ online/page.tsx     # Online matchmaking
+│  ├─ settings/page.tsx      # User settings and preferences
+│  ├─ user/[username]/       # User profiles
+│  └─ api/                   # API routes
+│     ├─ auth/[...nextauth]/ # NextAuth.js configuration
+│     ├─ health/             # Health check endpoint
+│     └─ user/username/      # Username management
 │
 ├─ components/
 │  ├─ ChessBoard.tsx         # React Chessground wrapper with ban/move logic
 │  ├─ GameClient.tsx         # Main game UI controller
 │  ├─ ActiveGameCard.tsx     # Active game card with inline resign
+│  ├─ AuthProvider.tsx       # Authentication wrapper component
+│  ├─ SoundControl.tsx       # Sound settings and controls
+│  ├─ auth/
+│  │  ├─ SignInPanel.tsx     # Sign-in options panel
+│  │  └─ withAuth.tsx        # Authentication HOC
 │  └─ game/
 │     ├─ GameSidebar.tsx     # Player info & move history
 │     ├─ GameStatusPanel.tsx # Game state & controls
-│     └─ ResizableBoard.tsx  # Resizable chess board wrapper
+│     ├─ ResizableBoard.tsx  # Resizable chess board wrapper
+│     └─ PlayerInfo.tsx      # Player information display
 │
 ├─ hooks/
-│  └─ useGameState.tsx       # WebSocket game state management
+│  ├─ useGameState.tsx       # WebSocket game state management
+│  └─ useGameTimer.tsx       # Game timer functionality
 │
 ├─ lib/
 │  ├─ game-types.ts          # TypeScript types & WebSocket messages
 │  ├─ game-utils.ts          # Game permissions & role inference
-│  └─ fen.ts                 # FEN parsing with ban state support
+│  ├─ fen.ts                 # FEN parsing with ban state support
+│  ├─ auth.ts                # NextAuth.js configuration
+│  ├─ sound-manager.ts       # Game sound management
+│  └─ websocket-config.ts    # WebSocket connection configuration
 │
 ├─ server/
-│  └─ ws-server.ts           # WebSocket server with Redis & game cleanup
+│  ├─ ws-server.ts           # WebSocket server with Redis & game cleanup
+│  ├─ redis.ts               # Redis connection and configuration
+│  └─ services/
+│     ├─ game-service.ts     # Game logic service
+│     └─ timer-service.ts    # Timer management service
 │
 ├─ contexts/
 │  └─ WebSocketContext.tsx   # WebSocket connection & auth provider
 │
-└─ package.json
+├─ e2e/                      # Playwright E2E tests
+│  ├─ auth.spec.ts           # Authentication flow tests
+│  ├─ game.spec.ts           # Game functionality tests
+│  ├─ multiplayer-flow.spec.ts # Multiplayer game tests
+│  └─ accessibility.spec.ts  # Accessibility tests
+│
+├─ types/
+│  ├─ auth.ts                # Authentication type definitions
+│  └─ next-auth.d.ts         # NextAuth.js type extensions
+│
+└─ docs/                     # Documentation
+   ├─ DEVELOPMENT.md         # Development guide
+   ├─ ARCHITECTURE.md        # Architecture documentation
+   └─ DEPLOYMENT.md          # Deployment instructions
 ```
 
 ---
@@ -99,7 +148,7 @@ npm install
 ```bash
 npm run dev:ws
 ```
-This starts the WebSocket server on **ws://localhost:8081** with hot reload.
+This starts the WebSocket server on **ws://localhost:3001** with hot reload.
 
 **Terminal 2: Next.js Development Server**
 ```bash
@@ -115,20 +164,59 @@ Runs both servers concurrently, but logs are mixed and harder to analyze.
 
 > 📖 **For detailed development setup, debugging tips, and best practices, see [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)**
 
+### 3. Authentication Setup (Optional)
+
+For OAuth providers, set up environment variables:
+
+```bash
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Lichess OAuth (optional) 
+LICHESS_CLIENT_ID=your_lichess_client_id
+
+# NextAuth secret (required for production)
+NEXTAUTH_SECRET=your_nextauth_secret
+
+# WebSocket URL (auto-detected in development)
+NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:3001
+```
+
+> 📖 **For detailed OAuth setup instructions, see [docs/OAUTH_SETUP.md](./docs/OAUTH_SETUP.md)**
+
+### 4. Testing & Quality Assurance
+
+```bash
+# Run E2E tests with Playwright
+npm run test
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+
+# Run both type-check and lint
+npm run analyze
+```
+
 ---
 
 ## 🎮 Usage
 
-1. Open [http://localhost:3000](http://localhost:3000).
-2. Click **"New Game"** → generates unique game ID and room.
-3. Copy the URL and share with opponent.
-4. On the game page:
-
-   * **Black bans first** - the game starts with Black banning a White move
-   * If it's your turn to **ban**, select an opponent's move to disable it (ban lasts one move only)
-   * If it's your turn to **move**, make a legal move on the board (cannot be the banned move)
-   * Turn order: Black bans → White moves → White bans → Black moves → repeat
-5. Game state updates in real time across all clients.
+1. **Visit the app**: Open [http://localhost:3000](http://localhost:3000)
+2. **Sign in**: Choose from Google OAuth, Lichess OAuth, or Guest mode
+3. **Create/Join game**: 
+   - **Solo Practice**: Click "Play Local" for single-player against the engine
+   - **Online Multiplayer**: Click "Play Online" to create a game room
+4. **Share game**: Copy the URL and share with an opponent for multiplayer
+5. **Play the game**:
+   - **Black bans first** - the game starts with Black banning a White move
+   - If it's your turn to **ban**, select an opponent's piece to disable their moves
+   - If it's your turn to **move**, make a legal move on the board (cannot use banned moves)
+   - Turn order: Black bans → White moves → White bans → Black moves → repeat
+6. **Game features**: Real-time sync, sound effects, move history, and timer support
 
 > See [RULES.md](./RULES.md) for detailed game rules, special move handling, and edge cases.
 
@@ -224,20 +312,69 @@ The board is rendered using [react-chessground](https://github.com/ruilisi/react
 
 ---
 
-## ✅ Next Steps
+## ✅ Current Status & Future Plans
 
-* [ ] Add authentication (user accounts, ratings)
-* [ ] Persist games in a DB (Postgres + Prisma)
-* [ ] Matchmaking / lobby system
-* [ ] Spectator mode
-* [ ] Analysis board & ban history
+### ✅ Completed Features
+- ✅ **Authentication**: Multiple OAuth providers + Guest mode
+- ✅ **Real-time multiplayer**: WebSocket-based gameplay
+- ✅ **Sound system**: Game audio and sound controls
+- ✅ **Comprehensive testing**: E2E test coverage with Playwright
+- ✅ **User management**: Profile pages and username customization
+- ✅ **Mobile support**: Responsive design for mobile devices
+- ✅ **Game persistence**: Redis-backed state management
+
+### 🚧 Future Roadmap
+* [ ] **Database persistence**: Full game history storage (Postgres + Prisma)
+* [ ] **Matchmaking system**: Automated player pairing and lobby
+* [ ] **Spectator mode**: Watch games in progress
+* [ ] **Analysis board**: Post-game analysis with ban history
+* [ ] **Rating system**: ELO-based player ratings
+* [ ] **Tournament mode**: Bracket-style competitions
+
+## 📚 Documentation
+
+For more detailed information, check out the comprehensive documentation:
+
+- **[DEVELOPMENT.md](./docs/DEVELOPMENT.md)** - Development setup, debugging, and best practices
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Technical architecture and design decisions  
+- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Production deployment instructions
+- **[OAUTH_SETUP.md](./docs/OAUTH_SETUP.md)** - OAuth provider configuration
+- **[RULES.md](./RULES.md)** - Complete Ban Chess game rules
+
+---
+
+## 🧪 Testing
+
+This project includes comprehensive end-to-end testing with Playwright:
+
+```bash
+# Run all tests
+npm run test
+
+# Run specific test suites
+npm run test:auth         # Authentication flow tests
+npm run test:game         # Game functionality tests  
+npm run test:multiplayer  # Multiplayer game tests
+npm run test:a11y         # Accessibility tests
+
+# Interactive test runner
+npm run test:ui
+```
+
+**Test Coverage:**
+- Authentication flows (OAuth + Guest)
+- Solo and multiplayer gameplay
+- Ban/move mechanics and validation
+- Real-time WebSocket synchronization
+- Accessibility compliance
+- Mobile responsiveness
 
 ---
 
 ### Credits
 
-* [ban-chess.ts](https://github.com/bezalel6/ban-chess.ts) by [@bezalel6](https://github.com/bezalel6)
-* [react-chessground](https://github.com/ruilisi/react-chessground) (React wrapper around Chessground from Lichess)
-
+* **[ban-chess.ts](https://github.com/bezalel6/ban-chess.ts)** by [@bezalel6](https://github.com/bezalel6) - Core game engine
+* **[@bezalel6/react-chessground](https://www.npmjs.com/package/@bezalel6/react-chessground)** - Enhanced React wrapper for Chessground
+* **[Chessground](https://github.com/lichess-org/chessground)** by Lichess - Interactive chessboard library
 
 ---
