@@ -7,8 +7,14 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Copy prisma schema for generation
+COPY prisma ./prisma
+
 # Install all dependencies (including devDependencies for build)
 RUN npm ci
+
+# Generate Prisma client - CRITICAL for production
+RUN npx prisma generate
 
 # Copy all source code
 COPY . .
@@ -31,6 +37,12 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy Prisma schema and generated client
+# The generated client needs to be available at runtime
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Set environment to production
 ENV NODE_ENV=production

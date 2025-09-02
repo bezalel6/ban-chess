@@ -9,8 +9,14 @@ WORKDIR /app
 # Copying this first prevents re-running npm install on every code change.
 COPY package*.json ./
 
+# Copy prisma schema for generation
+COPY prisma ./prisma
+
 # Install production dependencies.
 RUN npm ci
+
+# Generate Prisma client - CRITICAL for production
+RUN npx prisma generate
 
 # Copy local code to the container image.
 COPY . .
