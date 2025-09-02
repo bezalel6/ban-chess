@@ -222,7 +222,6 @@ export function useGameState() {
 
             // Handle events if provided and play appropriate sounds
             let banEventProcessed = false;
-            let moveEventProcessed = false;
             if (msg.events) {
               // Check for new events and play sounds for them
               const newEvents = msg.events.slice(gameEvents.length);
@@ -234,7 +233,6 @@ export function useGameState() {
                     banEventProcessed = true;
                     break;
                   case "move-made":
-                    moveEventProcessed = true;
                     // Move sound will be handled by the main move detection logic below
                     break;
                   case "game-started":
@@ -262,12 +260,7 @@ export function useGameState() {
 
             // Play sound effects for moves and bans (only if not already processed by events)
             if (previousFen.current && msg.fen !== previousFen.current && !banEventProcessed) {
-              const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || [])
-                .length;
-              const currentPieces = (msg.fen.match(/[prnbqk]/gi) || []).length;
-              
-              // Check if this was a ban or move action by looking at the last history entry
-              const wasCapture = currentPieces < prevPieces;
+              let wasCapture = false;
               let wasBan = false;
               let wasCastle = false;
               let wasPromotion = false;
@@ -292,6 +285,12 @@ export function useGameState() {
                     
                     // Check for promotion
                     wasPromotion = !!move.promotion;
+                    
+                    // Check for capture - only count piece reduction during a move action
+                    // Don't count piece reduction from bans as captures
+                    const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || []).length;
+                    const currentPieces = (msg.fen.match(/[prnbqk]/gi) || []).length;
+                    wasCapture = currentPieces < prevPieces;
                   }
                 }
               }
