@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
+import { useOfflineGame } from "@/hooks/useOfflineGame";
 import type { Move, Ban } from "@/lib/game-types";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
@@ -55,6 +56,14 @@ interface GameClientProps {
 }
 
 export default function GameClient({ gameId }: GameClientProps) {
+  const searchParams = useSearchParams();
+  const isOfflineMode = searchParams.get('mode') === 'offline' || gameId.startsWith('offline-');
+  
+  // Use appropriate hook based on game mode
+  const onlineGameState = useGameState();
+  const offlineGameState = useOfflineGame();
+  
+  // Select the appropriate state based on mode
   const {
     gameState,
     game,  // BanChess instance
@@ -68,7 +77,11 @@ export default function GameClient({ gameId }: GameClientProps) {
     gameEvents,
     giveTime,
     resignGame,
-  } = useGameState();
+  } = isOfflineMode ? {
+    ...offlineGameState,
+    joinGame: () => {}, // No-op for offline games
+    giveTime: () => {}, // No-op for offline games
+  } : onlineGameState;
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [boardRefreshKey, setBoardRefreshKey] = useState(0);
@@ -83,39 +96,56 @@ export default function GameClient({ gameId }: GameClientProps) {
     setDebugMode(debugParam || debugStorage);
   }, []);
 
-  // Join game when component mounts and we're connected
+  // Join game when component mounts and we're connected (or create offline game)
   useEffect(() => {
-    // Only join if we're connected, have a gameId, and haven't joined this specific game
-    if (connected && gameId && joinedGameId.current !== gameId) {
-      console.log("[GameClient] Joining game:", gameId);
-      joinGame(gameId);
-      joinedGameId.current = gameId;
-      setHasJoined(true);
-    }
+    if (isOfflineMode) {
+      // For offline games, create the game if not already done
+      if (joinedGameId.current !== gameId && !offlineGameState.gameState) {
+        console.log("[GameClient] Creating offline game:", gameId);
+        offlineGameState.createOfflineGame(gameId);
+        joinedGameId.current = gameId;
+        setHasJoined(true);
+      }
+    } else {
+      // For online games, join when connected
+      if (connected && gameId && joinedGameId.current !== gameId) {
+        console.log("[GameClient] Joining online game:", gameId);
+        joinGame(gameId);
+        joinedGameId.current = gameId;
+        setHasJoined(true);
+      }
 
-    // Reset join state if disconnected
-    if (!connected && hasJoined) {
-      setHasJoined(false);
-      // Don't reset joinedGameId here - we want to avoid rejoining the same game
+      // Reset join state if disconnected
+      if (!connected && hasJoined) {
+        setHasJoined(false);
+        // Don't reset joinedGameId here - we want to avoid rejoining the same game
+      }
     }
-  }, [connected, gameId, hasJoined, joinGame]);
+  }, [connected, gameId, hasJoined, joinGame, isOfflineMode, offlineGameState]);
 
   const handleMove = (move: Move) => sendAction({ move });
   const handleBan = (ban: Ban) => sendAction({ ban });
   const handleNewGame = () => router.push("/");
 
   // Loading states
-  if (!connected) {
-    return <LoadingMessage message="Connecting..." />;
+  if (isOfflineMode) {
+    // For offline games, check if we have a game state
+    if (!gameState) {
+      return <LoadingMessage message="Creating offline game..." />;
+    }
+  } else {
+    // For online games, check connection and game state
+    if (!connected) {
+      return <LoadingMessage message="Connecting..." />;
+    }
+
+    if (!gameState || gameState.gameId !== gameId) {
+      return <LoadingMessage message="Joining game..." />;
+    }
   }
 
   if (error) {
     return <ErrorMessage error={error} />;
-  }
-
-  if (!gameState || gameState.gameId !== gameId) {
-    // Show centered loading message while joining game
-    return <LoadingMessage message="Joining game..." />;
   }
 
   return (
@@ -231,7 +261,7 @@ export default function GameClient({ gameId }: GameClientProps) {
           onGiveTime={giveTime}
         />
       </div>
-      <WebSocketStats />
+      {!isOfflineMode && <WebSocketStats />}
       {debugMode && (
         <DebugPanel 
           gameState={gameState} 
