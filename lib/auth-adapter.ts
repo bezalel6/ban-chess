@@ -3,6 +3,11 @@ import type { Adapter } from "next-auth/adapters";
 import prisma from "./prisma";
 import { generateUniqueChessUsername } from "./username";
 
+// Guest users need a placeholder email to satisfy NextAuth's type requirements
+// This email format is invalid and will never receive actual emails
+const GUEST_EMAIL_DOMAIN = "@guest.local";
+const getGuestEmail = (id: string) => `guest_${id}${GUEST_EMAIL_DOMAIN}`;
+
 /**
  * Custom Prisma adapter that ensures security and privacy:
  * 
@@ -122,7 +127,14 @@ export function CustomPrismaAdapter(): Adapter {
           isGuest: true,
         },
       });
-      return user;
+      
+      if (!user) return null;
+      
+      // For guest users without email, provide a placeholder to satisfy NextAuth types
+      return {
+        ...user,
+        email: user.email || getGuestEmail(user.id),
+      };
     },
     
     // Keep getUserByEmail but it won't auto-link accounts
@@ -130,7 +142,14 @@ export function CustomPrismaAdapter(): Adapter {
       const user = await prisma.user.findUnique({
         where: { email },
       });
-      return user;
+      
+      if (!user) return null;
+      
+      // For guest users without email, provide a placeholder to satisfy NextAuth types
+      return {
+        ...user,
+        email: user.email || getGuestEmail(user.id),
+      };
     },
   };
 }

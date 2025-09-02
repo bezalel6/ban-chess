@@ -91,8 +91,8 @@ export default function TestAuthPage() {
                   
                   <div className="flex items-center justify-between py-2 px-3 bg-background rounded-lg">
                     <span className="text-muted-foreground">Account Type</span>
-                    <span className={session.user.isGuest ? "text-yellow-500" : "text-green-500"}>
-                      {session.user.isGuest ? 'Guest' : 'Registered'}
+                    <span className={session.user.provider === 'guest' ? "text-yellow-500" : "text-green-500"}>
+                      {session.user.provider === 'guest' ? 'Guest' : 'Registered'}
                     </span>
                   </div>
                 </>
