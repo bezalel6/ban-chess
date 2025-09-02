@@ -1,6 +1,7 @@
 import type { SimpleGameState } from "@/lib/game-types";
 import { parseFEN } from "@/lib/game-types";
 import { useAuth } from "@/components/AuthProvider";
+import { BanChess } from "ban-chess.ts";
 
 interface GameStatusProps {
   gameState: SimpleGameState;
@@ -9,6 +10,16 @@ interface GameStatusProps {
 export default function GameStatus({ gameState }: GameStatusProps) {
   const { user } = useAuth();
   const { turn } = parseFEN(gameState.fen);
+
+  // Create BanChess instance to get action type
+  let game: BanChess | null = null;
+  let actionType: "ban" | "move" = "move";
+  try {
+    game = new BanChess(gameState.fen);
+    actionType = game.nextActionType();
+  } catch (e) {
+    console.error("Error creating BanChess instance:", e);
+  }
 
   // Determine player's role
   const getPlayerRole = (): "spectator" | "white" | "black" => {
@@ -23,7 +34,6 @@ export default function GameStatus({ gameState }: GameStatusProps) {
   const isMyTurn = isPlayer && turn === playerRole;
 
   const getStatusText = () => {
-    const actionType = gameState.nextAction;
 
     // Check for game over states first
     if (gameState.gameOver) {
@@ -86,9 +96,7 @@ export default function GameStatus({ gameState }: GameStatusProps) {
     if (gameState.gameOver) {
       return gameState.result || "Game Over";
     }
-    return `${turn === "white" ? "White" : "Black"} to ${
-      gameState.nextAction || "move"
-    }`;
+    return `${turn === "white" ? "White" : "Black"} to ${actionType}`;
   };
 
   return (

@@ -13,9 +13,9 @@ export default function GameStatusPanel({
   gameState,
   onNewGame,
 }: GameStatusPanelProps) {
-  const { role, isMyTurn, isPlayer } = useGameRole();
+  const { role, isMyTurn, isPlayer, game } = useGameRole();
   const currentBan = getCurrentBan(gameState.fen);
-  const nextAction = gameState.nextAction || "move";
+  const nextAction = game ? game.nextActionType() : "move";
 
   // Format time control display
   const formatTimeControl = () => {

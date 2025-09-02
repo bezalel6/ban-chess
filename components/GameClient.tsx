@@ -57,6 +57,8 @@ interface GameClientProps {
 export default function GameClient({ gameId, urlRole }: GameClientProps) {
   const {
     gameState,
+    game,  // NEW: Get BanChess instance
+    dests, // NEW: Get legal moves map
     error,
     connected,
     sendAction,
@@ -136,7 +138,7 @@ export default function GameClient({ gameId, urlRole }: GameClientProps) {
   }
 
   return (
-    <GameRoleProvider gameState={gameState} urlRole={urlRole}>
+    <GameRoleProvider game={game} gameState={gameState} urlRole={urlRole}>
       {/* Desktop Layout - Three column layout with centered board */}
       <div
         className={`hidden md:flex justify-center items-center p-2 ${
@@ -186,6 +188,7 @@ export default function GameClient({ gameId, urlRole }: GameClientProps) {
             )}
             <ResizableBoard
               gameState={gameState}
+              dests={dests}
               onMove={handleMove}
               onBan={handleBan}
             />
@@ -227,6 +230,7 @@ export default function GameClient({ gameId, urlRole }: GameClientProps) {
       <div className="md:hidden flex flex-col gap-4 p-4">
         <ResizableBoard
           gameState={gameState}
+          dests={dests}
           onMove={handleMove}
           onBan={handleBan}
         />
