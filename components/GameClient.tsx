@@ -40,13 +40,31 @@ const ResizableBoard = dynamic(
     }),
   {
     ssr: false,
-    loading: () => (
-      <div className="chess-board-wrapper">
-        <div className="chess-board-container flex items-center justify-center">
-          <div className="loading-spinner" />
+    loading: () => {
+      // Get saved board size from localStorage or use default
+      const DEFAULT_SIZE = 600;
+      const savedSize = typeof window !== "undefined" 
+        ? localStorage.getItem("boardSize") 
+        : null;
+      const boardSize = savedSize ? parseInt(savedSize, 10) : DEFAULT_SIZE;
+      
+      return (
+        <div className="chess-board-wrapper">
+          <div 
+            className="chess-board-container flex items-center justify-center"
+            style={{ 
+              width: `${boardSize}px`, 
+              height: `${boardSize}px`,
+              background: 'var(--background-tertiary)',
+              borderRadius: '1rem',
+              padding: '16px'
+            }}
+          >
+            <div className="loading-spinner" />
+          </div>
         </div>
-      </div>
-    ),
+      );
+    },
   },
 );
 
