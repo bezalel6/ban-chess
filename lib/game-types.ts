@@ -1,6 +1,9 @@
 // Simplified types that rely on FEN as the source of truth
 // Now with Ban Chess Notation (BCN) support for serialization
 
+// Chess square type
+export type Square = string;
+
 export interface Move {
   from: string;
   to: string;
@@ -77,24 +80,23 @@ export interface GameEvent {
 
 // Minimal game state - FEN contains everything we need
 export interface SimpleGameState {
-  fen: string; // Extended FEN with ban state from ban-chess.ts
+  fen: string; // The ONLY source of game state truth
   gameId: string;
   players: {
     white?: { id: string; username: string };
     black?: { id: string; username: string };
   };
-  legalActions?: string[]; // Legal moves/bans from server
-  nextAction?: "move" | "ban"; // What action is next
-  gameOver?: boolean;
-  result?: string;
-  inCheck?: boolean; // Whether the current position has a check
-  history?: HistoryEntry[] | string[]; // Move history - can be strings or HistoryEntry objects from ban-chess.ts
+  // These fields are ONLY for display/metadata, NOT game logic:
+  gameOver?: boolean;  // For UI display only
+  result?: string;     // For UI display only
+  history?: HistoryEntry[] | string[]; // For move replay only
   timeControl?: TimeControl; // Time control settings
   clocks?: {
     white: PlayerClock;
     black: PlayerClock;
   };
   startTime?: number; // Game start timestamp
+  // REMOVED: legalActions, nextAction, inCheck - these come from BanChess
 }
 
 // Server messages - simplified

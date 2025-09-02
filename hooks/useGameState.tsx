@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ReadyState } from "react-use-websocket";
 import { useGameWebSocket } from "@/contexts/WebSocketContext";
-import { useAuth } from "@/components/AuthProvider";
 import { BanChess } from "ban-chess.ts";
 import type {
   SimpleGameState,
@@ -18,7 +17,6 @@ import type {
 import soundManager from "@/lib/sound-manager";
 
 export function useGameState() {
-  const { user } = useAuth();
   const router = useRouter();
   const wsContext = useGameWebSocket();
 
@@ -27,24 +25,22 @@ export function useGameState() {
     throw new Error("useGameState must be used within WebSocketProvider");
   }
 
-  const { sendMessage, lastMessage, readyState } = wsContext;
+  const { sendMessage, lastMessage, readyState, isAuthenticated: wsAuthenticated } = wsContext;
 
   // State management - simplified to just FEN
   const [fen, setFen] = useState<string | null>(null);
   const [gameState, setGameState] = useState<SimpleGameState | null>(null); // Keep for compatibility during migration
   const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   const [gameEvents, setGameEvents] = useState<GameEvent[]>([]);
   const [dests, setDests] = useState<Map<Square, Square[]>>(new Map());
 
   // Refs for tracking
   const previousFen = useRef<string | null>(null);
-  const authSent = useRef(false);
   const moveHistory = useRef<HistoryEntry[]>([]);
 
-  // Connection status
-  const connected = readyState === ReadyState.OPEN && isAuthenticated;
+  // Connection status - use centralized authentication
+  const connected = readyState === ReadyState.OPEN && wsAuthenticated;
 
   // Create BanChess instance from FEN
   const game = useMemo(() => {
@@ -90,31 +86,7 @@ export function useGameState() {
     [readyState, sendMessage],
   );
 
-  // Authenticate when connection opens
-  useEffect(() => {
-    if (readyState === ReadyState.OPEN && user && !authSent.current) {
-      authSent.current = true;
-      console.log("[GameState] Authenticating:", {
-        userId: user.userId,
-        username: user.username,
-        provider: user.provider,
-      });
-      // Send authentication directly without using the send callback
-      if (readyState === ReadyState.OPEN) {
-        sendMessage(JSON.stringify({
-          type: "authenticate",
-          userId: user.userId || "",
-          username: user.username || "",
-        }));
-      }
-    }
-
-    // Reset auth flag when connection closes
-    if (readyState === ReadyState.CLOSED || readyState === ReadyState.CLOSING) {
-      authSent.current = false;
-      setIsAuthenticated(false);
-    }
-  }, [readyState, user, sendMessage]);
+  // Authentication is now handled centrally in WebSocketContext
 
   // Add a ref to track the last processed message to prevent duplicates
   const lastProcessedMessage = useRef<string | null>(null);
@@ -146,7 +118,7 @@ export function useGameState() {
     try {
       switch (msg.type) {
         case "authenticated": {
-          setIsAuthenticated(true);
+          // Authentication is now handled centrally in WebSocketContext
           // Don't auto-join here - let the game page handle it
           break;
         }
@@ -398,7 +370,7 @@ export function useGameState() {
     dests, // NEW: Legal moves map
     error,
     connected,
-    isAuthenticated,
+    isAuthenticated: wsAuthenticated,
     currentGameId,
     gameEvents,
 

@@ -3,6 +3,7 @@
 import { createContext, useContext, useMemo, ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import type { SimpleGameState } from "@/lib/game-types";
+import type { BanChess } from "ban-chess.ts";
 
 export type PlayerRole = "white" | "black" | "spectator";
 export type Orientation = "white" | "black";
@@ -14,15 +15,22 @@ interface GameRoleContextValue {
 
   // Permissions based on role
   canMove: boolean;
+  canBan: boolean;
   canInteract: boolean;
   isMyTurn: boolean;
 
   // Helper flags
   isPlayer: boolean;
   isSpectator: boolean;
+  
+  // Current action type
+  currentAction: "move" | "ban";
 
   // Original game state for reference
   gameState: SimpleGameState | null;
+  
+  // BanChess instance for game logic
+  game: BanChess | null;
 }
 
 const GameRoleContext = createContext<GameRoleContextValue | undefined>(
@@ -31,29 +39,34 @@ const GameRoleContext = createContext<GameRoleContextValue | undefined>(
 
 interface GameRoleProviderProps {
   children: ReactNode;
-  gameState: SimpleGameState | null;
+  game: BanChess | null;  // NEW: BanChess instance instead of gameState
+  gameState: SimpleGameState | null;  // Keep for player info during migration
   urlRole?: PlayerRole; // Optional role from URL for future enhancement
 }
 
 export function GameRoleProvider({
   children,
+  game,
   gameState,
   urlRole,
 }: GameRoleProviderProps) {
   const { user } = useAuth();
 
   const value = useMemo(() => {
-    // Default values for when game state is not available
-    if (!gameState) {
+    // Default values for when game is not available
+    if (!game || !gameState) {
       return {
         role: "spectator" as PlayerRole,
         orientation: "white" as Orientation,
         canMove: false,
+        canBan: false,
         canInteract: false,
         isMyTurn: false,
         isPlayer: false,
         isSpectator: true,
+        currentAction: "move" as const,
         gameState: null,
+        game: null,
       };
     }
 
@@ -62,9 +75,10 @@ export function GameRoleProvider({
       gameState.players.white?.id === gameState.players.black?.id &&
       gameState.players.white?.id !== undefined;
 
-    // Parse current turn from FEN
-    const fenParts = gameState.fen.split(" ");
-    const currentTurn = fenParts[1] === "w" ? "white" : "black";
+    // NEW: Get state directly from BanChess instance
+    const currentAction = game.nextActionType(); // Returns 'ban' or 'move'
+    const actingPlayer = game.turn; // Returns 'white' or 'black'
+    const currentTurn = actingPlayer;
 
     // Debug logging to understand role assignment
     console.log("[GameRoleContext] Role determination:", {
@@ -73,6 +87,7 @@ export function GameRoleProvider({
       blackPlayerId: gameState.players.black?.id,
       isLocalGame,
       currentTurn,
+      currentAction,
     });
 
     // Determine player role
@@ -148,15 +163,15 @@ export function GameRoleProvider({
     const isSpectator = role === "spectator";
 
     // In local games, it's always "my turn" if I'm a player
+    // For ban actions, check if the current player matches the action taker
     const isMyTurn = isLocalGame
       ? isPlayer && !gameState.gameOver
       : isPlayer && role === currentTurn && !gameState.gameOver;
 
-    const canMove = Boolean(
-      isMyTurn &&
-        gameState.legalActions !== undefined &&
-        gameState.legalActions.length > 0,
-    );
+    // Permissions based on turn and action type
+    const canMove = isMyTurn && currentAction === "move";
+    const canBan = isMyTurn && currentAction === "ban";
+    
     const canInteract = isPlayer && !gameState.gameOver;
 
     // Determine board orientation
@@ -184,13 +199,16 @@ export function GameRoleProvider({
       role,
       orientation,
       canMove,
+      canBan,
       canInteract,
       isMyTurn,
       isPlayer,
       isSpectator,
+      currentAction,
       gameState,
+      game,
     };
-  }, [gameState, user?.userId, urlRole]);
+  }, [game, gameState, user?.userId, urlRole]);
 
   return (
     <GameRoleContext.Provider value={value}>
