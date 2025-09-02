@@ -70,6 +70,7 @@ export default function GameClient({ gameId }: GameClientProps) {
   } = useGameState();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [boardRefreshKey, setBoardRefreshKey] = useState(0);
   const router = useRouter();
   const joinedGameId = useRef<string | null>(null);
 
@@ -196,6 +197,7 @@ export default function GameClient({ gameId }: GameClientProps) {
               actionType={actionType}
               onMove={handleMove}
               onBan={handleBan}
+              refreshKey={boardRefreshKey}
             />
           </div>
 
@@ -241,6 +243,7 @@ export default function GameClient({ gameId }: GameClientProps) {
           actionType={actionType}
           onMove={handleMove}
           onBan={handleBan}
+          refreshKey={boardRefreshKey}
         />
         <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
         <GameSidebar
@@ -255,6 +258,7 @@ export default function GameClient({ gameId }: GameClientProps) {
           gameState={gameState} 
           game={game} 
           dests={dests}
+          onRefreshBoard={() => setBoardRefreshKey(prev => prev + 1)}
         />
       )}
     </>

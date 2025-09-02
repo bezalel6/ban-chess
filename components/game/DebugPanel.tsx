@@ -11,9 +11,10 @@ interface DebugPanelProps {
   gameState: SimpleGameState;
   game: BanChess | null;
   dests: Map<string, string[]>;
+  onRefreshBoard?: () => void;
 }
 
-export default function DebugPanel({ gameState, game, dests }: DebugPanelProps) {
+export default function DebugPanel({ gameState, game, dests, onRefreshBoard }: DebugPanelProps) {
   const [frozen, setFrozen] = useState(true);
   const [frozenConfig, setFrozenConfig] = useState<Record<string, unknown> | null>(null);
   
@@ -66,19 +67,32 @@ export default function DebugPanel({ gameState, game, dests }: DebugPanelProps) 
       <details className="p-2">
         <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
           <span>Game Debug Info (click to expand)</span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleFreeze();
-            }}
-            className={`px-2 py-1 text-xs rounded ${
-              frozen 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-green-600 text-white'
-            }`}
-          >
-            {frozen ? '❄️ Frozen' : '🔴 Live'}
-          </button>
+          <div className="flex gap-2">
+            {onRefreshBoard && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefreshBoard();
+                }}
+                className="px-2 py-1 text-xs rounded bg-yellow-600 text-white hover:bg-yellow-700"
+              >
+                🔄 Refresh Board
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFreeze();
+              }}
+              className={`px-2 py-1 text-xs rounded ${
+                frozen 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-green-600 text-white'
+              }`}
+            >
+              {frozen ? '❄️ Frozen' : '🔴 Live'}
+            </button>
+          </div>
         </summary>
         <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
           {JSON.stringify(displayConfig, null, 2)}

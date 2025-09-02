@@ -21,6 +21,7 @@ interface ChessBoardProps {
   actionType?: "ban" | "move";
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
+  refreshKey?: number;
 }
 
 // Helper function to get piece at a square from FEN position
@@ -53,6 +54,7 @@ const ChessBoard = memo(function ChessBoard({
   actionType,
   onMove,
   onBan,
+  refreshKey = 0,
 }: ChessBoardProps) {
   // Get user role from context (already memoized)
   const { role, orientation } = useUserRole();
@@ -72,7 +74,6 @@ const ChessBoard = memo(function ChessBoard({
     from: string;
     to: string;
   } | null>(null);
-
 
   // Parse FEN data
   const fenData = useMemo(() => {
@@ -162,8 +163,8 @@ const ChessBoard = memo(function ChessBoard({
     [gameState, fenData, nextAction, onMove, onBan]
   );
 
-  // Simple board key - stable to prevent unnecessary remounts
-  const boardKey = useMemo(() => `board-stable`, []);
+  // Board key that incorporates external refresh trigger
+  const boardKey = useMemo(() => `board-${refreshKey}`, [refreshKey]);
 
   // Memoize config early to comply with Rules of Hooks
   const config: ReactChessGroundProps = useMemo(
@@ -241,7 +242,6 @@ const ChessBoard = memo(function ChessBoard({
       </div>
     );
   }
-
   return (
     <div className="chess-board-outer">
       <div className="chess-board-inner">
