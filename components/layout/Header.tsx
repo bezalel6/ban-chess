@@ -1,13 +1,12 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useState, useTransition } from 'react';
-import { Search, LogOut, Settings, User } from 'lucide-react';
-import { useAuth } from '@/components/AuthProvider';
-import { signOut } from 'next-auth/react';
-import MobileMenu from './MobileMenu';
-import Image from 'next/image';
-
+import Link from "next/link";
+import { useState, useTransition } from "react";
+import { Search, LogOut, Settings, User } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { signOut } from "next-auth/react";
+import MobileMenu from "./MobileMenu";
+import Image from "next/image";
 
 function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +14,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
 
   const handleSignOut = () => {
     startTransition(() => {
-      signOut({ callbackUrl: '/' });
+      signOut({ callbackUrl: "/" });
     });
   };
 
@@ -27,20 +26,23 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
       >
         <div className="w-8 h-8 bg-lichess-orange-500 rounded-full flex items-center justify-center">
           <span className="text-xs font-bold text-white">
-            {user.username?.slice(0, 2).toUpperCase() || 'U'}
+            {user.username?.slice(0, 2).toUpperCase() || "U"}
           </span>
         </div>
-        <span className="text-sm font-medium">{user.username || 'User'}</span>
-        <div className="w-2 h-2 bg-green-500 rounded-full ml-1" title="Online" />
+        <span className="text-sm font-medium">{user.username || "User"}</span>
+        <div
+          className="w-2 h-2 bg-green-500 rounded-full ml-1"
+          title="Online"
+        />
       </button>
-      
+
       {isOpen && (
         <div className="absolute top-full right-0 w-56 bg-background-secondary border border-border rounded-lg shadow-lg py-3 z-50 mt-2">
           {/* Only show Profile link for registered users (not guests) */}
           {user.userId && (
             <>
               <Link
-                href={`/user/${user.username || 'profile'}`}
+                href={`/user/${user.username || "profile"}`}
                 className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
@@ -64,7 +66,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
             className="flex items-center w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
           >
             <LogOut className="h-4 w-4 mr-2" />
-            {isPending ? 'Signing out...' : 'Sign out'}
+            {isPending ? "Signing out..." : "Sign out"}
           </button>
         </div>
       )}
@@ -89,7 +91,10 @@ export default function Header() {
         <div className="flex h-20 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+            <Link
+              href="/"
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+            >
               <Image
                 src="/logo.png"
                 alt="BanChess Logo"
@@ -106,20 +111,26 @@ export default function Header() {
 
           {/* Main Navigation - Desktop */}
           <nav className="hidden md:flex items-center space-x-2">
-            <Link 
-              href="/play/local" 
+            <Link
+              href="/learn"
+              className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
+            >
+              Learn
+            </Link>
+            <Link
+              href="/play/local"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
               Play Solo
             </Link>
-            <Link 
-              href="/play/online" 
+            <Link
+              href="/play/online"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
               Play Online
             </Link>
-            <Link 
-              href="/analysis" 
+            <Link
+              href="/analysis"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
               Analysis
@@ -132,7 +143,7 @@ export default function Header() {
             {user ? (
               <UserMenu user={user} />
             ) : (
-              <Link 
+              <Link
                 href="/auth/signin"
                 className="px-5 py-2.5 bg-lichess-orange-500 hover:bg-lichess-orange-600 text-white rounded-lg transition-colors text-sm font-medium"
               >

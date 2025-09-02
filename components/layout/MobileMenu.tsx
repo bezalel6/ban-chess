@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Menu, X, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from "react";
+import { Menu, X, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 interface MobileMenuSection {
   title: string;
@@ -11,21 +11,54 @@ interface MobileMenuSection {
 
 const menuSections: MobileMenuSection[] = [
   {
-    title: 'Play',
+    title: "Learn",
     items: [
-      { label: 'Play Solo', href: '/play/local', description: 'Practice against yourself' },
-      { label: 'Find Opponent', href: '/play/online', description: 'Play against another player' },
-    ]
+      {
+        label: "Rules & Tutorial",
+        href: "/learn",
+        description: "Learn how Ban Chess works",
+      },
+      {
+        label: "Puzzles",
+        href: "/learn#puzzles",
+        description: "Practice with tactical puzzles",
+      },
+    ],
   },
   {
-    title: 'Tools',
+    title: "Play",
     items: [
-      { label: 'Analysis board', href: '/analysis', description: 'Analyze positions and games' },
-    ]
-  }
+      {
+        label: "Play Solo",
+        href: "/play/local",
+        description: "Practice against yourself",
+      },
+      {
+        label: "Find Opponent",
+        href: "/play/online",
+        description: "Play against another player",
+      },
+    ],
+  },
+  {
+    title: "Tools",
+    items: [
+      {
+        label: "Analysis board",
+        href: "/analysis",
+        description: "Analyze positions and games",
+      },
+    ],
+  },
 ];
 
-function MenuSection({ section, onItemClick }: { section: MobileMenuSection; onItemClick: () => void }) {
+function MenuSection({
+  section,
+  onItemClick,
+}: {
+  section: MobileMenuSection;
+  onItemClick: () => void;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -35,9 +68,11 @@ function MenuSection({ section, onItemClick }: { section: MobileMenuSection; onI
         className="flex w-full items-center justify-between px-4 py-3 text-left font-medium text-foreground hover:bg-background-tertiary transition-colors"
       >
         <span>{section.title}</span>
-        <ChevronRight className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+        <ChevronRight
+          className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+        />
       </button>
-      
+
       {isExpanded && (
         <div className="bg-background-tertiary">
           {section.items.map((item) => (
@@ -49,7 +84,9 @@ function MenuSection({ section, onItemClick }: { section: MobileMenuSection; onI
             >
               <div className="font-medium">{item.label}</div>
               {item.description && (
-                <div className="text-xs text-foreground-subtle mt-1">{item.description}</div>
+                <div className="text-xs text-foreground-subtle mt-1">
+                  {item.description}
+                </div>
               )}
             </Link>
           ))}
@@ -76,33 +113,32 @@ export default function MobileMenu() {
       {/* Overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-50 md:hidden">
-          <div 
-            className="fixed inset-0 bg-black/50" 
-            onClick={handleClose} 
-          />
-          
+          <div className="fixed inset-0 bg-black/50" onClick={handleClose} />
+
           {/* Sidebar */}
           <div className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-background border-r border-border overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-border">
               <div className="flex items-center space-x-2">
                 <div className="text-xl">♟️</div>
-                <span className="text-lg font-semibold text-foreground">Ban Chess</span>
+                <span className="text-lg font-semibold text-foreground">
+                  Ban Chess
+                </span>
               </div>
-              <button 
+              <button
                 onClick={handleClose}
                 className="p-1 hover:bg-background-secondary rounded-md transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Navigation Sections */}
             <nav className="py-2">
               {menuSections.map((section) => (
-                <MenuSection 
-                  key={section.title} 
-                  section={section} 
+                <MenuSection
+                  key={section.title}
+                  section={section}
                   onItemClick={handleClose}
                 />
               ))}

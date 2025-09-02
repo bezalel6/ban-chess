@@ -116,54 +116,28 @@ const ChessBoard = memo(function ChessBoard({
     [gameState, fenData, nextAction, onMove, onBan],
   );
 
-  // Safety check: If gameState or fenData is invalid, return a placeholder
-  if (!gameState || !gameState.fen || !fenData) {
-    return (
-      <div className="chess-board-outer">
-        <div className="chess-board-inner flex items-center justify-center">
-          <div className="loading-spinner" />
-        </div>
-      </div>
-    );
-  }
-
-  // Debug logging
-  console.log("[ChessBoard] State:", {
-    role,
-    turn: fenData.turn,
-    nextAction,
-    orientation,
-    movableColor,
-    canMove,
-    legalActionCount: gameState.legalActions?.length || 0,
-    players: gameState.players,
-    currentBan,
-    banState: fenData.banState,
-    isInCheck, // Add check state to debug output
-  });
-
-  // Extra debug for ban display
-  if (currentBan) {
-    console.log("[ChessBoard] BAN SHOULD BE VISIBLE:", currentBan);
-  } else {
-    console.log("[ChessBoard] No ban to display");
-  }
-
   // More stable board key - only remount when position actually changes
-  const boardKey = `${fenData.position}-${fenData.turn}-${
-    gameState.gameOver ? "over" : "active"
-  }`;
+  const boardKey = useMemo(
+    () =>
+      `${fenData?.position || "initial"}-${fenData?.turn || "w"}-${
+        gameState?.gameOver ? "over" : "active"
+      }`,
+    [fenData?.position, fenData?.turn, gameState?.gameOver],
+  );
 
+  // Memoize config early to comply with Rules of Hooks
   const config: ReactChessGroundProps = useMemo(
     () => ({
-      fen: fenData.position,
+      fen:
+        fenData?.position ||
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
       orientation,
       coordinates: false,
       autoCastle: true,
       highlight: {
         lastMove: true,
       },
-      check: isInCheck ? fenData.turn : undefined,
+      check: isInCheck ? fenData?.turn : undefined,
       lastMove: undefined,
       animation: {
         enabled: true,
@@ -210,10 +184,37 @@ const ChessBoard = memo(function ChessBoard({
     ],
   );
 
+  // Safety check: If gameState or fenData is invalid, return a placeholder
+  if (!gameState || !gameState.fen || !fenData) {
+    return (
+      <div className="chess-board-outer">
+        <div className="chess-board-inner flex items-center justify-center">
+          <div className="loading-spinner" />
+        </div>
+      </div>
+    );
+  }
+
   // Debug logging
-  if (config.fen) {
-    console.log(config.fen);
-    console.log("[ChessBoard] Check state:", isInCheck);
+  console.log("[ChessBoard] State:", {
+    role,
+    turn: fenData.turn,
+    nextAction,
+    orientation,
+    movableColor,
+    canMove,
+    legalActionCount: gameState.legalActions?.length || 0,
+    players: gameState.players,
+    currentBan,
+    banState: fenData.banState,
+    isInCheck, // Add check state to debug output
+  });
+
+  // Extra debug for ban display
+  if (currentBan) {
+    console.log("[ChessBoard] BAN SHOULD BE VISIBLE:", currentBan);
+  } else {
+    console.log("[ChessBoard] No ban to display");
   }
 
   return (
