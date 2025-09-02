@@ -2,7 +2,9 @@
 
 import type { SimpleGameState } from "@/lib/game-types";
 import { getCurrentBan } from "@/lib/game-types";
-import { useGameRole } from "@/contexts/GameRoleContext";
+import { getGamePermissions } from "@/lib/game-utils";
+import { useAuth } from "@/components/AuthProvider";
+import { useGameState } from "@/hooks/useGameState";
 
 interface GameStatusPanelProps {
   gameState: SimpleGameState;
@@ -13,7 +15,10 @@ export default function GameStatusPanel({
   gameState,
   onNewGame,
 }: GameStatusPanelProps) {
-  const { role, isMyTurn, isPlayer, game } = useGameRole();
+  const { user } = useAuth();
+  const { game } = useGameState();
+  const permissions = getGamePermissions(gameState, game, user?.userId);
+  const { role, isMyTurn, isPlayer } = permissions;
   const currentBan = getCurrentBan(gameState.fen);
   const nextAction = game ? game.nextActionType() : "move";
 

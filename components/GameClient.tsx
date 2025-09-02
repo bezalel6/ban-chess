@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
 import type { Move, Ban } from "@/lib/game-types";
-import { GameRoleProvider, type PlayerRole } from "@/contexts/GameRoleContext";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 
@@ -51,10 +50,9 @@ const ResizableBoard = dynamic(
 
 interface GameClientProps {
   gameId: string;
-  urlRole?: PlayerRole;
 }
 
-export default function GameClient({ gameId, urlRole }: GameClientProps) {
+export default function GameClient({ gameId }: GameClientProps) {
   const {
     gameState,
     game,  // NEW: Get BanChess instance
@@ -138,7 +136,7 @@ export default function GameClient({ gameId, urlRole }: GameClientProps) {
   }
 
   return (
-    <GameRoleProvider game={game} gameState={gameState} urlRole={urlRole}>
+    <>
       {/* Desktop Layout - Three column layout with centered board */}
       <div
         className={`hidden md:flex justify-center items-center p-2 ${
@@ -188,6 +186,7 @@ export default function GameClient({ gameId, urlRole }: GameClientProps) {
             )}
             <ResizableBoard
               gameState={gameState}
+              game={game}
               dests={dests}
               onMove={handleMove}
               onBan={handleBan}
@@ -230,6 +229,7 @@ export default function GameClient({ gameId, urlRole }: GameClientProps) {
       <div className="md:hidden flex flex-col gap-4 p-4">
         <ResizableBoard
           gameState={gameState}
+          game={game}
           dests={dests}
           onMove={handleMove}
           onBan={handleBan}
@@ -241,7 +241,7 @@ export default function GameClient({ gameId, urlRole }: GameClientProps) {
           onGiveTime={giveTime}
         />
       </div>
-    </GameRoleProvider>
+    </>
   );
 }
 

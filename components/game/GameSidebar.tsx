@@ -2,7 +2,9 @@
 
 import type { SimpleGameState, GameEvent } from "@/lib/game-types";
 import { parseFEN, getNextAction, getWhoBans } from "@/lib/game-types";
-import { useGameRole } from "@/contexts/GameRoleContext";
+import { getGamePermissions } from "@/lib/game-utils";
+import { useAuth } from "@/components/AuthProvider";
+import { useGameState } from "@/hooks/useGameState";
 import PlayerInfo from "./PlayerInfo";
 import MoveList from "./MoveList";
 import GameEventLog from "./GameEventLog";
@@ -18,7 +20,10 @@ export default function GameSidebar({
   gameEvents = [],
   onGiveTime,
 }: GameSidebarProps) {
-  const { role, orientation, isPlayer } = useGameRole();
+  const { user } = useAuth();
+  const { game } = useGameState();
+  const permissions = getGamePermissions(gameState, game, user?.userId);
+  const { role, orientation, isPlayer } = permissions;
   const { turn } = parseFEN(gameState.fen);
   const nextAction = getNextAction(gameState.fen);
   const whoBans = getWhoBans(gameState.fen);

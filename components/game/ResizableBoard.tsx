@@ -11,9 +11,11 @@ import React, {
 import ChessBoard from "../ChessBoard";
 import ChessBoardErrorBoundary from "../ChessBoardWrapper";
 import type { SimpleGameState, Move, Ban, Square } from "@/lib/game-types";
+import { BanChess } from "ban-chess.ts";
 
 interface ResizableBoardProps {
   gameState: SimpleGameState;
+  game: BanChess | null;
   dests: Map<Square, Square[]>;
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
@@ -21,6 +23,7 @@ interface ResizableBoardProps {
 
 const ResizableBoard = memo(function ResizableBoard({
   gameState,
+  game,
   dests,
   onMove,
   onBan,
@@ -256,7 +259,7 @@ const ResizableBoard = memo(function ResizableBoard({
       {/* Board Container with dynamic size and resize handle */}
       <div ref={boardRef} className={containerClassName} style={containerStyle}>
         <ChessBoardErrorBoundary>
-          <ChessBoard gameState={gameState} dests={dests} onMove={onMove} onBan={onBan} />
+          <ChessBoard gameState={gameState} game={game} dests={dests} onMove={onMove} onBan={onBan} />
         </ChessBoardErrorBoundary>
 
         {/* Resize handle - Lichess style corner grip */}
