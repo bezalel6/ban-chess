@@ -357,6 +357,9 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     return;
   }
 
+  // Get the current player to determine their color
+  const currentPlayer = authenticatedPlayers.get(ws);
+
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
 
@@ -437,6 +440,20 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   // Get recent game events
   const recentEvents = await getRecentGameEvents(gameId, 10);
 
+  // Determine playerColor based on game type
+  let playerColor: "white" | "black" | undefined;
+  if (gameState.isSoloGame) {
+    // For solo games, playerColor changes based on who is acting
+    playerColor = actingPlayer;
+  } else if (currentPlayer) {
+    // For multiplayer games, playerColor is fixed based on the player's assignment
+    if (currentPlayer.userId === gameState.whitePlayerId) {
+      playerColor = "white";
+    } else if (currentPlayer.userId === gameState.blackPlayerId) {
+      playerColor = "black";
+    }
+  }
+
   // Full state WITH history for new joiners
   const fullStateMsg: SimpleServerMsg = {
     type: "state",
@@ -449,7 +466,7 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     inCheck: isInCheck,
     history, // Include full history from Redis for new joiners
     events: recentEvents, // Include recent events
-    ...(gameState.isSoloGame && { playerColor: actingPlayer }),
+    ...(playerColor && { playerColor }),
     ...(gameState.gameOver && {
       gameOver: true,
       result: gameState.result,
@@ -640,7 +657,7 @@ async function broadcastGameState(gameId: string) {
           : undefined,
       moveNumber: Math.floor(storedActions.length / 2) + 1,
     },
-    ...(gameState.isSoloGame && { playerColor: actingPlayer }),
+    // Note: playerColor is added per-player in the broadcast loop
     ...(isGameOver && {
       gameOver: true,
       result: gameState.result,
@@ -670,9 +687,29 @@ async function broadcastGameState(gameId: string) {
 
   connectedPlayers.forEach((player) => {
     if (player.ws.readyState === WebSocket.OPEN) {
-      player.ws.send(JSON.stringify(stateMsg));
+      // Determine playerColor for this specific player
+      let playerColor: "white" | "black" | undefined;
+      if (gameState.isSoloGame) {
+        // For solo games, playerColor changes based on who is acting
+        playerColor = actingPlayer;
+      } else {
+        // For multiplayer games, playerColor is fixed based on the player's assignment
+        if (player.userId === gameState.whitePlayerId) {
+          playerColor = "white";
+        } else if (player.userId === gameState.blackPlayerId) {
+          playerColor = "black";
+        }
+      }
+
+      // Create personalized state message with correct playerColor
+      const personalizedStateMsg = {
+        ...stateMsg,
+        ...(playerColor && { playerColor }),
+      };
+
+      player.ws.send(JSON.stringify(personalizedStateMsg));
       console.log(
-        `[broadcastGameState] SENT state to ${player.username} for game ${gameId}`,
+        `[broadcastGameState] SENT state to ${player.username} for game ${gameId} as ${playerColor}`,
       );
     }
   });
