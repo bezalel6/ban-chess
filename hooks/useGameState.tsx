@@ -220,22 +220,104 @@ export function useGameState() {
               setCurrentGameId(null);
             }
 
-            // Handle events if provided
+            // Handle events if provided and play appropriate sounds
+            let banEventProcessed = false;
+            let moveEventProcessed = false;
             if (msg.events) {
+              // Check for new events and play sounds for them
+              const newEvents = msg.events.slice(gameEvents.length);
+              newEvents.forEach((event) => {
+                console.log(`[GameState] Processing game event: ${event.type}`);
+                switch (event.type) {
+                  case "ban-made":
+                    soundManager.playEvent("ban");
+                    banEventProcessed = true;
+                    break;
+                  case "move-made":
+                    moveEventProcessed = true;
+                    // Move sound will be handled by the main move detection logic below
+                    break;
+                  case "game-started":
+                    soundManager.playEvent("game-start");
+                    break;
+                  case "checkmate":
+                  case "stalemate":
+                  case "draw":
+                  case "resignation":
+                    // Game end sounds will be handled by the main game over logic below
+                    break;
+                  case "timeout":
+                    soundManager.playEvent("time-warning");
+                    break;
+                  default:
+                    // For other events, play a generic notification
+                    if (event.type === "time-given") {
+                      soundManager.playEvent("game-start"); // Use confirmation sound for time gifts
+                    }
+                    break;
+                }
+              });
               setGameEvents(msg.events);
             }
 
-            // Play sound effects for moves
-            if (previousFen.current && msg.fen !== previousFen.current) {
+            // Play sound effects for moves and bans (only if not already processed by events)
+            if (previousFen.current && msg.fen !== previousFen.current && !banEventProcessed) {
               const prevPieces = (previousFen.current.match(/[prnbqk]/gi) || [])
                 .length;
               const currentPieces = (msg.fen.match(/[prnbqk]/gi) || []).length;
+              
+              // Check if this was a ban or move action by looking at the last history entry
+              const wasCapture = currentPieces < prevPieces;
+              let wasBan = false;
+              let wasCastle = false;
+              let wasPromotion = false;
+              
+              if (msg.lastMove) {
+                wasBan = msg.lastMove.actionType === "ban";
+                if (msg.lastMove.actionType === "move") {
+                  // Handle move action - could be either { move: Move } or direct Move
+                  let move;
+                  if ("move" in msg.lastMove.action) {
+                    move = msg.lastMove.action.move;
+                  } else {
+                    // Direct move object (legacy format)
+                    move = msg.lastMove.action as Move;
+                  }
+                  
+                  if (move) {
+                    // Check for castling (king moves more than 1 square horizontally)
+                    const fromFile = move.from.charCodeAt(0);
+                    const toFile = move.to.charCodeAt(0);
+                    const fromRank = parseInt(move.from[1]);
+                    const toRank = parseInt(move.to[1]);
+                    wasCastle = fromRank === toRank && Math.abs(fromFile - toFile) > 1 && 
+                               (move.from[1] === '1' || move.from[1] === '8'); // King on back rank
+                    
+                    // Check for promotion
+                    wasPromotion = !!move.promotion;
+                  }
+                }
+              }
+              
+              if (wasBan) {
+                soundManager.playEvent("ban");
+                showNotification("Ban made!", "info");
+              } else {
+                // Determine if this was an opponent's move
+                const userRole = getUserRole(gameState, user?.userId);
+                const moveWasByOpponent = msg.lastMove && 
+                  ((userRole.role === "white" && msg.lastMove.player === "black") ||
+                   (userRole.role === "black" && msg.lastMove.player === "white"));
 
-              soundManager.playMoveSound({
-                check: msg.inCheck === true,
-                capture: currentPieces < prevPieces,
-              });
-              showNotification("Move made!", "info");
+                soundManager.playMoveSound({
+                  check: msg.inCheck === true,
+                  capture: wasCapture,
+                  castle: wasCastle,
+                  promotion: wasPromotion,
+                  isOpponent: moveWasByOpponent || false,
+                });
+                showNotification("Move made!", "info");
+              }
             }
             previousFen.current = msg.fen;
 
