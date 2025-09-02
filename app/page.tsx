@@ -133,12 +133,6 @@ export default function HomePage() {
           <p className="text-lg mb-4">
             Want to learn more about Ban Chess strategy and edge cases?
           </p>
-          <button
-            onClick={() => router.push("/learn")}
-            className="btn-secondary"
-          >
-            Learn Ban Chess →
-          </button>
         </div>
       </div>
     </div>

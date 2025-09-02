@@ -112,12 +112,6 @@ export default function Header() {
           {/* Main Navigation - Desktop */}
           <nav className="hidden md:flex items-center space-x-2">
             <Link
-              href="/learn"
-              className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
-            >
-              Learn
-            </Link>
-            <Link
               href="/play/local"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
@@ -128,12 +122,6 @@ export default function Header() {
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
               Play Online
-            </Link>
-            <Link
-              href="/analysis"
-              className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
-            >
-              Analysis
             </Link>
           </nav>
 

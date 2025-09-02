@@ -23,8 +23,6 @@ const footerSections = [
   {
     title: 'Help',
     links: [
-      { label: 'Rules', href: '/learn/ban-chess' },
-      { label: 'Getting started', href: '/learn/basics' },
       { label: 'Support', href: '/support' },
       { label: 'Bug reports', href: '/bugs' },
     ]

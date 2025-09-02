@@ -11,21 +11,6 @@ interface MobileMenuSection {
 
 const menuSections: MobileMenuSection[] = [
   {
-    title: "Learn",
-    items: [
-      {
-        label: "Rules & Tutorial",
-        href: "/learn",
-        description: "Learn how Ban Chess works",
-      },
-      {
-        label: "Puzzles",
-        href: "/learn#puzzles",
-        description: "Practice with tactical puzzles",
-      },
-    ],
-  },
-  {
     title: "Play",
     items: [
       {
@@ -37,16 +22,6 @@ const menuSections: MobileMenuSection[] = [
         label: "Find Opponent",
         href: "/play/online",
         description: "Play against another player",
-      },
-    ],
-  },
-  {
-    title: "Tools",
-    items: [
-      {
-        label: "Analysis board",
-        href: "/analysis",
-        description: "Analyze positions and games",
       },
     ],
   },
