@@ -15,9 +15,12 @@ import type {
   Square,
 } from "@/lib/game-types";
 import soundManager from "@/lib/sound-manager";
+import { getUserRole } from "@/lib/game-utils";
+import { useAuth } from "@/components/AuthProvider";
 
 export function useGameState() {
   const router = useRouter();
+  const { user } = useAuth();
   const wsContext = useGameWebSocket();
 
   // Handle null context (should not happen if provider is set up correctly)
@@ -219,7 +222,11 @@ export function useGameState() {
 
             if (msg.gameOver) {
               console.log("[GameState] Game Over:", msg.result);
-              soundManager.playEvent("game-end");
+              const userRole = getUserRole(gameState, user?.userId);
+              soundManager.playEvent("game-end", {
+                result: msg.result,
+                playerRole: userRole.role,
+              });
             }
           }
           break;
@@ -286,7 +293,14 @@ export function useGameState() {
           if (currentGameId === msg.gameId) {
             setCurrentGameId(null);
           }
-          soundManager.playEvent("game-end"); // Play sound only when server confirms timeout
+          // Get current game state to determine player role
+          const currentGameState = gameState;
+          const userRole = getUserRole(currentGameState, user?.userId);
+          const resultText = `${msg.winner === "white" ? "White" : "Black"} wins on time!`;
+          soundManager.playEvent("game-end", {
+            result: resultText,
+            playerRole: userRole.role,
+          }); // Play sound only when server confirms timeout
           break;
 
         case "game-event":
