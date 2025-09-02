@@ -2,7 +2,7 @@
 
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import type {
   Dests,
   Key,
@@ -122,6 +122,21 @@ const ChessBoard = memo(function ChessBoard({
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
   const nextAction = currentAction; // From GameRoleContext which gets it from BanChess
   const isInCheck = false; // TODO: Get from BanChess instance if needed for UI
+  
+  // Delay ban visualization to avoid NaN errors when board is not ready
+  const [visibleBan, setVisibleBan] = useState<typeof currentBan>(null);
+  
+  useEffect(() => {
+    // Small delay to ensure board DOM elements are positioned
+    if (currentBan) {
+      const timer = setTimeout(() => {
+        setVisibleBan(currentBan);
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      setVisibleBan(null);
+    }
+  }, [currentBan]);
 
   // Convert dests from Map<Square, Square[]> to Map<Key, Key[]> for chessground
   const dests: Dests = useMemo(() => {
@@ -209,11 +224,11 @@ const ChessBoard = memo(function ChessBoard({
       drawable: {
         enabled: true,
         visible: true,
-        autoShapes: currentBan && currentBan.from && currentBan.to
+        autoShapes: visibleBan && visibleBan.from && visibleBan.to
           ? [
               {
-                orig: currentBan.from as Key,
-                dest: currentBan.to as Key,
+                orig: visibleBan.from as Key,
+                dest: visibleBan.to as Key,
                 brush: "red",
               },
             ]
@@ -229,7 +244,7 @@ const ChessBoard = memo(function ChessBoard({
       canBan,
       dests,
       handleAfterMove,
-      currentBan,
+      visibleBan,
     ],
   );
 
@@ -269,16 +284,32 @@ const ChessBoard = memo(function ChessBoard({
   });
 
   // Extra debug for ban display
-  if (currentBan) {
-    console.log("[ChessBoard] BAN SHOULD BE VISIBLE:", currentBan);
+  if (visibleBan) {
+    console.log("[ChessBoard] BAN IS VISIBLE:", visibleBan);
+  } else if (currentBan) {
+    console.log("[ChessBoard] Ban pending visualization:", currentBan);
   } else {
     console.log("[ChessBoard] No ban to display");
   }
 
   return (
-    <div className="chess-board-outer">
+    <div className="chess-board-outer relative">
       <div className="chess-board-inner">
         <Chessground key={boardKey} {...config} />
+      </div>
+      {/* Debug Panel */}
+      <div className="absolute top-0 right-0 bg-black/90 text-white text-xs p-2 max-w-xs z-50 font-mono">
+        <div>FEN: {gameState?.fen?.substring(0, 30)}...</div>
+        <div>Turn: {fenData?.turn}</div>
+        <div>Role: {role}</div>
+        <div>Action: {currentAction}</div>
+        <div>Active: {currentActivePlayer}</div>
+        <div>CanMove: {String(canMove)}</div>
+        <div>CanBan: {String(canBan)}</div>
+        <div>MovableColor: {String(movableColor)}</div>
+        <div>Dests: {dests.size} moves</div>
+        <div>Config.fen: {config.fen?.substring(0, 30)}...</div>
+        <div>Config.movable.color: {String(config.movable?.color)}</div>
       </div>
     </div>
   );
