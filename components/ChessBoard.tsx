@@ -191,7 +191,7 @@ const ChessBoard = memo(function ChessBoard({
   const config: ReactChessGroundProps = useMemo(
     () => ({
       fen:
-        fenData?.position ||
+        gameState?.fen ||
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
       orientation,
       coordinates: false,
@@ -236,6 +236,7 @@ const ChessBoard = memo(function ChessBoard({
       },
     }),
     [
+      gameState?.fen,
       fenData,
       orientation,
       isInCheck,
@@ -292,24 +293,28 @@ const ChessBoard = memo(function ChessBoard({
     console.log("[ChessBoard] No ban to display");
   }
 
+  // Format destinations for debug display
+  const debugDests = Array.from(dests.entries()).map(([from, tos]) => 
+    `${from}→[${tos.join(',')}]`
+  ).join(' | ');
+
   return (
-    <div className="chess-board-outer relative">
+    <div className="chess-board-outer">
       <div className="chess-board-inner">
         <Chessground key={boardKey} {...config} />
       </div>
-      {/* Debug Panel */}
-      <div className="absolute top-0 right-0 bg-black/90 text-white text-xs p-2 max-w-xs z-50 font-mono">
-        <div>FEN: {gameState?.fen?.substring(0, 30)}...</div>
-        <div>Turn: {fenData?.turn}</div>
-        <div>Role: {role}</div>
-        <div>Action: {currentAction}</div>
-        <div>Active: {currentActivePlayer}</div>
-        <div>CanMove: {String(canMove)}</div>
-        <div>CanBan: {String(canBan)}</div>
-        <div>MovableColor: {String(movableColor)}</div>
-        <div>Dests: {dests.size} moves</div>
-        <div>Config.fen: {config.fen?.substring(0, 30)}...</div>
-        <div>Config.movable.color: {String(config.movable?.color)}</div>
+      {/* Debug Panel - Below board, full width */}
+      <div className="bg-gray-900 text-green-400 text-xs p-3 font-mono border-t border-gray-700">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          <div>FEN: {gameState?.fen?.substring(0, 50)}...</div>
+          <div>Turn: {fenData?.turn} | Role: {role} | Action: {currentAction}</div>
+          <div>Active: {currentActivePlayer} | CanMove: {String(canMove)} | CanBan: {String(canBan)}</div>
+          <div>MovableColor: {String(movableColor)} | Dests: {dests.size} moves</div>
+          <div className="col-span-2">Moves: {debugDests || 'None'}</div>
+          <div className="col-span-2">Config.fen: {config.fen?.substring(0, 50)}...</div>
+          <div>Config.movable.color: {String(config.movable?.color)}</div>
+          <div>Ban: {visibleBan ? `${visibleBan.from}→${visibleBan.to}` : 'None'}</div>
+        </div>
       </div>
     </div>
   );

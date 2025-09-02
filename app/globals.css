@@ -161,6 +161,14 @@ a {
     @apply w-12 h-12 mx-auto animate-spin rounded-full border-4 border-border border-t-lichess-orange-500;
   }
 
+  /* Animation delays for connection indicator */
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+
   /* Typography Scale */
   .text-hero { @apply text-4xl font-bold leading-tight; }
   .text-page-title { @apply text-3xl font-bold leading-tight; }

@@ -58,11 +58,13 @@ export default function ConnectionStatusOverlay() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center backdrop-blur-sm">
-      <div className="text-center text-white">
-        <div className="loading-spinner mb-4"></div>
-        <p className="text-lg font-semibold">{message}</p>
+    <div className="fixed bottom-4 left-4 bg-gray-900/95 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-3 border border-gray-700">
+      <div className="flex gap-1">
+        <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse"></span>
+        <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse delay-100"></span>
+        <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse delay-200"></span>
       </div>
+      <p className="text-sm">{message}</p>
     </div>
   );
 }
