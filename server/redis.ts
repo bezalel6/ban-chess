@@ -34,12 +34,9 @@ interface QueuePlayerData {
 }
 
 // Redis connection configuration
-// Default to 'redis' hostname for Docker, 'localhost' for local dev
-const defaultRedisUrl =
-  process.env.NODE_ENV === "production"
-    ? "redis://redis:6379"
-    : "redis://localhost:6379";
-const redisUrl = process.env.REDIS_URL || defaultRedisUrl;
+// Use REDIS_URL if provided, otherwise default to localhost
+// This allows both local development and production deployments to work
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 console.log("[Redis] Connecting to:", redisUrl.replace(/:[^:@]*@/, ":***@")); // Log URL with password hidden
 
 // Create main Redis client for general operations
