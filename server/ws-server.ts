@@ -168,10 +168,14 @@ interface GameStateWithPlayers {
   isSoloGame?: boolean;
 }
 
-async function getPlayerUsernames(
-  gameState: GameStateWithPlayers,
-): Promise<{ white?: string; black?: string }> {
-  const usernames: { white?: string; black?: string } = {};
+async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
+  white?: { id: string; username: string };
+  black?: { id: string; username: string };
+}> {
+  const players: {
+    white?: { id: string; username: string };
+    black?: { id: string; username: string };
+  } = {};
 
   if (gameState.whitePlayerId) {
     const whiteSession = await redis.get(
@@ -179,7 +183,10 @@ async function getPlayerUsernames(
     );
     if (whiteSession) {
       const session = JSON.parse(whiteSession);
-      usernames.white = session.username;
+      players.white = {
+        id: gameState.whitePlayerId,
+        username: session.username,
+      };
     }
   }
 
@@ -189,18 +196,24 @@ async function getPlayerUsernames(
     );
     if (blackSession) {
       const session = JSON.parse(blackSession);
-      usernames.black = session.username;
-      // For solo games, both names are the same
+      players.black = {
+        id: gameState.blackPlayerId,
+        username: session.username,
+      };
+      // For solo games, both players are the same
       if (
         gameState.isSoloGame &&
         gameState.whitePlayerId === gameState.blackPlayerId
       ) {
-        usernames.white = session.username;
+        players.white = {
+          id: gameState.whitePlayerId,
+          username: session.username,
+        };
       }
     }
   }
 
-  return usernames;
+  return players;
 }
 
 async function handleTimeout(gameId: string, winner: "white" | "black") {
@@ -250,7 +263,7 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     type: "state",
     fen: gameState.fen,
     gameId,
-    players: await getPlayerUsernames(gameState),
+    players: await getPlayerInfo(gameState),
     isSoloGame: gameState.isSoloGame,
     gameOver: true,
     result: gameState.result,
@@ -357,9 +370,6 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     return;
   }
 
-  // Get the current player to determine their color
-  const currentPlayer = authenticatedPlayers.get(ws);
-
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
 
@@ -440,33 +450,20 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   // Get recent game events
   const recentEvents = await getRecentGameEvents(gameId, 10);
 
-  // Determine playerColor based on game type
-  let playerColor: "white" | "black" | undefined;
-  if (gameState.isSoloGame) {
-    // For solo games, playerColor changes based on who is acting
-    playerColor = actingPlayer;
-  } else if (currentPlayer) {
-    // For multiplayer games, playerColor is fixed based on the player's assignment
-    if (currentPlayer.userId === gameState.whitePlayerId) {
-      playerColor = "white";
-    } else if (currentPlayer.userId === gameState.blackPlayerId) {
-      playerColor = "black";
-    }
-  }
-
   // Full state WITH history for new joiners
   const fullStateMsg: SimpleServerMsg = {
     type: "state",
     fen: fen,
     gameId,
-    players: await getPlayerUsernames(gameState),
+    players: await getPlayerInfo(gameState),
     isSoloGame: gameState.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? "ban" : "move",
     inCheck: isInCheck,
     history, // Include full history from Redis for new joiners
     events: recentEvents, // Include recent events
-    ...(playerColor && { playerColor }),
+    // For solo games, include playerColor to indicate who's acting
+    ...(gameState.isSoloGame && { playerColor: actingPlayer }),
     ...(gameState.gameOver && {
       gameOver: true,
       result: gameState.result,
@@ -639,7 +636,7 @@ async function broadcastGameState(gameId: string) {
     type: "state",
     fen: fen,
     gameId,
-    players: await getPlayerUsernames(gameState),
+    players: await getPlayerInfo(gameState),
     isSoloGame: gameState.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? "ban" : "move",
@@ -687,29 +684,14 @@ async function broadcastGameState(gameId: string) {
 
   connectedPlayers.forEach((player) => {
     if (player.ws.readyState === WebSocket.OPEN) {
-      // Determine playerColor for this specific player
-      let playerColor: "white" | "black" | undefined;
-      if (gameState.isSoloGame) {
-        // For solo games, playerColor changes based on who is acting
-        playerColor = actingPlayer;
-      } else {
-        // For multiplayer games, playerColor is fixed based on the player's assignment
-        if (player.userId === gameState.whitePlayerId) {
-          playerColor = "white";
-        } else if (player.userId === gameState.blackPlayerId) {
-          playerColor = "black";
-        }
-      }
+      // For solo games, include playerColor to indicate who's acting
+      const msgToSend = gameState.isSoloGame
+        ? { ...stateMsg, playerColor: actingPlayer }
+        : stateMsg;
 
-      // Create personalized state message with correct playerColor
-      const personalizedStateMsg = {
-        ...stateMsg,
-        ...(playerColor && { playerColor }),
-      };
-
-      player.ws.send(JSON.stringify(personalizedStateMsg));
+      player.ws.send(JSON.stringify(msgToSend));
       console.log(
-        `[broadcastGameState] SENT state to ${player.username} for game ${gameId} as ${playerColor}`,
+        `[broadcastGameState] SENT state to ${player.username} for game ${gameId}`,
       );
     }
   });
@@ -1038,7 +1020,7 @@ wss.on("connection", (ws: WebSocket, request) => {
                   type: "joined",
                   gameId,
                   color,
-                  players: await getPlayerUsernames(gameState),
+                  players: await getPlayerInfo(gameState),
                   isSoloGame: gameState.isSoloGame,
                 } as SimpleServerMsg),
               );
