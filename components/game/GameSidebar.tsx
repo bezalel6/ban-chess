@@ -56,12 +56,12 @@ export default function GameSidebar({
   // Determine if player can give time (only to opponent, only if they're playing)
   const canGiveTimeToTop =
     isPlayer &&
-    ((role === "white" && !playerIsWhite) ||
-      (role === "black" && playerIsWhite));
-  const canGiveTimeToBottom =
-    isPlayer &&
     ((role === "white" && playerIsWhite) ||
       (role === "black" && !playerIsWhite));
+  const canGiveTimeToBottom =
+    isPlayer &&
+    ((role === "white" && !playerIsWhite) ||
+      (role === "black" && playerIsWhite));
 
   return (
     <div className="bg-background-secondary rounded-lg p-4 flex flex-col shadow-lg h-fit">
@@ -77,6 +77,8 @@ export default function GameSidebar({
           !gameState.gameOver
         }
         onGiveTime={onGiveTime}
+        rating={topPlayer === "Waiting..." ? undefined : 2051}
+        isOnline={topPlayer !== "Waiting..."}
       />
       <div className="my-2 border-t border-border"></div>
       {/* Fixed height for 4 rows of moves (approximately 120px) */}
@@ -101,6 +103,8 @@ export default function GameSidebar({
           !gameState.gameOver
         }
         onGiveTime={onGiveTime}
+        rating={bottomPlayer === "Waiting..." ? undefined : 2071}
+        isOnline={bottomPlayer !== "Waiting..."}
       />
       <div className="my-2 border-t border-border"></div>
       {onResign && !gameState.gameOver && isPlayer && (
