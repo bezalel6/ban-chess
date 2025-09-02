@@ -149,7 +149,20 @@ export type SimpleServerMsg =
     }
   | { type: "timeout"; gameId: string; winner: "white" | "black" }
   | { type: "game-event"; gameId: string; event: GameEvent }
-  | { type: "pong" }; // Heartbeat pong response from server
+  | { type: "pong" } // Heartbeat pong response from server
+  | {
+      type: "username-changed";
+      oldUsername: string;
+      newUsername: string;
+      timestamp: number;
+      message: string;
+    }
+  | {
+      type: "opponent-username-changed";
+      oldUsername: string;
+      newUsername: string;
+      playerId: string;
+    };
 
 // Client messages - simplified
 export type SimpleClientMsg =

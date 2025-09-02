@@ -238,6 +238,44 @@ export function useGameState() {
           // No action needed here
           break;
 
+        case "username-changed":
+          // Handle username change notification
+          console.log(
+            "[GameState] Username changed:",
+            msg.oldUsername,
+            "→",
+            msg.newUsername,
+          );
+          // You might want to update local state or show a notification
+          break;
+
+        case "opponent-username-changed":
+          // Handle opponent username change
+          console.log(
+            "[GameState] Opponent username changed:",
+            msg.oldUsername,
+            "→",
+            msg.newUsername,
+          );
+          // Update the game state with new opponent username
+          setGameState((prev) => {
+            if (!prev) return prev;
+            const updatedPlayers = { ...prev.players };
+            if (updatedPlayers.white?.id === msg.playerId) {
+              updatedPlayers.white = {
+                ...updatedPlayers.white,
+                username: msg.newUsername,
+              };
+            } else if (updatedPlayers.black?.id === msg.playerId) {
+              updatedPlayers.black = {
+                ...updatedPlayers.black,
+                username: msg.newUsername,
+              };
+            }
+            return { ...prev, players: updatedPlayers };
+          });
+          break;
+
         default: {
           const _exhaustiveCheck: never = msg;
           console.log(

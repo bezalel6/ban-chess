@@ -68,29 +68,43 @@ export const authOptions = {
   callbacks: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async jwt({ token, account, profile, user }: any) {
-      // On first login, account will be present
+      // On initial sign-in, account will be present
       if (account) {
         // Handle Lichess profile
         if (account.provider === "lichess" && profile) {
           const lichessProfile = profile as LichessProfile;
-          token.username = lichessProfile.username;
           token.providerId = lichessProfile.id;
           token.provider = "lichess";
+          token.originalUsername = lichessProfile.username; // Store original for display
+
+          // Generate a unique chess username if not already set
+          if (!token.username) {
+            token.username = await generateUniqueChessUsername();
+            token.isNewUser = true; // Flag for first-time setup
+          }
         }
         // Handle Google profile
         else if (account.provider === "google" && profile) {
-          token.username =
-            profile.name || profile.email?.split("@")[0] || "User";
           token.providerId = profile.sub;
           token.provider = "google";
+          token.originalName = profile.name || profile.email?.split("@")[0]; // Store original for display
+
+          // Generate a unique chess username if not already set
+          if (!token.username) {
+            token.username = await generateUniqueChessUsername();
+            token.isNewUser = true; // Flag for first-time setup
+          }
         }
         // Handle Guest login (CredentialsProvider)
         else if (account.provider === "guest" && user) {
-          token.username = user.name;
+          token.username = user.name; // Already using generateGuestId()
           token.providerId = user.id;
           token.provider = "guest";
+          token.isGuest = true; // Flag for guest users
         }
       }
+
+      // Preserve existing token data on subsequent requests
       return token;
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,6 +113,12 @@ export const authOptions = {
         session.user.username = token.username as string;
         session.user.providerId = token.providerId as string;
         session.user.provider = token.provider as AuthProvider;
+        session.user.originalUsername = token.originalUsername as
+          | string
+          | undefined;
+        session.user.originalName = token.originalName as string | undefined;
+        session.user.isNewUser = token.isNewUser as boolean | undefined;
+        session.user.isGuest = token.isGuest as boolean | undefined;
       }
       return session;
     },

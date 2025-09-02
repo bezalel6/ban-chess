@@ -102,8 +102,9 @@ console.log(
 
 // Subscribe to Redis pub/sub channels for cross-server communication
 async function setupRedisPubSub() {
-  // Subscribe to queue updates
+  // Subscribe to queue updates and user updates
   await redisSub.subscribe(KEYS.CHANNELS.QUEUE_UPDATE);
+  await redisSub.subscribe(KEYS.CHANNELS.USER_UPDATE);
 
   redisSub.on("message", async (channel, message) => {
     try {
@@ -121,6 +122,72 @@ async function setupRedisPubSub() {
               type: "queued",
               position,
             } as SimpleServerMsg),
+          );
+        }
+      } else if (channel === KEYS.CHANNELS.USER_UPDATE) {
+        // Handle username changes
+        const { userId, type, oldUsername, newUsername, timestamp } = data;
+
+        if (type === "username-change") {
+          // Update the in-memory player data
+          const player = Array.from(authenticatedPlayers.values()).find(
+            (p) => p.userId === userId,
+          );
+
+          if (player) {
+            player.username = newUsername;
+
+            // Notify the player about their username change
+            if (player.ws.readyState === WebSocket.OPEN) {
+              player.ws.send(
+                JSON.stringify({
+                  type: "username-changed",
+                  oldUsername,
+                  newUsername,
+                  timestamp,
+                  message:
+                    "Your username has been updated. Please sign out and back in to refresh your session.",
+                } as SimpleServerMsg),
+              );
+            }
+          }
+
+          // Notify all players in the same game about the username change
+          const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
+          if (gameId) {
+            const gameState = await getGameState(gameId);
+            if (gameState) {
+              // Find all connected players in this game
+              const gamePlayers = Array.from(
+                authenticatedPlayers.values(),
+              ).filter((p) => {
+                return (
+                  p.userId === gameState.whitePlayerId ||
+                  p.userId === gameState.blackPlayerId
+                );
+              });
+
+              // Notify them about the username change
+              gamePlayers.forEach((gamePlayer) => {
+                if (
+                  gamePlayer.ws.readyState === WebSocket.OPEN &&
+                  gamePlayer.userId !== userId
+                ) {
+                  gamePlayer.ws.send(
+                    JSON.stringify({
+                      type: "opponent-username-changed",
+                      oldUsername,
+                      newUsername,
+                      playerId: userId,
+                    } as SimpleServerMsg),
+                  );
+                }
+              });
+            }
+          }
+
+          console.log(
+            `[WebSocket] Username changed: ${oldUsername} → ${newUsername}`,
           );
         }
       } else if (channel.startsWith("channel:game:")) {

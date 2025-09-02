@@ -86,6 +86,7 @@ export const KEYS = {
     GAME_MOVES: (id: string) => `channel:game:${id}:moves`,
     GAME_STATE: (id: string) => `channel:game:${id}:state`,
     QUEUE_UPDATE: "channel:queue:update",
+    USER_UPDATE: "channel:user:update",
   },
   GAME_EVENTS: (id: string) => `game:${id}:events`,
   TIMER: (id: string) => `timer:${id}`,
