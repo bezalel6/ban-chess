@@ -282,7 +282,7 @@ export function useGameState() {
           });
           break;
 
-        case "timeout":
+        case "timeout": {
           console.log(
             "[GameState] Timeout in game:",
             msg.gameId,
@@ -314,6 +314,7 @@ export function useGameState() {
           }); // Play sound only when server confirms timeout
           showNotification(`${msg.winner === "white" ? "White" : "Black"} wins on time!`, "info");
           break;
+        }
 
         case "game-event":
           // Add new event to the list
@@ -378,11 +379,18 @@ export function useGameState() {
           break;
 
         case "actions-since":
-          if (game) {
-            const newGame = BanChess.replayFromActions(game.history().concat(msg.actions));
-            setGame(newGame);
-            console.log(`[GameState] Synced ${msg.actions.length} actions.`);
-            showNotification(`Synced ${msg.actions.length} actions.`, "success");
+          if (msg.actions.length > 0) {
+            // Replay from the new actions received from the server
+            // The server sends all actions since the client's last known ply
+            try {
+              const newGame = BanChess.replayFromActions(msg.actions);
+              setGame(newGame);
+              console.log(`[GameState] Synced ${msg.actions.length} actions.`);
+              showNotification(`Synced ${msg.actions.length} actions.`, "success");
+            } catch (e) {
+              console.error("[GameState] Failed to replay actions:", e);
+              setError({ type: "game", message: "Failed to sync game state" });
+            }
           }
           break;
 
@@ -400,6 +408,7 @@ export function useGameState() {
       // Reset processing flag after handling
       processingMessage.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastMessage, router, sendMessage, readyState, currentGameId]);
 
   // Action handlers - NEW: Uses BanChess serialization
