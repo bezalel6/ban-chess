@@ -33,7 +33,7 @@ export function useGameState() {
   // State management - maintain persistent BanChess instance
   const [game, setGame] = useState<BanChess | null>(null);
   const [gameState, setGameState] = useState<SimpleGameState | null>(null); // Keep for UI elements that need it
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ type: 'auth' | 'game' | 'network' | 'unknown'; message: string } | null>(null);
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   const [gameEvents, setGameEvents] = useState<GameEvent[]>([]);
   const [notification, setNotification] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
@@ -170,7 +170,7 @@ export function useGameState() {
               });
             } catch (e) {
               console.error("[GameState] Failed to create BanChess instance:", e);
-              setError("Failed to parse game state");
+              setError({ type: "game", message: "Failed to parse game state" });
             }
             
             // Keep minimal state for UI elements that still need it
@@ -324,7 +324,7 @@ export function useGameState() {
 
         case "error":
           console.error("[GameState] Server error:", msg.message);
-          setError(msg.message);
+          setError({ type: "network", message: msg.message });
           showNotification(`Error: ${msg.message}`, "error");
           setTimeout(() => setError(null), 5000);
           break;
@@ -437,7 +437,7 @@ export function useGameState() {
       }
       send({ type: "create-solo-game" });
     } else {
-      setError("Not connected to server. Please wait...");
+      setError({ type: "network", message: "Not connected to server. Please wait..." });
     }
   }, [connected, send, isLocalGame]);
 
@@ -453,7 +453,7 @@ export function useGameState() {
       }
       send({ type: "join-queue" });
     } else {
-      setError("Not connected to server. Please wait...");
+      setError({ type: "network", message: "Not connected to server. Please wait..." });
     }
   }, [connected, send, isLocalGame]);
 
@@ -470,7 +470,7 @@ export function useGameState() {
         const currentPly = game ? game.getPly() : 0;
         send({ type: "join-game", gameId, ply: currentPly });
       } else {
-        setError("Not connected to server. Please wait...");
+        setError({ type: "network", message: "Not connected to server. Please wait..." });
       }
     },
     [connected, send, game],
@@ -481,9 +481,7 @@ export function useGameState() {
       if (currentGameId && connected) {
         send({ type: "give-time", gameId: currentGameId, amount });
       } else {
-        console.warn(
-          "[GameState] Cannot give time: not in game or not connected",
-        );
+        setError({ type: "network", message: "Cannot give time: not connected" });
       }
     },
     [currentGameId, connected, send],
