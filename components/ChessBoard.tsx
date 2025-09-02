@@ -78,6 +78,9 @@ const ChessBoard = memo(function ChessBoard({
   // Debug panel freeze state - frozen by default
   const [frozen, setFrozen] = useState(true);
   const [frozenConfig, setFrozenConfig] = useState<Record<string, unknown> | null>(null);
+  
+  // Manual refresh state for forcing board remount
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Parse FEN data
   const fenData = useMemo(() => {
@@ -167,13 +170,15 @@ const ChessBoard = memo(function ChessBoard({
     [gameState, fenData, nextAction, onMove, onBan],
   );
 
-  // More stable board key - only remount when position actually changes
+  // Board key that includes ban state to force remount when game phase changes
   const boardKey = useMemo(
     () =>
       `${fenData?.position || "initial"}-${fenData?.turn || "w"}-${
+        fenData?.banState || "no-ban"
+      }-${movableColor || "none"}-${
         gameState?.gameOver ? "over" : "active"
-      }`,
-    [fenData?.position, fenData?.turn, gameState?.gameOver],
+      }-refresh-${refreshKey}`,
+    [fenData?.position, fenData?.turn, fenData?.banState, movableColor, gameState?.gameOver, refreshKey],
   );
 
   // Memoize config early to comply with Rules of Hooks
@@ -332,19 +337,30 @@ const ChessBoard = memo(function ChessBoard({
         <details className="p-2">
           <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
             <span>Board Config JSON (click to expand)</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleFreeze();
-              }}
-              className={`ml-2 px-2 py-1 text-xs rounded ${
-                frozen 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-green-600 text-white'
-              }`}
-            >
-              {frozen ? '❄️ Frozen' : '🔴 Live'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRefreshKey(prev => prev + 1);
+                }}
+                className="px-2 py-1 text-xs rounded bg-yellow-600 text-white hover:bg-yellow-700"
+              >
+                🔄 Refresh Board
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFreeze();
+                }}
+                className={`px-2 py-1 text-xs rounded ${
+                  frozen 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-green-600 text-white'
+                }`}
+              >
+                {frozen ? '❄️ Frozen' : '🔴 Live'}
+              </button>
+            </div>
           </summary>
           <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
             {JSON.stringify(displayConfig, null, 2)}
