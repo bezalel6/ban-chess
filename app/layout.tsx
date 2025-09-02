@@ -9,6 +9,9 @@ import ConnectionStatusOverlay from "@/components/ConnectionStatusOverlay";
 import WebSocketStatusWidget from "@/components/WebSocketStatusWidget";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+  ),
   title: "BanChess",
   description: "Chess with bans - A strategic chess variant",
   icons: {
