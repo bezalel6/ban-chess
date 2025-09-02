@@ -111,7 +111,7 @@ export function useGameState() {
   // Authentication is now handled centrally in WebSocketContext
 
   // Add refs to track message processing and prevent duplicates
-  const lastProcessedMessage = useRef<string | null>(null);
+  const processedMessageIds = useRef<Set<string>>(new Set());
   const messageCounter = useRef(0);
   const processingMessage = useRef(false);
 
@@ -119,28 +119,40 @@ export function useGameState() {
   useEffect(() => {
     if (!lastMessage || processingMessage.current) return;
     
-    // Check if we've already processed this exact message
-    if (lastProcessedMessage.current === lastMessage.data) {
-      return; // Skip duplicate message
-    }
-    
     // Mark as processing to prevent concurrent processing
     processingMessage.current = true;
-    lastProcessedMessage.current = lastMessage.data;
     messageCounter.current++;
 
-    // Parse message first to check type
-    let msg: SimpleServerMsg;
+    // Parse message first to check type and ID
+    let msg: SimpleServerMsg & { messageId?: string };
     try {
-      msg = JSON.parse(lastMessage.data) as SimpleServerMsg;
+      msg = JSON.parse(lastMessage.data) as SimpleServerMsg & { messageId?: string };
     } catch (e) {
       console.error("[GameState] Failed to parse WebSocket message:", e);
+      processingMessage.current = false;
       return;
+    }
+
+    // Check if we've already processed this message ID
+    if (msg.messageId && processedMessageIds.current.has(msg.messageId)) {
+      console.log(`[GameState] Skipping duplicate message ID: ${msg.messageId}`);
+      processingMessage.current = false;
+      return;
+    }
+    
+    // Track this message as processed
+    if (msg.messageId) {
+      processedMessageIds.current.add(msg.messageId);
+      // Clean up old message IDs if set gets too large (keep last 100)
+      if (processedMessageIds.current.size > 100) {
+        const ids = Array.from(processedMessageIds.current);
+        processedMessageIds.current = new Set(ids.slice(-100));
+      }
     }
 
     // Only log non-clock-update messages to reduce console spam
     if (msg.type !== "clock-update") {
-      console.log("[GameState] WebSocket message:", msg.type, msg);
+      console.log(`[GameState] Processing message: ${msg.type}, ID: ${msg.messageId || 'no-id'}`);
     }
 
     try {

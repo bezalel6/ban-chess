@@ -40,6 +40,7 @@ interface Player {
   userId: string;
   username: string;
   ws: WebSocket;
+  authMessageSent?: boolean; // Track if we've sent auth confirmation
 }
 
 // In-memory cache for active connections and time managers
@@ -48,6 +49,9 @@ const authenticatedPlayers = new Map<WebSocket, Player>();
 const timeManagers = new Map<string, TimeManager>();
 // Game state deduplication cache to prevent WebSocket spam
 const lastBroadcastStates = new Map<string, string>();
+// Message deduplication tracking
+let messageIdCounter = 0;
+const sentMessageIds = new Map<WebSocket, Set<string>>(); // Track sent message IDs per connection
 
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -539,7 +543,7 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   const recentEvents = await getRecentGameEvents(gameId, 10);
 
   // Full state WITH history for new joiners
-  const fullStateMsg: SimpleServerMsg = {
+  const fullStateMsg = {
     type: "state",
     fen: fen,
     gameId,
@@ -551,6 +555,7 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     inCheck: isInCheck,
     history, // Include full history from Redis for new joiners
     events: recentEvents, // Include recent events
+    messageId: `state-full-${++messageIdCounter}`,
     ...(gameState.gameOver && {
       gameOver: true,
       result: gameState.result,
@@ -560,13 +565,24 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
       clocks: timeManager ? timeManager.getClocks() : undefined,
       startTime: gameState.startTime,
     }),
-  };
+  } as SimpleServerMsg & { messageId: string };
 
   if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(fullStateMsg));
-    console.log(
-      `[sendFullGameState] Sent full state with history for game ${gameId}`,
-    );
+    if (!sentMessageIds.has(ws)) {
+      sentMessageIds.set(ws, new Set());
+    }
+    
+    // Create a unique key for this full state send
+    const stateKey = `full-state-${gameId}-${ply}`;
+    if (!sentMessageIds.get(ws)!.has(stateKey)) {
+      sentMessageIds.get(ws)!.add(stateKey);
+      ws.send(JSON.stringify(fullStateMsg));
+      console.log(
+        `[sendFullGameState] Sent full state with history for game ${gameId}, messageId: ${fullStateMsg.messageId}`,
+      );
+    } else {
+      console.log(`[sendFullGameState] Skipping duplicate full state for game ${gameId}, ply ${ply}`);
+    }
   }
 }
 
@@ -700,7 +716,7 @@ async function broadcastGameState(gameId: string) {
     };
   }
 
-  const stateMsg: SimpleServerMsg = {
+  const stateMsg = {
     type: "state",
     fen: fen,
     gameId,
@@ -723,6 +739,7 @@ async function broadcastGameState(gameId: string) {
           : undefined,
       moveNumber: Math.floor(ply / 4) + 1,  // Each full move is 4 plies
     },
+    messageId: `state-${++messageIdCounter}`,
     // Include game over state if the game is over (either by position or resignation/timeout)
     ...((isGameOver || gameState.gameOver) && {
       gameOver: true,
@@ -733,23 +750,24 @@ async function broadcastGameState(gameId: string) {
       clocks: timeManager ? timeManager.getClocks() : undefined,
       startTime: gameState.startTime,
     }),
-  };
+  } as SimpleServerMsg & { messageId: string };
 
-  // Check for duplicate state to prevent WebSocket spam
-  const stateHash = JSON.stringify(stateMsg);
+  // Create a content hash WITHOUT the messageId for deduplication
+  const contentForHash = { ...stateMsg };
+  delete (contentForHash as { messageId?: string }).messageId;
+  const stateHash = JSON.stringify(contentForHash);
+  
   if (lastBroadcastStates.get(gameId) === stateHash) {
-    console.log(`[broadcastGameState] Skipping duplicate state for game ${gameId}`);
+    console.log(`[broadcastGameState] Skipping duplicate state content for game ${gameId}`);
     return;
   }
   lastBroadcastStates.set(gameId, stateHash);
 
-  // Publish to Redis for all servers
-  await redisPub.publish(
-    KEYS.CHANNELS.GAME_STATE(gameId),
-    JSON.stringify(stateMsg),
-  );
-
-  // Also directly send to connected players on this server
+  // For single-server deployment, send directly to connected players
+  // For multi-server deployment, we'd use Redis pub/sub instead
+  // TODO: Make this configurable based on deployment mode
+  
+  // Direct send to connected players on this server (avoiding Redis pub/sub duplicates)
   const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
     (p) => {
       return (
@@ -761,12 +779,23 @@ async function broadcastGameState(gameId: string) {
 
   connectedPlayers.forEach((player) => {
     if (player.ws.readyState === WebSocket.OPEN) {
-      const msgToSend = stateMsg;
-
-      player.ws.send(JSON.stringify(msgToSend));
-      console.log(
-        `[broadcastGameState] SENT state to ${player.username} for game ${gameId}`,
-      );
+      if (!sentMessageIds.has(player.ws)) {
+        sentMessageIds.set(player.ws, new Set());
+      }
+      
+      // Use a state key that includes ply to allow new states but prevent duplicates
+      const stateKey = `state-${gameId}-${ply}`;
+      if (!sentMessageIds.get(player.ws)!.has(stateKey)) {
+        sentMessageIds.get(player.ws)!.add(stateKey);
+        player.ws.send(JSON.stringify(stateMsg));
+        console.log(
+          `[broadcastGameState] SENT state to ${player.username} for game ${gameId}, ply ${ply}, messageId: ${stateMsg.messageId}`,
+        );
+      } else {
+        console.log(
+          `[broadcastGameState] SKIPPED duplicate state to ${player.username} for game ${gameId}, ply ${ply}`,
+        );
+      }
     }
   });
 
@@ -947,14 +976,25 @@ wss.on("connection", (ws: WebSocket, request) => {
 
       console.log(`Player authenticated via ${authToken.isGuest ? 'guest' : 'session'} token: ${authToken.username}`);
 
-      // Send authentication confirmation
-      ws.send(
-        JSON.stringify({
+      // Send authentication confirmation (only once)
+      if (!currentPlayer.authMessageSent) {
+        const authMsg = {
           type: "authenticated",
           userId: userId,
           username: authToken.username,
-        } as SimpleServerMsg),
-      );
+          messageId: `auth-${++messageIdCounter}`,
+        } as SimpleServerMsg & { messageId: string };
+        
+        // Track this message as sent
+        if (!sentMessageIds.has(ws)) {
+          sentMessageIds.set(ws, new Set());
+        }
+        sentMessageIds.get(ws)!.add(authMsg.messageId);
+        
+        ws.send(JSON.stringify(authMsg));
+        currentPlayer.authMessageSent = true;
+        console.log(`[Auth] Sent authentication confirmation with ID: ${authMsg.messageId}`);
+      }
 
       // Check if player was in a game (reconnection)
       const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
@@ -1008,13 +1048,24 @@ wss.on("connection", (ws: WebSocket, request) => {
             console.log(
               `Player ${username} already authenticated, skipping duplicate`,
             );
-            ws.send(
-              JSON.stringify({
+            // Don't send another auth message if we already sent one
+            if (!currentPlayer.authMessageSent) {
+              const authMsg = {
                 type: "authenticated",
                 userId,
                 username,
-              } as SimpleServerMsg),
-            );
+                messageId: `auth-${++messageIdCounter}`,
+              } as SimpleServerMsg & { messageId: string };
+              
+              if (!sentMessageIds.has(ws)) {
+                sentMessageIds.set(ws, new Set());
+              }
+              sentMessageIds.get(ws)!.add(authMsg.messageId);
+              
+              ws.send(JSON.stringify(authMsg));
+              currentPlayer.authMessageSent = true;
+              console.log(`[Auth] Sent auth confirmation with ID: ${authMsg.messageId}`);
+            }
 
             // Check if they're already in a game and send current state without re-joining
             const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
@@ -1057,13 +1108,24 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           console.log(`Player authenticated: ${username}`);
 
-          ws.send(
-            JSON.stringify({
+          // Send auth confirmation with message ID
+          if (!currentPlayer.authMessageSent) {
+            const authMsg = {
               type: "authenticated",
               userId,
               username,
-            } as SimpleServerMsg),
-          );
+              messageId: `auth-${++messageIdCounter}`,
+            } as SimpleServerMsg & { messageId: string };
+            
+            if (!sentMessageIds.has(ws)) {
+              sentMessageIds.set(ws, new Set());
+            }
+            sentMessageIds.get(ws)!.add(authMsg.messageId);
+            
+            ws.send(JSON.stringify(authMsg));
+            currentPlayer.authMessageSent = true;
+            console.log(`[Auth] Sent authentication confirmation with ID: ${authMsg.messageId}`);
+          }
 
           // Check if player was in a game (reconnection)
           const gameId = await redis.get(KEYS.PLAYER_GAME(userId));
@@ -1143,13 +1205,26 @@ wss.on("connection", (ws: WebSocket, request) => {
           // Subscribe to game channel
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
 
-          ws.send(
-            JSON.stringify({
-              type: "game-created",
-              gameId,
-              timeControl,
-            } as SimpleServerMsg),
-          );
+          const gameCreatedMsg = {
+            type: "game-created",
+            gameId,
+            timeControl,
+            messageId: `game-created-${++messageIdCounter}`,
+          } as SimpleServerMsg & { messageId: string };
+          
+          if (!sentMessageIds.has(ws)) {
+            sentMessageIds.set(ws, new Set());
+          }
+          
+          // Check if we've already sent this type of message for this game
+          const msgKey = `game-created-${gameId}`;
+          if (!sentMessageIds.get(ws)!.has(msgKey)) {
+            sentMessageIds.get(ws)!.add(msgKey);
+            ws.send(JSON.stringify(gameCreatedMsg));
+            console.log(`[Game] Sent game-created with ID: ${gameCreatedMsg.messageId}`);
+          } else {
+            console.log(`[Game] Skipping duplicate game-created for game ${gameId}`);
+          }
           console.log(
             `Solo game ${gameId} created for ${currentPlayer.username} with time control ${timeControl.initial}+${timeControl.increment}`,
           );
@@ -1575,9 +1650,10 @@ wss.on("connection", (ws: WebSocket, request) => {
         // Note: We don't remove the game or player from game, allowing reconnection
       }
     }
-    // Clean up ping/pong tracking
+    // Clean up tracking
     lastPong.delete(ws);
     lastPing.delete(ws);
+    sentMessageIds.delete(ws); // Clean up message tracking
   });
 });
 
