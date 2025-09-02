@@ -205,22 +205,23 @@ const game = BanChess.replayFromActions(["b:e2e4", "m:d2d4", ...]);
 
 | Component | Technology | Purpose | Version |
 |-----------|------------|---------|---------|
-| Framework | Next.js | React framework with SSR | 15.x |
-| UI Library | React | Component-based UI | 19.x |
-| Chess UI | react-chessground | Interactive chess board | 1.5.0 |
-| Styling | Tailwind CSS | Utility-first CSS | 4.1.12 |
+| Framework | Next.js 15 | React framework with App Router | 15.5.2 |
+| UI Library | React 19 | Component-based UI with concurrent features | 19.0.0 |
+| Chess UI | @bezalel6/react-chessground | Interactive chess board | 1.5.0 |
+| Styling | Tailwind CSS | Utility-first CSS framework | 3.4.17 |
 | Audio | Howler.js | Web audio API wrapper | 2.2.4 |
-| Type Safety | TypeScript | Static typing | 5.x |
+| Type Safety | TypeScript | Static typing with strict mode | 5.7.2 |
 
 ### Backend Stack
 
 | Component | Technology | Purpose | Version |
 |-----------|------------|---------|---------|
-| Runtime | Node.js | JavaScript runtime | 20.x |
+| Runtime | Node.js | JavaScript runtime | 20.18.1 |
 | WebSocket | ws | WebSocket server | 8.18.0 |
-| Game Logic | ban-chess.ts | Chess variant engine | 1.2.2 |
-| Persistence | Redis/ioredis | Game state & pub/sub | 5.x |
+| Game Logic | ban-chess.ts | Chess variant engine | 3.0.0 |
+| Persistence | Redis/ioredis | Game state & pub/sub | 5.4.1 |
 | Session | iron-session | Encrypted sessions | 8.0.4 |
+| Authentication | NextAuth.js | OAuth & session management | 5.0.0 |
 | IDs | nanoid/uuid | Unique identifiers | 5.1.5/9.0.1 |
 
 ## Design Patterns
@@ -551,6 +552,6 @@ graph LR
 
 ---
 
-*Last Updated: 2025-08-29*  
-*Architecture Version: 2.0.0*  
-*Now with Redis persistence, BCN serialization, and horizontal scaling support*
+*Last Updated: January 2025*  
+*Architecture Version: 3.0.0*  
+*Next.js 15 + React 19 with Redis persistence, BCN serialization, and horizontal scaling*

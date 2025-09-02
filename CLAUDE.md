@@ -36,11 +36,12 @@ When changing ANY existing functionality:
 ---
 
 ## 1. Context
-- Framework: **Next.js 15 (App Router only)**
-- Language: **TypeScript**
-- Runtime: **React 19 (required)**
-- Styling: **Tailwind CSS**
-- No `pages/` or legacy patterns.
+- Framework: **Next.js 15.5.2 (App Router only)**
+- Language: **TypeScript 5.7.2 (strict mode)**
+- Runtime: **React 19.0.0 (with concurrent features)**
+- Styling: **Tailwind CSS 3.4.17**
+- Game Engine: **ban-chess.ts v3.0.0**
+- No `pages/` directory or legacy patterns.
 
 ---
 
