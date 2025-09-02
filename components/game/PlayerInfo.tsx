@@ -58,7 +58,7 @@ export default function PlayerInfo({ username, isTurn, clock, isClockActive = fa
         </div>
         {canGiveTime && onGiveTime && (
           <button
-            onClick={onGiveTime}
+            onClick={() => onGiveTime()}
             className="p-1 rounded bg-blue-600 hover:bg-blue-500 transition-colors"
             title="Give 15 seconds to opponent"
             aria-label="Give time to opponent"
