@@ -42,8 +42,12 @@ export function getUserRole(
   // In local games, the player controls whoever is active - get from server
   const role: PlayerRole = isLocalGame ? (gameState.activePlayer || "white") : playerColor;
   
-  // Board orientation - you see from your seat's perspective (or white in local games)
-  const orientation: Orientation = isLocalGame ? "white" : (playerColor || "white");
+  // Board orientation:
+  // - In local games: flip to show current player's perspective
+  // - In online games: show from your seat's perspective
+  const orientation: Orientation = isLocalGame 
+    ? (gameState.activePlayer || "white")  // Flip board based on who's playing
+    : (playerColor || "white");  // Fixed perspective in online games
 
   console.log("[game-utils] User role:", {
     userId,

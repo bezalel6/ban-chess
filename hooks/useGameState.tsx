@@ -158,16 +158,30 @@ export function useGameState() {
             }
             
             // Keep minimal state for UI elements that still need it
-            setGameState({
-              ...msg,
-              fen: msg.fen,
-              history: msg.history || [],
-              timeControl: msg.timeControl,
-              clocks: msg.clocks,
-              startTime: msg.startTime,
-              players: msg.players,
-              gameOver: msg.gameOver,
-              result: msg.result,
+            setGameState((prev) => {
+              // Preserve history if not provided (incremental updates)
+              // Only use msg.history if it's a full state update (e.g., on join)
+              let history = prev?.history || [];
+              
+              if (msg.history) {
+                // Full history provided - use it
+                history = msg.history;
+              } else if (msg.lastMove) {
+                // Incremental update - append to existing history
+                history = [...history, msg.lastMove];
+              }
+              
+              return {
+                ...msg,
+                fen: msg.fen,
+                history,
+                timeControl: msg.timeControl,
+                clocks: msg.clocks,
+                startTime: msg.startTime,
+                players: msg.players,
+                gameOver: msg.gameOver,
+                result: msg.result,
+              };
             });
             
             // Clear currentGameId if game is over

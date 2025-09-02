@@ -775,7 +775,9 @@ async function matchPlayers() {
     (winner) => handleTimeout(gameId, winner),
     () => broadcastClockUpdate(gameId),
   );
-  timeManager.start("white");
+  // Use BanChess to determine who starts (should be Black at ply 1)
+  const activePlayer = game.getActivePlayer();
+  timeManager.start(activePlayer);
   timeManagers.set(gameId, timeManager);
 
   // Update player sessions
@@ -1102,7 +1104,9 @@ wss.on("connection", (ws: WebSocket, request) => {
               (winner) => handleTimeout(gameId, winner),
               () => broadcastClockUpdate(gameId),
             );
-            timeManager.start("black"); // Black bans first in solo games
+            // Use BanChess to determine who starts (should be Black at ply 1)
+            const activePlayer = game.getActivePlayer();
+            timeManager.start(activePlayer);
             timeManagers.set(gameId, timeManager);
           }
 
