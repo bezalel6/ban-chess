@@ -56,25 +56,30 @@ const ChessBoard = memo(function ChessBoard({
 }: ChessBoardProps) {
   // Get user role from context (already memoized)
   const { role, orientation } = useUserRole();
-  
+
   // Get game state from BanChess instance
-  const currentActivePlayer = activePlayer || game?.getActivePlayer() || "white";
+  const currentActivePlayer =
+    activePlayer || game?.getActivePlayer() || "white";
   const currentAction = actionType || game?.getActionType() || "move";
-  
+
   // Determine permissions based on BanChess state
   const isPlayer = role !== null;
-  const isMyTurn = isPlayer && role === currentActivePlayer && !gameState?.gameOver;
+  const isMyTurn =
+    isPlayer && role === currentActivePlayer && !gameState?.gameOver;
   const canMove = isMyTurn && currentAction === "move";
   const canBan = isMyTurn && currentAction === "ban";
   const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
     to: string;
   } | null>(null);
-  
+
   // Debug panel freeze state - frozen by default
   const [frozen, setFrozen] = useState(true);
-  const [frozenConfig, setFrozenConfig] = useState<Record<string, unknown> | null>(null);
-  
+  const [frozenConfig, setFrozenConfig] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+
   // Manual refresh state for forcing board remount
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -92,7 +97,7 @@ const ChessBoard = memo(function ChessBoard({
     if (role === null) {
       return undefined;
     }
-    
+
     // During YOUR ban phase, allow selecting both colors
     // The dests map will restrict to only opponent pieces
     if (canBan && currentAction === "ban") {
@@ -110,10 +115,10 @@ const ChessBoard = memo(function ChessBoard({
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
   const nextAction = currentAction; // From GameRoleContext which gets it from BanChess
   const isInCheck = false; // TODO: Get from BanChess instance if needed for UI
-  
+
   // Delay ban visualization to avoid NaN errors when board is not ready
   const [visibleBan, setVisibleBan] = useState<typeof currentBan>(null);
-  
+
   useEffect(() => {
     // Small delay to ensure board DOM elements are positioned
     if (currentBan) {
@@ -129,12 +134,12 @@ const ChessBoard = memo(function ChessBoard({
   // Convert dests from Map<Square, Square[]> to Map<Key, Key[]> for chessground
   const dests: Dests = useMemo(() => {
     const destsMap = new Map<Key, Key[]>();
-    
+
     // ONLY use provided dests - no fallbacks
     propDests.forEach((squares, from) => {
       destsMap.set(from as Key, squares as Key[]);
     });
-    
+
     return destsMap;
   }, [propDests]);
 
@@ -163,14 +168,11 @@ const ChessBoard = memo(function ChessBoard({
         }
       }
     },
-    [gameState, fenData, nextAction, onMove, onBan],
+    [gameState, fenData, nextAction, onMove, onBan]
   );
 
   // Simple board key - only remount on manual refresh
-  const boardKey = useMemo(
-    () => `board-${refreshKey}`,
-    [refreshKey],
-  );
+  const boardKey = useMemo(() => `board-${refreshKey}`, [refreshKey]);
 
   // Memoize config early to comply with Rules of Hooks
   const config: ReactChessGroundProps = useMemo(
@@ -193,7 +195,7 @@ const ChessBoard = memo(function ChessBoard({
       movable: {
         free: false,
         color: movableColor,
-        dests: (canMove || canBan) ? dests : new Map(),
+        dests: canMove || canBan ? dests : new Map(),
         showDests: true,
         rookCastle: false, // Disable castling during ban phase
         events: {
@@ -209,15 +211,16 @@ const ChessBoard = memo(function ChessBoard({
       drawable: {
         enabled: true,
         visible: true,
-        autoShapes: visibleBan && visibleBan.from && visibleBan.to
-          ? [
-              {
-                orig: visibleBan.from as Key,
-                dest: visibleBan.to as Key,
-                brush: "red",
-              },
-            ]
-          : [],
+        autoShapes:
+          visibleBan && visibleBan.from && visibleBan.to
+            ? [
+                {
+                  orig: visibleBan.from as Key,
+                  dest: visibleBan.to as Key,
+                  brush: "red",
+                },
+              ]
+            : [],
       },
     }),
     [
@@ -231,7 +234,7 @@ const ChessBoard = memo(function ChessBoard({
       dests,
       handleAfterMove,
       visibleBan,
-    ],
+    ]
   );
 
   // Safety check: If gameState or fenData is invalid, return a placeholder
@@ -248,47 +251,15 @@ const ChessBoard = memo(function ChessBoard({
     );
   }
 
-  // Debug logging - commented out to reduce console spam
-  // Uncomment when debugging is needed
-  /*
-  console.log("[ChessBoard] State:", {
-    role,
-    turn: fenData.turn,
-    nextAction,
-    orientation,
-    movableColor,
-    canMove,
-    canBan,
-    destsCount: dests.size,
-    destsKeys: Array.from(dests.keys()),
-    players: gameState.players,
-    currentBan,
-    banState: fenData.banState,
-    isInCheck,
-  });
-  
-  console.log("[ChessBoard] Movable config:", {
-    color: movableColor,
-    destsSize: dests.size,
-    canMoveOrBan: canMove || canBan,
-  });
-
-  if (visibleBan) {
-    console.log("[ChessBoard] BAN IS VISIBLE:", visibleBan);
-  } else if (currentBan) {
-    console.log("[ChessBoard] Ban pending visualization:", currentBan);
-  } else {
-    console.log("[ChessBoard] No ban to display");
-  }
-  */
-
   // Create the debug config object
   const debugConfig = {
     fen: config.fen,
     orientation: config.orientation,
     movable: {
       color: config.movable?.color,
-      dests: config.movable?.dests ? Array.from(config.movable.dests.entries()).map(([k, v]) => [k, v]) : [],
+      dests: config.movable?.dests
+        ? Array.from(config.movable.dests.entries()).map(([k, v]) => [k, v])
+        : [],
     },
     drawable: config.drawable,
     check: config.check,
@@ -301,7 +272,7 @@ const ChessBoard = memo(function ChessBoard({
       canMove,
       canBan,
       visibleBan,
-    }
+    },
   };
 
   // Capture config when freezing
@@ -317,48 +288,49 @@ const ChessBoard = memo(function ChessBoard({
   const displayConfig = frozen && frozenConfig ? frozenConfig : debugConfig;
 
   return (
-    <div className="relative">
+    <>
       <div className="chess-board-outer">
         <div className="chess-board-inner">
           <Chessground key={boardKey} {...config} />
         </div>
-        {/* Debug JSON Panel - Below the board */}
-        <div className="absolute top-full left-0 right-0 mt-2 bg-gray-900 text-green-400 max-h-48 overflow-y-auto z-50 border-2 border-gray-700 rounded-lg">
-          <details className="p-2">
-            <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
-              <span>Board Config JSON (click to expand)</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRefreshKey(prev => prev + 1);
-                  }}
-                  className="px-2 py-1 text-xs rounded bg-yellow-600 text-white hover:bg-yellow-700"
-                >
-                  🔄 Refresh Board
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleFreeze();
-                  }}
-                  className={`px-2 py-1 text-xs rounded ${
-                    frozen 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-green-600 text-white'
-                  }`}
-                >
-                  {frozen ? '❄️ Frozen' : '🔴 Live'}
-                </button>
-              </div>
-            </summary>
-            <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
-              {JSON.stringify(displayConfig, null, 2)}
-            </pre>
-          </details>
-        </div>
       </div>
-    </div>
+      
+      {/* Debug JSON Panel - Fixed position in bottom right corner */}
+      <div className="fixed bottom-4 right-4 w-96 bg-gray-900 text-green-400 max-h-48 overflow-y-auto border-2 border-gray-700 rounded-lg z-[9999]">
+        <details className="p-2">
+          <summary className="cursor-pointer text-xs font-mono text-gray-400 hover:text-green-400 flex items-center justify-between">
+            <span>Board Config JSON (click to expand)</span>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRefreshKey((prev) => prev + 1);
+                }}
+                className="px-2 py-1 text-xs rounded bg-yellow-600 text-white hover:bg-yellow-700"
+              >
+                🔄 Refresh Board
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleFreeze();
+                }}
+                className={`px-2 py-1 text-xs rounded ${
+                  frozen
+                    ? "bg-blue-600 text-white"
+                    : "bg-green-600 text-white"
+                }`}
+              >
+                {frozen ? "❄️ Frozen" : "🔴 Live"}
+              </button>
+            </div>
+          </summary>
+          <pre className="text-xs font-mono mt-2 whitespace-pre-wrap">
+            {JSON.stringify(displayConfig, null, 2)}
+          </pre>
+        </details>
+      </div>
+    </>
   );
 });
 
