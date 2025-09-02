@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Search, LogOut, Settings, User } from "lucide-react";
+import { Search, LogOut, Volume2, User } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "next-auth/react";
 import MobileMenu from "./MobileMenu";
@@ -54,7 +54,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
                 className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
-                <Settings className="h-4 w-4 mr-2" />
+                <Volume2 className="h-4 w-4 mr-2" />
                 Sound Settings
               </Link>
               <div className="border-t border-border my-1"></div>
