@@ -40,6 +40,9 @@ interface Player {
 const authenticatedPlayers = new Map<WebSocket, Player>();
 const timeManagers = new Map<string, TimeManager>();
 
+// Cache to prevent duplicate WebSocket state broadcasts
+const lastBroadcastState = new Map<string, string>();
+
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
@@ -284,6 +287,9 @@ async function cleanupFinishedGame(gameId: string) {
     timeManagers.delete(gameId);
   }
   
+  // Clean up broadcast cache for this game
+  lastBroadcastState.delete(gameId);
+  
   // Remove game state from Redis after a short delay to ensure final state is sent
   setTimeout(async () => {
     try {
@@ -330,6 +336,9 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     timeManager.destroy();
     timeManagers.delete(gameId);
   }
+  
+  // Clean up broadcast cache for this game
+  lastBroadcastState.delete(gameId);
 
   // Reconstruct game from action history to get full PGN
   const actionHistory = await getActionHistory(gameId);
@@ -435,21 +444,9 @@ async function restoreTimeManager(
   // TODO: In production you'd need to track actual time spent per player
   // For now, we just restart the timer for the current player
 
-  // Determine current player based on FEN
+  // Determine current player using ban-chess.ts v3.0.0 API
   const game = new BanChess(gameState.fen);
-  const fen = game.fen();
-  const fenParts = fen.split(" ");
-  const chessTurn = fenParts[1] === "w" ? "white" : "black";
-  const banState = fenParts[6];
-  const isNextActionBan = banState && banState.includes(":ban");
-
-  // For ban phase, the banning player is the opposite of current turn
-  // For move phase, it's the current turn player
-  const currentPlayer: "white" | "black" = isNextActionBan
-    ? chessTurn === "white"
-      ? "black"
-      : "white"
-    : chessTurn;
+  const currentPlayer = game.getActivePlayer();
 
   // Start the timer for the current player
   timeManager.start(currentPlayer);
@@ -717,10 +714,21 @@ async function broadcastGameState(gameId: string) {
     }),
   };
 
+  // Check if this state is different from the last broadcast to prevent spam
+  const stateString = JSON.stringify(stateMsg);
+  const lastState = lastBroadcastState.get(gameId);
+  if (lastState === stateString) {
+    console.log(`[broadcastGameState] Skipping duplicate state broadcast for game ${gameId}`);
+    return;
+  }
+  
+  // Cache the current state to prevent future duplicates
+  lastBroadcastState.set(gameId, stateString);
+
   // Publish to Redis for all servers
   await redisPub.publish(
     KEYS.CHANNELS.GAME_STATE(gameId),
-    JSON.stringify(stateMsg),
+    stateString,
   );
 
   // Also directly send to connected players on this server
@@ -1221,22 +1229,9 @@ wss.on("connection", (ws: WebSocket, request) => {
             // Handle clock switching after successful move/ban
             const timeManager = timeManagers.get(gameId);
             if (timeManager && !game.gameOver()) {
-              const fen = game.fen();
-              const fenParts = fen.split(" ");
-              const chessTurn = fenParts[1] === "w" ? "white" : "black";
-              const banState = fenParts[6];
-              const isNextActionBan = banState && banState.includes(":ban");
-
-              // Determine who acts next
-              // For ban phase, the banning player is the opposite of current turn
-              // For move phase, it's the current turn player
-              const nextPlayer: "white" | "black" = isNextActionBan
-                ? chessTurn === "white"
-                  ? "black"
-                  : "white"
-                : chessTurn;
-
-              timeManager.switchPlayer(nextPlayer);
+              // Use ban-chess.ts v3.0.0 API instead of manual FEN parsing
+              const activePlayer = game.getActivePlayer();
+              timeManager.switchPlayer(activePlayer);
             }
 
             await broadcastGameState(gameId);
@@ -1245,6 +1240,8 @@ wss.on("connection", (ws: WebSocket, request) => {
             if (game.gameOver() && timeManager) {
               timeManager.destroy();
               timeManagers.delete(gameId);
+              // Clean up broadcast cache for this game
+              lastBroadcastState.delete(gameId);
               // Clean up the finished game
               await cleanupFinishedGame(gameId);
             }
@@ -1508,6 +1505,9 @@ wss.on("connection", (ws: WebSocket, request) => {
             timeManager.stop();
             timeManagers.delete(gameId);
           }
+          
+          // Clean up broadcast cache for this game
+          lastBroadcastState.delete(gameId);
 
           // Create and store resignation event
           const event: GameEvent = {
