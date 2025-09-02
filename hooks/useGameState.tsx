@@ -27,13 +27,12 @@ export function useGameState() {
 
   const { sendMessage, lastMessage, readyState, isAuthenticated: wsAuthenticated } = wsContext;
 
-  // State management - simplified to just FEN
-  const [fen, setFen] = useState<string | null>(null);
-  const [gameState, setGameState] = useState<SimpleGameState | null>(null); // Keep for compatibility during migration
+  // State management - maintain persistent BanChess instance
+  const [game, setGame] = useState<BanChess | null>(null);
+  const [gameState, setGameState] = useState<SimpleGameState | null>(null); // Keep for UI elements that need it
   const [error, setError] = useState<string | null>(null);
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   const [gameEvents, setGameEvents] = useState<GameEvent[]>([]);
-  const [dests, setDests] = useState<Map<Square, Square[]>>(new Map());
 
   // Refs for tracking
   const previousFen = useRef<string | null>(null);
@@ -42,18 +41,40 @@ export function useGameState() {
   // Connection status - use centralized authentication
   const connected = readyState === ReadyState.OPEN && wsAuthenticated;
 
-  // Create BanChess instance from FEN
-  const game = useMemo(() => {
-    if (fen) {
-      try {
-        return new BanChess(fen);
-      } catch (e) {
-        console.error("Error creating BanChess instance from FEN:", fen, e);
-        return null;
+  // Get current state from BanChess instance
+  const _fen = game?.fen() || null; // Used for debugging, not directly returned
+  const activePlayer = game?.getActivePlayer();
+  const actionType = game?.getActionType();
+  const ply = game?.getPly();
+  const _legalActions = game?.getLegalActions() || []; // Used in dests calculation
+  
+  // Convert legal actions to dests map for Chessground
+  const dests = useMemo(() => {
+    const destsMap = new Map<Square, Square[]>();
+    if (!game) return destsMap;
+    
+    const actions = game.getLegalActions();
+    actions.forEach((action) => {
+      // Convert Action object to BCN format string
+      const serialized = BanChess.serializeAction(action);
+      // Parse BCN format (e.g., "b:e2e4" or "m:d2d4")
+      const parts = serialized.split(":");
+      if (parts.length === 2) {
+        const moveStr = parts[1]; // e.g., "e2e4"
+        if (moveStr.length >= 4) {
+          const from = moveStr.substring(0, 2) as Square;
+          const to = moveStr.substring(2, 4) as Square;
+          
+          if (!destsMap.has(from)) {
+            destsMap.set(from, []);
+          }
+          destsMap.get(from)!.push(to);
+        }
       }
-    }
-    return null;
-  }, [fen]);
+    });
+    
+    return destsMap;
+  }, [game]);
 
   // Note: dests are now updated from server-provided legalActions in the "state" message handler
   // This ensures client and server are perfectly synchronized for ban/move selections
@@ -115,20 +136,38 @@ export function useGameState() {
         }
 
         case "state":
-          // NEW ARCHITECTURE: Only process FEN string
+          // Create or update BanChess instance from server FEN
           if (msg.fen) {
-            setFen(msg.fen);
             setCurrentGameId(msg.gameId);
             
-            // Keep minimal state for compatibility
+            // Create/update persistent BanChess instance
+            try {
+              const newGame = new BanChess(msg.fen);
+              setGame(newGame);
+              
+              console.log("[GameState] BanChess instance updated:", {
+                fen: newGame.fen(),
+                ply: newGame.getPly(),
+                activePlayer: newGame.getActivePlayer(),
+                actionType: newGame.getActionType(),
+                legalActionsCount: newGame.getLegalActions().length,
+              });
+            } catch (e) {
+              console.error("[GameState] Failed to create BanChess instance:", e);
+              setError("Failed to parse game state");
+            }
+            
+            // Keep minimal state for UI elements that still need it
             setGameState({
               ...msg,
+              fen: msg.fen,
               history: msg.history || [],
-              activePlayer: msg.activePlayer,
-              ply: msg.ply,
               timeControl: msg.timeControl,
               clocks: msg.clocks,
               startTime: msg.startTime,
+              players: msg.players,
+              gameOver: msg.gameOver,
+              result: msg.result,
             });
             
             // Clear currentGameId if game is over
@@ -139,34 +178,6 @@ export function useGameState() {
             // Handle events if provided
             if (msg.events) {
               setGameEvents(msg.events);
-            }
-            
-            // Update dests from server-provided legal actions
-            if (msg.legalActions) {
-              console.log("[GameState] Received legal actions:", msg.legalActions.length, "actions");
-              console.log("[GameState] All actions:", msg.legalActions);
-              
-              const newDests = new Map<Square, Square[]>();
-              msg.legalActions.forEach((action: string) => {
-                // Parse BCN format (e.g., "b:e2e4" or "m:d2d4")
-                const parts = action.split(":");
-                if (parts.length === 2) {
-                  const moveStr = parts[1]; // e.g., "e2e4"
-                  if (moveStr.length >= 4) {
-                    const from = moveStr.substring(0, 2) as Square;
-                    const to = moveStr.substring(2, 4) as Square;
-                    
-                    if (!newDests.has(from)) {
-                      newDests.set(from, []);
-                    }
-                    newDests.get(from)!.push(to);
-                  }
-                }
-              });
-              
-              console.log("[GameState] Created dests map with", newDests.size, "source squares");
-              console.log("[GameState] Dests map:", Array.from(newDests.entries()).map(([from, tos]) => `${from}: ${tos.length} moves`));
-              setDests(newDests);
             }
 
             // Play sound effects for moves
@@ -403,9 +414,8 @@ export function useGameState() {
       // Clear game state immediately on resignation
       setCurrentGameId(null);
       setGameState(null);
-      setFen("");
+      setGame(null);
       setGameEvents([]);
-      setDests(new Map());
     } else {
       console.warn(
         "[GameState] Cannot resign: not in game or not connected",
@@ -416,8 +426,11 @@ export function useGameState() {
   return {
     // State
     gameState,
-    game, // NEW: BanChess instance
-    dests, // NEW: Legal moves map
+    game, // Persistent BanChess instance
+    dests, // Legal moves map from BanChess
+    activePlayer, // From BanChess instance
+    actionType, // From BanChess instance
+    ply, // From BanChess instance
     error,
     connected,
     isAuthenticated: wsAuthenticated,

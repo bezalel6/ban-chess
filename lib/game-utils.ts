@@ -1,37 +1,28 @@
 import type { SimpleGameState } from "./game-types";
-import { BanChess } from "ban-chess.ts";
 
 export type PlayerRole = "white" | "black" | null;
 export type Orientation = "white" | "black";
 
-export interface GamePermissions {
-  role: PlayerRole;
-  orientation: Orientation;
-  canMove: boolean;
-  canBan: boolean;
-  canInteract: boolean;
-  isMyTurn: boolean;
-  isPlayer: boolean;
-  currentAction: "move" | "ban";
+export interface UserRole {
+  role: PlayerRole;  // What color you're playing (or null for spectator)
+  orientation: Orientation;  // How the board should be oriented
+  isLocalGame: boolean;  // Whether this is a solo/local game
 }
 
-export function getGamePermissions(
+/**
+ * Simplified function that ONLY determines what role/color this user is playing.
+ * All game logic (permissions, turn, etc.) comes from the BanChess instance directly.
+ */
+export function getUserRole(
   gameState: SimpleGameState | null,
-  game: BanChess | null,
-  userId: string | undefined,
-  activePlayer?: "white" | "black"
-): GamePermissions {
-  // Default values for when game is not available
-  if (!game || !gameState) {
+  userId: string | undefined
+): UserRole {
+  // Default values
+  if (!gameState) {
     return {
       role: null,
       orientation: "white",
-      canMove: false,
-      canBan: false,
-      canInteract: false,
-      isMyTurn: false,
-      isPlayer: false,
-      currentAction: "move",
+      isLocalGame: false,
     };
   }
 
@@ -40,56 +31,31 @@ export function getGamePermissions(
     gameState.players.white?.id === gameState.players.black?.id &&
     gameState.players.white?.id !== undefined;
 
-  // Get action type from game or fallback
-  const currentAction = game.getActionType ? game.getActionType() : game.nextActionType();
-
-  // Determine player's role
-  let role: PlayerRole = null;
-  
+  // Determine what color this user is playing (their seat at the table)
+  let playerColor: PlayerRole = null;
   if (userId && gameState.players.white?.id === userId) {
-    role = "white";
+    playerColor = "white";
   } else if (userId && gameState.players.black?.id === userId) {
-    role = "black";
+    playerColor = "black";
   }
-
-  // In local games, role switches based on active player
-  if (isLocalGame && role) {
-    role = activePlayer || (game.getActivePlayer ? game.getActivePlayer() : game.turn);
-  }
-
-  // Determine permissions
-  const isPlayer = role !== null;
   
-  // Use server-provided activePlayer if available, otherwise use game API
-  const currentActivePlayer = activePlayer || (game.getActivePlayer ? game.getActivePlayer() : game.turn);
+  // In local games, the player controls whoever is active - get from server
+  const role: PlayerRole = isLocalGame ? (gameState.activePlayer || "white") : playerColor;
   
-  let isMyTurn: boolean;
-  if (isLocalGame) {
-    isMyTurn = isPlayer && !gameState.gameOver;
-  } else {
-    isMyTurn = isPlayer && role === currentActivePlayer && !gameState.gameOver;
-  }
+  // Board orientation - you see from your seat's perspective (or white in local games)
+  const orientation: Orientation = isLocalGame ? "white" : (playerColor || "white");
 
-  // Permissions based on turn and action type
-  const canMove = isMyTurn && currentAction === "move";
-  const canBan = isMyTurn && currentAction === "ban";
-  const canInteract = isPlayer && !gameState.gameOver;
-
-  // Determine board orientation
-  let orientation: Orientation = "white";
-  if (!isLocalGame && role) {
-    // Players see from their assigned color's perspective
-    orientation = gameState.players.white?.id === userId ? "white" : "black";
-  }
+  console.log("[game-utils] User role:", {
+    userId,
+    playerColor,
+    role,
+    isLocalGame,
+    orientation,
+  });
 
   return {
     role,
     orientation,
-    canMove,
-    canBan,
-    canInteract,
-    isMyTurn,
-    isPlayer,
-    currentAction,
+    isLocalGame,
   };
 }

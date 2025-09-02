@@ -2,7 +2,7 @@
 
 import type { SimpleGameState } from "@/lib/game-types";
 import { getCurrentBan } from "@/lib/game-types";
-import { getGamePermissions } from "@/lib/game-utils";
+import { getUserRole } from "@/lib/game-utils";
 import { useAuth } from "@/components/AuthProvider";
 import { useGameState } from "@/hooks/useGameState";
 
@@ -16,15 +16,17 @@ export default function GameStatusPanel({
   onNewGame,
 }: GameStatusPanelProps) {
   const { user } = useAuth();
-  const { game } = useGameState();
-  const permissions = getGamePermissions(gameState, game, user?.userId, gameState?.activePlayer);
-  const { role, isMyTurn, isPlayer } = permissions;
+  const { activePlayer, actionType } = useGameState();
+  const userRole = getUserRole(gameState, user?.userId);
+  const { role } = userRole;
+  const isPlayer = role !== null;
+  const currentActivePlayer = activePlayer || gameState?.activePlayer || "white";
+  const isMyTurn = isPlayer && role === currentActivePlayer && !gameState?.gameOver;
   const currentBan = getCurrentBan(gameState.fen);
-  const nextAction = game ? game.nextActionType() : "move";
+  const nextAction = actionType || "move";
   
-  // Get ply and active player info from gameState (server-provided)
+  // Get ply info from gameState (server-provided)
   const ply = gameState?.ply || 0;
-  const activePlayer = gameState?.activePlayer || "unknown";
 
   // Format time control display
   const formatTimeControl = () => {
@@ -77,7 +79,7 @@ export default function GameStatusPanel({
           <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2">
             <div className="text-xs text-blue-400 uppercase">Active</div>
             <div className="text-sm font-bold text-blue-500 capitalize">
-              {activePlayer}
+              {currentActivePlayer}
             </div>
           </div>
         </div>

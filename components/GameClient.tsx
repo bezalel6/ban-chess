@@ -55,8 +55,10 @@ interface GameClientProps {
 export default function GameClient({ gameId }: GameClientProps) {
   const {
     gameState,
-    game,  // NEW: Get BanChess instance
-    dests, // NEW: Get legal moves map
+    game,  // BanChess instance
+    dests, // Legal moves map
+    activePlayer, // From BanChess
+    actionType, // From BanChess  
     error,
     connected,
     sendAction,
@@ -188,6 +190,8 @@ export default function GameClient({ gameId }: GameClientProps) {
               gameState={gameState}
               game={game}
               dests={dests}
+              activePlayer={activePlayer}
+              actionType={actionType}
               onMove={handleMove}
               onBan={handleBan}
             />
@@ -231,6 +235,8 @@ export default function GameClient({ gameId }: GameClientProps) {
           gameState={gameState}
           game={game}
           dests={dests}
+          activePlayer={activePlayer}
+          actionType={actionType}
           onMove={handleMove}
           onBan={handleBan}
         />

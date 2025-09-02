@@ -17,6 +17,8 @@ interface ResizableBoardProps {
   gameState: SimpleGameState;
   game: BanChess | null;
   dests: Map<Square, Square[]>;
+  activePlayer?: "white" | "black";
+  actionType?: "ban" | "move";
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
 }
@@ -25,6 +27,8 @@ const ResizableBoard = memo(function ResizableBoard({
   gameState,
   game,
   dests,
+  activePlayer,
+  actionType,
   onMove,
   onBan,
 }: ResizableBoardProps) {
@@ -259,7 +263,15 @@ const ResizableBoard = memo(function ResizableBoard({
       {/* Board Container with dynamic size and resize handle */}
       <div ref={boardRef} className={containerClassName} style={containerStyle}>
         <ChessBoardErrorBoundary>
-          <ChessBoard gameState={gameState} game={game} dests={dests} onMove={onMove} onBan={onBan} />
+          <ChessBoard 
+            gameState={gameState} 
+            game={game} 
+            dests={dests} 
+            activePlayer={activePlayer}
+            actionType={actionType}
+            onMove={onMove} 
+            onBan={onBan} 
+          />
         </ChessBoardErrorBoundary>
 
         {/* Resize handle - Lichess style corner grip */}

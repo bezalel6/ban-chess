@@ -10,7 +10,7 @@ import type {
 } from "@bezalel6/react-chessground";
 import type { Ban, Move, SimpleGameState, Square } from "@/lib/game-types";
 import { getCurrentBan, parseFEN } from "@/lib/game-types";
-import { getGamePermissions } from "@/lib/game-utils";
+import { getUserRole } from "@/lib/game-utils";
 import { useAuth } from "@/components/AuthProvider";
 import { BanChess } from "ban-chess.ts";
 
@@ -18,6 +18,8 @@ interface ChessBoardProps {
   gameState: SimpleGameState;
   game: BanChess | null;
   dests: Map<Square, Square[]>;
+  activePlayer?: "white" | "black";
+  actionType?: "ban" | "move";
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
 }
@@ -48,13 +50,26 @@ const ChessBoard = memo(function ChessBoard({
   gameState,
   game,
   dests: propDests,
+  activePlayer,
+  actionType,
   onMove,
   onBan,
 }: ChessBoardProps) {
   const { user } = useAuth();
-  // Use activePlayer from gameState if available (from server)
-  const permissions = getGamePermissions(gameState, game, user?.userId, gameState?.activePlayer);
-  const { role, orientation, canMove, canBan, currentAction } = permissions;
+  
+  // Get user role (what color they're playing)
+  const userRole = getUserRole(gameState, user?.userId);
+  const { role, orientation } = userRole;
+  
+  // Get game state from BanChess instance
+  const currentActivePlayer = activePlayer || game?.getActivePlayer() || "white";
+  const currentAction = actionType || game?.getActionType() || "move";
+  
+  // Determine permissions based on BanChess state
+  const isPlayer = role !== null;
+  const isMyTurn = isPlayer && role === currentActivePlayer && !gameState?.gameOver;
+  const canMove = isMyTurn && currentAction === "move";
+  const canBan = isMyTurn && currentAction === "ban";
   const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
     to: string;
@@ -68,21 +83,40 @@ const ChessBoard = memo(function ChessBoard({
 
   // Determine which color pieces can be moved
   const movableColor = useMemo(() => {
-    if (!canMove && !canBan) return undefined;
-    if (role === "spectator") return undefined;
+    // Detailed debugging
+    console.log("[ChessBoard] movableColor calculation:", {
+      canMove,
+      canBan,
+      role,
+      currentAction,
+      isSpectator: role === null,
+      gameOver: gameState?.gameOver,
+    });
     
-    // During ban phase, we select the OPPONENT's pieces to ban their moves
-    if (currentAction === "ban") {
-      // When banning, select the opposite color's pieces
-      const opponentColor = role === "white" ? "black" : "white";
-      console.log("[ChessBoard] Ban phase - player", role, "can select", opponentColor, "pieces to ban");
-      return opponentColor as "white" | "black";
-    } else {
-      // When moving, you select YOUR OWN pieces
-      console.log("[ChessBoard] Move phase - allowing selection of", role, "pieces");
-      return role as "white" | "black";
+    if (!canMove && !canBan) {
+      console.log("[ChessBoard] Cannot move or ban - returning undefined");
+      return undefined;
     }
-  }, [canMove, canBan, role, currentAction]);
+    if (role === null) {
+      console.log("[ChessBoard] Spectator - returning undefined");
+      return undefined;
+    }
+    
+    // During YOUR ban phase, allow selecting both colors
+    // The dests map will restrict to only opponent pieces
+    if (canBan && currentAction === "ban") {
+      console.log("[ChessBoard] ✅ Ban phase - player", role, "can select BOTH colors (dests will restrict to opponent)");
+      return "both";
+    } else if (canMove && currentAction === "move") {
+      // When moving, you select YOUR OWN pieces
+      console.log("[ChessBoard] Move phase - player", role, "can select", role, "pieces");
+      return role as "white" | "black";
+    } else {
+      // Not your turn - no pieces selectable
+      console.log("[ChessBoard] ❌ Not your turn - no pieces selectable");
+      return undefined;
+    }
+  }, [canMove, canBan, role, currentAction, gameState?.gameOver]);
 
   // Extract values - ban from FEN, action from context
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
