@@ -11,9 +11,11 @@ interface PlayerInfoProps {
   isClockActive?: boolean;
   canGiveTime?: boolean;
   onGiveTime?: () => void;
+  rating?: number;
+  isOnline?: boolean;
 }
 
-export default function PlayerInfo({ username, isTurn, clock, isClockActive = false, canGiveTime = false, onGiveTime }: PlayerInfoProps) {
+export default function PlayerInfo({ username, isTurn, clock, isClockActive = false, canGiveTime = false, onGiveTime, rating, isOnline = true }: PlayerInfoProps) {
   const { formattedTime, isLowTime, isCritical } = useGameTimer({
     clock,
     isActive: isClockActive,
@@ -41,27 +43,36 @@ export default function PlayerInfo({ username, isTurn, clock, isClockActive = fa
   };
 
   return (
-    <div className={`p-3 rounded-lg ${isTurn ? 'bg-primary/20' : 'bg-transparent'}`}>
-      <div className="flex items-center justify-between">
-        <span className={`font-semibold text-lg ${isTurn ? 'text-foreground' : 'text-foreground-muted'}`}>
-          {username}
-        </span>
+    <div className="py-2">
+      <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <div className={getClockClassName()}>
-            {clock ? formattedTime : '5:00'}
-          </div>
-          {canGiveTime && onGiveTime && (
-            <button
-              onClick={onGiveTime}
-              className="p-2 rounded-md hover:bg-primary/20 transition-colors group"
-              title="Give 15 seconds to opponent"
-              aria-label="Give time to opponent"
-            >
-              <Plus className="w-4 h-4 text-foreground-muted group-hover:text-primary" />
-            </button>
+          <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
+          <span className={`font-medium text-base ${isTurn ? 'text-white' : 'text-gray-300'}`}>
+            {username}
+          </span>
+          {rating && (
+            <span className="text-sm text-gray-400">
+              {rating}
+            </span>
           )}
         </div>
+        {canGiveTime && onGiveTime && (
+          <button
+            onClick={onGiveTime}
+            className="p-1 rounded bg-blue-600 hover:bg-blue-500 transition-colors"
+            title="Give 15 seconds to opponent"
+            aria-label="Give time to opponent"
+          >
+            <Plus className="w-4 h-4 text-white" />
+          </button>
+        )}
       </div>
+      <div className={getClockClassName()}>
+        {clock ? formattedTime : '5:00'}
+      </div>
+      {isTurn && (
+        <div className="w-full h-0.5 bg-green-500 mt-1 rounded-full"></div>
+      )}
     </div>
   );
 }
