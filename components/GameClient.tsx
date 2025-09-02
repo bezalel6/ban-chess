@@ -110,35 +110,12 @@ export default function GameClient({ gameId }: GameClientProps) {
   }
 
   if (error) {
-    return <ErrorMessage message={error} />;
+    return <ErrorMessage error={error} />;
   }
 
   if (!gameState || gameState.gameId !== gameId) {
-    // Show loading with proper chess board structure to prevent layout shift
-    return (
-      <div className="hidden md:flex h-screen justify-center items-start p-4">
-        <div className="grid grid-cols-[18rem_auto_18rem] gap-4">
-          <div className="max-h-[calc(100vh-2rem)] overflow-y-auto">
-            <div className="game-info">
-              <div className="status">Joining game...</div>
-            </div>
-          </div>
-          <div className="flex justify-center">
-            <div
-              className="chess-board-wrapper"
-              style={{ width: "600px", height: "600px" }}
-            >
-              <div className="chess-board-container flex items-center justify-center">
-                <div className="loading-spinner" />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-center">
-            <div className="text-foreground-muted">Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
+    // Show centered loading message while joining game
+    return <LoadingMessage message="Joining game..." />;
   }
 
   return (
@@ -280,11 +257,60 @@ function LoadingMessage({ message }: { message: string }) {
 }
 
 // Simple error component
-function ErrorMessage({ message }: { message: string }) {
+function ErrorMessage({ error }: { error: { type: string; message: string } }) {
+  let title = "An unexpected error occurred.";
+  let description = error.message;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let actionButton: any = null;
+
+  switch (error.type) {
+    case "network":
+      title = "Connection Error";
+      description = "Could not connect to the game server. Please check your internet connection or try again later.";
+      actionButton = (
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600"
+        >
+          Reload Page
+        </button>
+      );
+      break;
+    case "auth":
+      title = "Authentication Required";
+      description = "You need to be logged in to perform this action. Please refresh the page or log in again.";
+      actionButton = (
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600"
+        >
+          Reload Page
+        </button>
+      );
+      break;
+    case "game":
+      title = "Game Error";
+      description = `There was an issue with the game state: ${error.message}.`;
+      actionButton = (
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-lichess-orange-500 text-white rounded-lg hover:bg-lichess-orange-600"
+        >
+          Start New Game
+        </button>
+      );
+      break;
+    default:
+      // Use default title and description
+      break;
+  }
+
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="text-center text-destructive">
-        <p>Error: {message}</p>
+      <div className="text-center text-destructive p-6 rounded-lg shadow-xl bg-background-secondary">
+        <h2 className="text-xl font-bold mb-2">{title}</h2>
+        <p className="text-base mb-4">{description}</p>
+        {actionButton}
       </div>
     </div>
   );

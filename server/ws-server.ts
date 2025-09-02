@@ -1149,7 +1149,7 @@ wss.on("connection", (ws: WebSocket, request) => {
             return;
           }
 
-          const { gameId, ply: clientPly } = msg;
+          const { gameId } = msg;
           const gameState = await getGameState(gameId);
 
           if (!gameState) {
@@ -1165,28 +1165,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
 
-          const game = new BanChess(gameState.fen);
-          const serverPly = game.getPly();
-
-          if (clientPly !== undefined && clientPly < serverPly) {
-            const history = await getActionHistory(gameId);
-            const missingActions = history.slice(clientPly);
-            ws.send(JSON.stringify({
-              type: "actions-since",
-              gameId,
-              actions: missingActions,
-            } as SimpleServerMsg));
-            console.log(`Player ${currentPlayer.username} synced with ${missingActions.length} actions`);
-          } else if (clientPly === serverPly) {
-            ws.send(JSON.stringify({
-              type: "sync-complete",
-              gameId,
-            } as SimpleServerMsg));
-            console.log(`Player ${currentPlayer.username} is already in sync`);
-          } else {
-            await sendFullGameState(gameId, ws);
-            console.log(`Player ${currentPlayer.username} joined game ${gameId}, sent full state`);
-          }
+          // Always send full state when joining a game
+          // The client will use this to initialize or verify its state
+          await sendFullGameState(gameId, ws);
+          console.log(`Player ${currentPlayer.username} joined game ${gameId}, sent full state`);
           break;
         }
 
