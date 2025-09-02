@@ -468,11 +468,19 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
 
+  // Get game state using new clean APIs (moved up to use for game over check)
+  const fen = game.fen();
+  const ply = game.getPly();
+  const activePlayer = game.getActivePlayer();
+  const actionType = game.getActionType();
+  const legalActions = game.getLegalActions();
+
   // Check for immediate checkmate when sending state
-  const isGameOver = checkForImmediateCheckmate(game);
+  // IMPORTANT: Also check if there are no legal actions available (which means game over)
+  const isGameOver = checkForImmediateCheckmate(game) || legalActions.length === 0;
   const isCheckmate =
-    game.inCheckmate() || (game.inCheck() && game.legalMoves().length === 0);
-  const isStalemate = game.inStalemate();
+    game.inCheckmate() || (game.inCheck() && legalActions.length === 0);
+  const isStalemate = game.inStalemate() || (!game.inCheck() && legalActions.length === 0);
 
   if (isGameOver && !gameState.gameOver) {
     // Game just ended due to immediate checkmate detection
@@ -491,13 +499,6 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     await saveGameState(gameId, gameState);
   }
 
-  // Get game state using new clean APIs
-  const fen = game.fen();
-  const ply = game.getPly();
-  const activePlayer = game.getActivePlayer();
-  const actionType = game.getActionType();
-  const legalActions = game.getLegalActions();
-  
   console.log(`[sendFullGameState] FEN: ${fen}`);
   console.log(`[sendFullGameState] Ply: ${ply}, Active player: ${activePlayer}, Action type: ${actionType}, Legal actions count: ${legalActions.length}`);
   
@@ -604,20 +605,28 @@ async function broadcastGameState(gameId: string) {
   // Create game instance from FEN
   const game = new BanChess(gameState.fen);
 
+  // Get game state using new clean APIs (moved up to avoid duplicate declaration)
+  const fen = game.fen();
+  const ply = game.getPly();
+  const activePlayer = game.getActivePlayer();
+  const actionType = game.getActionType();
+  const legalActions = game.getLegalActions();
+  
   // Check for both immediate checkmate and standard game over conditions
-  const isGameOver = checkForImmediateCheckmate(game);
+  // IMPORTANT: Also check if there are no legal actions available (which means game over)
+  const isGameOver = checkForImmediateCheckmate(game) || legalActions.length === 0;
   const isCheckmate =
-    game.inCheckmate() || (game.inCheck() && game.legalMoves().length === 0);
-  const isStalemate = game.inStalemate();
+    game.inCheckmate() || (game.inCheck() && legalActions.length === 0);
+  const isStalemate = game.inStalemate() || (!game.inCheck() && legalActions.length === 0);
 
   if (isGameOver) {
     console.log(
-      `[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}`,
+      `[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}, Legal actions: ${legalActions.length}`,
     );
 
     // Determine the winner based on who is in checkmate
     let result: string;
-    if (isCheckmate || (game.inCheck() && game.legalMoves().length === 0)) {
+    if (isCheckmate || (game.inCheck() && legalActions.length === 0)) {
       // The player whose turn it is to act (ban or move) is in checkmate
       const loser = game.turn;
       result = `${loser === "white" ? "Black" : "White"} wins by checkmate!`;
@@ -632,13 +641,6 @@ async function broadcastGameState(gameId: string) {
     gameState.pgn = game.pgn(); // Store final PGN
     await saveGameState(gameId, gameState);
   }
-
-  // Get game state using new clean APIs
-  const fen = game.fen();
-  const ply = game.getPly();
-  const activePlayer = game.getActivePlayer();
-  const actionType = game.getActionType();
-  const legalActions = game.getLegalActions();
 
   console.log(`[broadcastGameState] FEN: ${fen}`);
   console.log(
