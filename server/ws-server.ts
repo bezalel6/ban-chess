@@ -165,7 +165,6 @@ async function handleGameChannelMessage(gameId: string, data: SimpleServerMsg) {
 interface GameStateWithPlayers {
   whitePlayerId?: string;
   blackPlayerId?: string;
-  isSoloGame?: boolean;
 }
 
 async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
@@ -200,16 +199,6 @@ async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
         id: gameState.blackPlayerId,
         username: session.username,
       };
-      // For solo games, both players are the same
-      if (
-        gameState.isSoloGame &&
-        gameState.whitePlayerId === gameState.blackPlayerId
-      ) {
-        players.white = {
-          id: gameState.whitePlayerId,
-          username: session.username,
-        };
-      }
     }
   }
 
@@ -264,7 +253,6 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     fen: gameState.fen,
     gameId,
     players: await getPlayerInfo(gameState),
-    isSoloGame: gameState.isSoloGame,
     gameOver: true,
     result: gameState.result,
     history: game.history() as HistoryEntry[],
@@ -307,7 +295,6 @@ async function restoreTimeManager(
     result?: string;
     startTime: number;
     fen: string;
-    isSoloGame?: boolean;
   },
 ) {
   // Only restore if game has time control and is not over
@@ -342,16 +329,13 @@ async function restoreTimeManager(
   const banState = fenParts[6];
   const isNextActionBan = banState && banState.includes(":ban");
 
-  let currentPlayer: "white" | "black";
-  if (gameState.isSoloGame) {
-    if (isNextActionBan) {
-      currentPlayer = chessTurn === "white" ? "black" : "white";
-    } else {
-      currentPlayer = chessTurn;
-    }
-  } else {
-    currentPlayer = chessTurn;
-  }
+  // For ban phase, the banning player is the opposite of current turn
+  // For move phase, it's the current turn player
+  const currentPlayer: "white" | "black" = isNextActionBan
+    ? chessTurn === "white"
+      ? "black"
+      : "white"
+    : chessTurn;
 
   // Start the timer for the current player
   timeManager.start(currentPlayer);
@@ -399,7 +383,6 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
   // Get legal moves/bans from the game
   const fen = game.fen();
   const fenParts = fen.split(" ");
-  const chessTurn = fenParts[1] === "w" ? "white" : "black";
   const banState = fenParts[6];
   const isNextActionBan = banState && banState.includes(":ban");
 
@@ -419,16 +402,6 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
       return null;
     })
     .filter((action): action is string => action !== null);
-
-  // For solo games, determine the acting player
-  let actingPlayer: "white" | "black" = chessTurn;
-  if (gameState.isSoloGame) {
-    if (isNextActionBan) {
-      actingPlayer = chessTurn === "white" ? "black" : "white";
-    } else {
-      actingPlayer = chessTurn;
-    }
-  }
 
   const timeManager = timeManagers.get(gameId);
   const isInCheck = game.inCheck();
@@ -456,14 +429,11 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     fen: fen,
     gameId,
     players: await getPlayerInfo(gameState),
-    isSoloGame: gameState.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? "ban" : "move",
     inCheck: isInCheck,
     history, // Include full history from Redis for new joiners
     events: recentEvents, // Include recent events
-    // For solo games, include playerColor to indicate who's acting
-    ...(gameState.isSoloGame && { playerColor: actingPlayer }),
     ...(gameState.gameOver && {
       gameOver: true,
       result: gameState.result,
@@ -585,19 +555,16 @@ async function broadcastGameState(gameId: string) {
     })
     .filter((action): action is string => action !== null);
 
-  // For solo games, determine the acting player
-  let actingPlayer: "white" | "black" = chessTurn;
-  if (gameState.isSoloGame) {
-    if (isNextActionBan) {
-      actingPlayer = chessTurn === "white" ? "black" : "white";
-    } else {
-      actingPlayer = chessTurn;
-    }
-  }
+  // Determine the acting player
+  // For ban phase, the banning player is the opposite of current turn
+  // For move phase, it's the current turn player
+  const actingPlayer: "white" | "black" = isNextActionBan
+    ? chessTurn === "white"
+      ? "black"
+      : "white"
+    : chessTurn;
 
-  console.log(
-    `[broadcastGameState] Acting player: ${actingPlayer} (solo: ${gameState.isSoloGame})`,
-  );
+  console.log(`[broadcastGameState] Acting player: ${actingPlayer}`);
 
   // Check if the current player is in check
   const isInCheck = game.inCheck();
@@ -637,7 +604,6 @@ async function broadcastGameState(gameId: string) {
     fen: fen,
     gameId,
     players: await getPlayerInfo(gameState),
-    isSoloGame: gameState.isSoloGame,
     legalActions: simpleLegalActions,
     nextAction: isNextActionBan ? "ban" : "move",
     inCheck: isInCheck,
@@ -654,7 +620,6 @@ async function broadcastGameState(gameId: string) {
           : undefined,
       moveNumber: Math.floor(storedActions.length / 2) + 1,
     },
-    // Note: playerColor is added per-player in the broadcast loop
     ...(isGameOver && {
       gameOver: true,
       result: gameState.result,
@@ -684,10 +649,7 @@ async function broadcastGameState(gameId: string) {
 
   connectedPlayers.forEach((player) => {
     if (player.ws.readyState === WebSocket.OPEN) {
-      // For solo games, include playerColor to indicate who's acting
-      const msgToSend = gameState.isSoloGame
-        ? { ...stateMsg, playerColor: actingPlayer }
-        : stateMsg;
+      const msgToSend = stateMsg;
 
       player.ws.send(JSON.stringify(msgToSend));
       console.log(
@@ -716,7 +678,6 @@ async function matchPlayers() {
     pgn: game.pgn(), // Initialize with empty PGN
     whitePlayerId: player1.userId,
     blackPlayerId: player2.userId,
-    isSoloGame: false,
     timeControl,
     startTime: Date.now(),
   });
@@ -999,21 +960,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               let color: "white" | "black" =
                 gameState.whitePlayerId === userId ? "white" : "black";
 
-              // For solo games, determine the acting player
-              if (gameState.isSoloGame) {
-                const game = new BanChess(gameState.fen);
-                const fen = game.fen();
-                const fenParts = fen.split(" ");
-                const chessTurn = fenParts[1] === "w" ? "white" : "black";
-                const banState = fenParts[6];
-                const isNextActionBan = banState && banState.includes(":ban");
-
-                if (isNextActionBan) {
-                  color = chessTurn === "white" ? "black" : "white";
-                } else {
-                  color = chessTurn;
-                }
-              }
+              // Note: color already correctly set based on game state
 
               ws.send(
                 JSON.stringify({
@@ -1021,7 +968,6 @@ wss.on("connection", (ws: WebSocket, request) => {
                   gameId,
                   color,
                   players: await getPlayerInfo(gameState),
-                  isSoloGame: gameState.isSoloGame,
                 } as SimpleServerMsg),
               );
 
@@ -1058,7 +1004,6 @@ wss.on("connection", (ws: WebSocket, request) => {
             pgn: game.pgn(), // Initialize with empty PGN
             whitePlayerId: currentPlayer.userId,
             blackPlayerId: currentPlayer.userId,
-            isSoloGame: true,
             timeControl,
             startTime: Date.now(),
           });
@@ -1082,7 +1027,7 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           ws.send(
             JSON.stringify({
-              type: "solo-game-created",
+              type: "game-created",
               gameId,
               timeControl,
             } as SimpleServerMsg),
@@ -1198,16 +1143,13 @@ wss.on("connection", (ws: WebSocket, request) => {
               const isNextActionBan = banState && banState.includes(":ban");
 
               // Determine who acts next
-              let nextPlayer: "white" | "black";
-              if (gameState.isSoloGame) {
-                if (isNextActionBan) {
-                  nextPlayer = chessTurn === "white" ? "black" : "white";
-                } else {
-                  nextPlayer = chessTurn;
-                }
-              } else {
-                nextPlayer = chessTurn;
-              }
+              // For ban phase, the banning player is the opposite of current turn
+              // For move phase, it's the current turn player
+              const nextPlayer: "white" | "black" = isNextActionBan
+                ? chessTurn === "white"
+                  ? "black"
+                  : "white"
+                : chessTurn;
 
               timeManager.switchPlayer(nextPlayer);
             }
@@ -1313,12 +1255,12 @@ wss.on("connection", (ws: WebSocket, request) => {
             return;
           }
 
-          // Disable give-time for solo games - doesn't make sense when playing against yourself
-          if (gameState.isSoloGame) {
+          // Disable give-time if player is playing against themselves
+          if (gameState.whitePlayerId === gameState.blackPlayerId) {
             ws.send(
               JSON.stringify({
                 type: "error",
-                message: "Cannot give time in solo games",
+                message: "Cannot give time when playing both sides",
               } as SimpleServerMsg),
             );
             return;

@@ -81,13 +81,18 @@ export function GameRoleProvider({
     const isPlayer = role !== "spectator";
     const isSpectator = role === "spectator";
     const isMyTurn = isPlayer && role === currentTurn && !gameState.gameOver;
-    const canMove =
-      isMyTurn && gameState.legalActions && gameState.legalActions.length > 0;
+    const canMove = Boolean(
+      isMyTurn &&
+        gameState.legalActions !== undefined &&
+        gameState.legalActions.length > 0,
+    );
     const canInteract = isPlayer && !gameState.gameOver;
 
     // Determine board orientation
     // Players see from their color's perspective, spectators see from white's perspective
-    const orientation: Orientation = isSpectator ? "white" : role;
+    const orientation: Orientation = isSpectator
+      ? "white"
+      : (role as Orientation);
 
     return {
       role,

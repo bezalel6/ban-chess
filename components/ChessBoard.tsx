@@ -2,21 +2,20 @@
 
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import { useState, memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import type {
-  ReactChessGroundProps,
-  Key,
   Dests,
+  Key,
+  ReactChessGroundProps,
 } from "@bezalel6/react-chessground";
-import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
-import { parseFEN, getCurrentBan } from "@/lib/game-types";
-import { useAuth } from "@/components/AuthProvider";
+import type { Ban, Move, SimpleGameState } from "@/lib/game-types";
+import { getCurrentBan, parseFEN } from "@/lib/game-types";
+import { useGameRole } from "@/contexts/GameRoleContext";
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
-  playerColor?: "white" | "black"; // Optional override for solo games
 }
 
 // Helper function to get piece at a square from FEN position
@@ -45,44 +44,12 @@ const ChessBoard = memo(function ChessBoard({
   gameState,
   onMove,
   onBan,
-  playerColor: overridePlayerColor,
 }: ChessBoardProps) {
-  const { user } = useAuth();
+  const { role, orientation, canMove } = useGameRole();
   const [_promotionMove, _setPromotionMove] = useState<{
     from: string;
     to: string;
   } | null>(null);
-
-  // Determine the player's role based on their user ID
-  const playerRole = useMemo(() => {
-    if (!user?.userId) return "spectator";
-    if (!gameState?.players) return "spectator";
-
-    // Check if user is white player
-    if (gameState.players.white?.id === user.userId) {
-      return "white";
-    }
-
-    // Check if user is black player
-    if (gameState.players.black?.id === user.userId) {
-      return "black";
-    }
-
-    // Otherwise, user is a spectator
-    return "spectator";
-  }, [user?.userId, gameState?.players]);
-
-  // Determine the actual player color to use
-  // For solo games, use the override (which comes from server)
-  // For multiplayer, use the determined role
-  const playerColor = useMemo(() => {
-    if (!gameState) return "white";
-    if (gameState.isSoloGame) {
-      return overridePlayerColor || "white";
-    }
-    // For multiplayer, return the player's actual color or default to white for spectators
-    return playerRole === "spectator" ? "white" : playerRole;
-  }, [gameState, overridePlayerColor, playerRole]);
 
   // Parse FEN data
   const fenData = useMemo(() => {
@@ -90,53 +57,14 @@ const ChessBoard = memo(function ChessBoard({
     return parseFEN(gameState.fen);
   }, [gameState?.fen]);
 
-  // Determine board orientation
-  // Solo games: Show the perspective of the current turn
-  // Multiplayer: Show the player's fixed color (or white for spectators)
-  const orientation = useMemo(() => {
-    if (!fenData) return playerColor;
-    if (gameState?.isSoloGame) {
-      // In solo games, board flips to show current player's perspective
-      return fenData.turn;
-    }
-    // In multiplayer, board is fixed to player's color
-    return playerColor;
-  }, [gameState?.isSoloGame, fenData, playerColor]);
-
-  // Determine if this player can make moves
-  const canMove = useMemo(() => {
-    if (!gameState || !fenData) return false;
-
-    // Game must not be over
-    if (gameState.gameOver) return false;
-
-    // Must have legal actions available
-    if (!gameState.legalActions || gameState.legalActions.length === 0)
-      return false;
-
-    // In solo games, player can always move
-    if (gameState.isSoloGame) return true;
-
-    // In multiplayer, only the player whose turn it is can move
-    // Spectators cannot move
-    if (playerRole === "spectator") return false;
-
-    // Check if it's this player's turn
-    return fenData.turn === playerRole;
-  }, [gameState, fenData, playerRole]);
-
   // Determine which color pieces can be moved
   const movableColor = useMemo(() => {
     if (!canMove) return undefined;
 
-    // In solo games, player can move both colors
-    if (gameState?.isSoloGame) return "both";
-
-    // In multiplayer, only move pieces of player's color when it's their turn
-    return playerRole === "spectator"
-      ? undefined
-      : (playerRole as "white" | "black");
-  }, [canMove, gameState?.isSoloGame, playerRole]);
+    // Role determines what pieces can be moved
+    if (role === "spectator") return undefined;
+    return role as "white" | "black";
+  }, [canMove, role]);
 
   // Safety check: If gameState or fenData is invalid, return a placeholder
   if (!gameState || !gameState.fen || !fenData) {
@@ -170,16 +98,13 @@ const ChessBoard = memo(function ChessBoard({
 
   // Debug logging
   console.log("[ChessBoard] State:", {
-    userId: user?.userId,
-    playerRole,
+    role,
     turn: fenData.turn,
     nextAction,
     orientation,
     movableColor,
     canMove,
     legalActionCount: gameState.legalActions?.length || 0,
-    isSoloGame: gameState.isSoloGame,
-    playerColor,
     players: gameState.players,
     currentBan,
     banState: fenData.banState,

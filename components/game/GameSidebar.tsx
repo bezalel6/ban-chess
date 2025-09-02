@@ -2,6 +2,7 @@
 
 import type { SimpleGameState, GameEvent } from "@/lib/game-types";
 import { parseFEN, getNextAction, getWhoBans } from "@/lib/game-types";
+import { useGameRole } from "@/contexts/GameRoleContext";
 import PlayerInfo from "./PlayerInfo";
 import MoveList from "./MoveList";
 import GameEventLog from "./GameEventLog";
@@ -10,15 +11,14 @@ interface GameSidebarProps {
   gameState: SimpleGameState;
   gameEvents?: GameEvent[];
   onGiveTime?: () => void;
-  playerColor?: "white" | "black";
 }
 
 export default function GameSidebar({
   gameState,
   gameEvents = [],
   onGiveTime,
-  playerColor,
 }: GameSidebarProps) {
+  const { role, orientation, isPlayer } = useGameRole();
   const { turn } = parseFEN(gameState.fen);
   const nextAction = getNextAction(gameState.fen);
   const whoBans = getWhoBans(gameState.fen);
@@ -36,16 +36,14 @@ export default function GameSidebar({
     activeColor = turn;
   }
 
-  // For solo games, always show who is actively making decisions
-  if (gameState.isSoloGame && gameState.playerColor) {
-    activeColor = gameState.playerColor;
-  }
+  // For players, show active color based on the game state
+  // For spectators, default behavior applies
 
   const isWhiteActive = activeColor === "white" && !gameState.gameOver;
   const isBlackActive = activeColor === "black" && !gameState.gameOver;
 
-  // Determine who is top and bottom based on player color
-  const playerIsWhite = gameState.playerColor === "white";
+  // Determine who is top and bottom based on board orientation
+  const playerIsWhite = orientation === "white";
   const topPlayer = playerIsWhite ? blackPlayer : whitePlayer;
   const bottomPlayer = playerIsWhite ? whitePlayer : blackPlayer;
   const isTopActive = playerIsWhite ? isBlackActive : isWhiteActive;
@@ -59,15 +57,15 @@ export default function GameSidebar({
     ? gameState.clocks?.white
     : gameState.clocks?.black;
 
-  // Determine if player can give time (only to opponent, only if they're playing, never in solo games)
+  // Determine if player can give time (only to opponent, only if they're playing)
   const canGiveTimeToTop =
-    !gameState.isSoloGame &&
-    ((playerColor === "white" && !playerIsWhite) ||
-      (playerColor === "black" && playerIsWhite));
+    isPlayer &&
+    ((role === "white" && !playerIsWhite) ||
+      (role === "black" && playerIsWhite));
   const canGiveTimeToBottom =
-    !gameState.isSoloGame &&
-    ((playerColor === "white" && playerIsWhite) ||
-      (playerColor === "black" && !playerIsWhite));
+    isPlayer &&
+    ((role === "white" && playerIsWhite) ||
+      (role === "black" && !playerIsWhite));
 
   return (
     <div className="bg-background-secondary rounded-lg p-4 flex flex-col shadow-lg h-fit">

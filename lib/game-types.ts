@@ -83,8 +83,6 @@ export interface SimpleGameState {
     white?: { id: string; username: string };
     black?: { id: string; username: string };
   };
-  playerColor?: "white" | "black"; // Which color this client is playing (for solo games)
-  isSoloGame?: boolean;
   legalActions?: string[]; // Legal moves/bans from server
   nextAction?: "move" | "ban"; // What action is next
   gameOver?: boolean;
@@ -109,10 +107,8 @@ export type SimpleServerMsg =
         white?: { id: string; username: string };
         black?: { id: string; username: string };
       };
-      isSoloGame?: boolean;
       legalActions?: string[];
       nextAction?: "move" | "ban";
-      playerColor?: "white" | "black";
       gameOver?: boolean;
       result?: string;
       inCheck?: boolean;
@@ -133,7 +129,6 @@ export type SimpleServerMsg =
         white?: { id: string; username: string };
         black?: { id: string; username: string };
       };
-      isSoloGame?: boolean;
       timeControl?: TimeControl;
     }
   | { type: "authenticated"; userId: string; username: string }
@@ -146,7 +141,7 @@ export type SimpleServerMsg =
       timeControl?: TimeControl;
     }
   | { type: "error"; message: string }
-  | { type: "solo-game-created"; gameId: string; timeControl?: TimeControl }
+  | { type: "game-created"; gameId: string; timeControl?: TimeControl }
   | {
       type: "clock-update";
       gameId: string;

@@ -1,22 +1,27 @@
-'use client';
+"use client";
 
-import React, { useState, useCallback, useEffect, useRef, memo, useMemo } from 'react';
-import ChessBoard from '../ChessBoard';
-import ChessBoardErrorBoundary from '../ChessBoardWrapper';
-import type { SimpleGameState, Move, Ban } from '@/lib/game-types';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  memo,
+  useMemo,
+} from "react";
+import ChessBoard from "../ChessBoard";
+import ChessBoardErrorBoundary from "../ChessBoardWrapper";
+import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
 
 interface ResizableBoardProps {
   gameState: SimpleGameState;
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
-  playerColor?: "white" | "black";
 }
 
 const ResizableBoard = memo(function ResizableBoard({
   gameState,
   onMove,
   onBan,
-  playerColor = "white",
 }: ResizableBoardProps) {
   // Default board size in pixels - use multiples of 8 for perfect square alignment
   const MIN_SIZE = 400;
@@ -24,7 +29,7 @@ const ResizableBoard = memo(function ResizableBoard({
   const DEFAULT_SIZE = 600;
   const PADDING = 32; // Total padding in chess-board-outer (16px each side)
   const GRID_SIZE = 8; // Grid alignment for smooth resizing
-  
+
   // Helper to ensure the INNER board (after padding) is divisible by 8
   const roundToGrid = useCallback((size: number) => {
     // Calculate what the inner size would be
@@ -34,11 +39,11 @@ const ResizableBoard = memo(function ResizableBoard({
     // Add padding back to get the total size
     return roundedInner + PADDING;
   }, []);
-  
+
   const [boardSize, setBoardSize] = useState(() => {
     // Load saved size from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('boardSize');
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("boardSize");
       const size = saved ? parseInt(saved, 10) : DEFAULT_SIZE;
       return roundToGrid(size);
     }
@@ -61,52 +66,61 @@ const ResizableBoard = memo(function ResizableBoard({
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = window.setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('boardSize', size.toString());
+      if (typeof window !== "undefined") {
+        localStorage.setItem("boardSize", size.toString());
       }
     }, 300); // Save after 300ms of no changes
   }, []);
 
   // Throttled resize handler for smooth performance
-  const handleResize = useCallback((newSize: number) => {
-    // Clamp size to valid range
-    const clampedSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, newSize));
-    const gridAlignedSize = roundToGrid(clampedSize);
-    
-    // Update visual size immediately for smooth feedback (no throttling)
-    setVisualSize(gridAlignedSize);
-    
-    // Throttle actual board updates to prevent excessive re-renders
-    if (throttleRef.current) {
-      clearTimeout(throttleRef.current);
-    }
-    
-    throttleRef.current = window.setTimeout(() => {
-      setBoardSize(gridAlignedSize);
-      debouncedSave(gridAlignedSize);
-    }, 16); // ~60fps throttling for board updates
-  }, [roundToGrid, debouncedSave]);
+  const handleResize = useCallback(
+    (newSize: number) => {
+      // Clamp size to valid range
+      const clampedSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, newSize));
+      const gridAlignedSize = roundToGrid(clampedSize);
+
+      // Update visual size immediately for smooth feedback (no throttling)
+      setVisualSize(gridAlignedSize);
+
+      // Throttle actual board updates to prevent excessive re-renders
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
+      }
+
+      throttleRef.current = window.setTimeout(() => {
+        setBoardSize(gridAlignedSize);
+        debouncedSave(gridAlignedSize);
+      }, 16); // ~60fps throttling for board updates
+    },
+    [roundToGrid, debouncedSave],
+  );
 
   // Handle mouse down on resize handle
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-    startSizeRef.current = boardSize;
-    startPosRef.current = { x: e.clientX, y: e.clientY };
-    
-    // Add cursor style to body during resize
-    document.body.style.cursor = 'nwse-resize';
-  }, [boardSize]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
+      startSizeRef.current = boardSize;
+      startPosRef.current = { x: e.clientX, y: e.clientY };
+
+      // Add cursor style to body during resize
+      document.body.style.cursor = "nwse-resize";
+    },
+    [boardSize],
+  );
 
   // Handle touch start for mobile devices
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    startSizeRef.current = boardSize;
-    const touch = e.touches[0];
-    startPosRef.current = { x: touch.clientX, y: touch.clientY };
-  }, [boardSize]);
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+      startSizeRef.current = boardSize;
+      const touch = e.touches[0];
+      startPosRef.current = { x: touch.clientX, y: touch.clientY };
+    },
+    [boardSize],
+  );
 
   // Handle mouse/touch move for resizing
   useEffect(() => {
@@ -134,22 +148,22 @@ const ResizableBoard = memo(function ResizableBoard({
     const handleEnd = () => {
       setIsResizing(false);
       // Restore cursor
-      document.body.style.cursor = '';
+      document.body.style.cursor = "";
       // Ensure visual size matches actual size
       setVisualSize(boardSize);
-      
+
       // Force chessground to recalculate piece positions after resize
       // This prevents pieces from drifting off-center
       requestAnimationFrame(() => {
-        const cgWrap = boardRef.current?.querySelector('.cg-wrap');
+        const cgWrap = boardRef.current?.querySelector(".cg-wrap");
         if (cgWrap) {
           // Trigger a reflow to force position recalculation
-          const board = cgWrap.querySelector('.cg-board');
+          const board = cgWrap.querySelector(".cg-board");
           if (board) {
             // Force a layout recalculation
-            (board as HTMLElement).style.display = 'none';
+            (board as HTMLElement).style.display = "none";
             (board as HTMLElement).offsetHeight; // Trigger reflow
-            (board as HTMLElement).style.display = '';
+            (board as HTMLElement).style.display = "";
           }
         }
       });
@@ -157,35 +171,35 @@ const ResizableBoard = memo(function ResizableBoard({
 
     // Add event listeners with passive: false for better performance
     const options = { passive: false };
-    document.addEventListener('mousemove', handleMouseMove, options);
-    document.addEventListener('mouseup', handleEnd, options);
-    document.addEventListener('touchmove', handleTouchMove, options);
-    document.addEventListener('touchend', handleEnd, options);
+    document.addEventListener("mousemove", handleMouseMove, options);
+    document.addEventListener("mouseup", handleEnd, options);
+    document.addEventListener("touchmove", handleTouchMove, options);
+    document.addEventListener("touchend", handleEnd, options);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleEnd);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleEnd);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleEnd);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleEnd);
       // Restore cursor on cleanup
-      document.body.style.cursor = '';
+      document.body.style.cursor = "";
     };
   }, [isResizing, handleResize, boardSize]);
 
   // Add resize observer to fix piece positions when board size changes
   useEffect(() => {
     if (!boardRef.current) return;
-    
+
     const resizeObserver = new ResizeObserver(() => {
       // Fix piece positions after any size change
       requestAnimationFrame(() => {
-        const pieces = boardRef.current?.querySelectorAll('.cg-board piece');
+        const pieces = boardRef.current?.querySelectorAll(".cg-board piece");
         if (pieces && pieces.length > 0) {
           // Force pieces to recenter by triggering a minor style update
           pieces.forEach((piece) => {
             const el = piece as HTMLElement;
             const currentTransform = el.style.transform;
-            el.style.transform = 'translateZ(0)';
+            el.style.transform = "translateZ(0)";
             requestAnimationFrame(() => {
               el.style.transform = currentTransform;
             });
@@ -193,9 +207,9 @@ const ResizableBoard = memo(function ResizableBoard({
         }
       });
     });
-    
+
     resizeObserver.observe(boardRef.current);
-    
+
     return () => {
       resizeObserver.disconnect();
     };
@@ -206,7 +220,7 @@ const ResizableBoard = memo(function ResizableBoard({
     const saveTimeout = saveTimeoutRef.current;
     const rafId = rafRef.current;
     const throttleId = throttleRef.current;
-    
+
     return () => {
       if (saveTimeout) {
         clearTimeout(saveTimeout);
@@ -221,49 +235,55 @@ const ResizableBoard = memo(function ResizableBoard({
   }, []);
 
   // Memoize container style to prevent unnecessary recalculations
-  const containerStyle = useMemo(() => ({
-    width: `${isResizing ? visualSize : boardSize}px`,
-    height: `${isResizing ? visualSize : boardSize}px`,
-  }), [isResizing, visualSize, boardSize]);
+  const containerStyle = useMemo(
+    () => ({
+      width: `${isResizing ? visualSize : boardSize}px`,
+      height: `${isResizing ? visualSize : boardSize}px`,
+    }),
+    [isResizing, visualSize, boardSize],
+  );
 
   // Memoize container className for performance
-  const containerClassName = useMemo(() => 
-    `resizable-board-container ${isResizing ? 'resizing' : ''}`,
-    [isResizing]
+  const containerClassName = useMemo(
+    () => `resizable-board-container ${isResizing ? "resizing" : ""}`,
+    [isResizing],
   );
 
   return (
     <div className="flex flex-col items-center gap-4">
       {/* Board Container with dynamic size and resize handle */}
-      <div 
-        ref={boardRef}
-        className={containerClassName}
-        style={containerStyle}
-      >
+      <div ref={boardRef} className={containerClassName} style={containerStyle}>
         <ChessBoardErrorBoundary>
-          <ChessBoard
-            gameState={gameState}
-            onMove={onMove}
-            onBan={onBan}
-            playerColor={playerColor}
-          />
+          <ChessBoard gameState={gameState} onMove={onMove} onBan={onBan} />
         </ChessBoardErrorBoundary>
-        
+
         {/* Resize handle - Lichess style corner grip */}
         <div
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           className={`resize-handle absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize
-                     ${isResizing ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+                     ${isResizing ? "opacity-100" : "opacity-60 hover:opacity-100"}`}
           style={{
             background: `linear-gradient(135deg, transparent 40%, rgba(255, 140, 0, 0.5) 40%, rgba(255, 140, 0, 0.5) 60%, transparent 60%),
-                        linear-gradient(135deg, transparent 65%, rgba(255, 140, 0, 0.5) 65%, rgba(255, 140, 0, 0.5) 85%, transparent 85%)`
+                        linear-gradient(135deg, transparent 65%, rgba(255, 140, 0, 0.5) 65%, rgba(255, 140, 0, 0.5) 85%, transparent 85%)`,
           }}
         >
           {/* Visual indicator */}
           <div className="absolute bottom-1 right-1">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-lichess-orange-500">
-              <path d="M1 11L11 1M6 11L11 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.7"/>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              className="text-lichess-orange-500"
+            >
+              <path
+                d="M1 11L11 1M6 11L11 6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.7"
+              />
             </svg>
           </div>
         </div>

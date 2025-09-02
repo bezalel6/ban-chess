@@ -1,81 +1,103 @@
-import type { SimpleGameState } from '@/lib/game-types';
-import { parseFEN } from '@/lib/game-types';
+import type { SimpleGameState } from "@/lib/game-types";
+import { parseFEN } from "@/lib/game-types";
+import { useAuth } from "@/components/AuthProvider";
 
 interface GameStatusProps {
   gameState: SimpleGameState;
 }
 
 export default function GameStatus({ gameState }: GameStatusProps) {
+  const { user } = useAuth();
   const { turn } = parseFEN(gameState.fen);
-  
+
+  // Determine player's role
+  const getPlayerRole = (): "spectator" | "white" | "black" => {
+    if (!user?.userId) return "spectator";
+    if (gameState.players.white?.id === user.userId) return "white";
+    if (gameState.players.black?.id === user.userId) return "black";
+    return "spectator";
+  };
+
+  const playerRole = getPlayerRole();
+  const isPlayer = playerRole !== "spectator";
+  const isMyTurn = isPlayer && turn === playerRole;
+
   const getStatusText = () => {
-    const isMyTurn = gameState.isSoloGame || turn === gameState.playerColor;
     const actionType = gameState.nextAction;
 
-    if (!gameState.playerColor && !gameState.isSoloGame) {
-      return "Spectating";
-    }
-    
-    // Check for game over states
+    // Check for game over states first
     if (gameState.gameOver) {
-      if (gameState.result?.includes('checkmate')) {
-        const winner = gameState.result.includes('White') ? 'white' : 'black';
-        const didIWin = winner === gameState.playerColor;
-        if (gameState.isSoloGame) {
-          return `🎉 Checkmate! ${winner === 'white' ? 'White' : 'Black'} wins!`;
+      if (gameState.result?.includes("checkmate")) {
+        const winner = gameState.result.includes("White") ? "white" : "black";
+        if (playerRole === "spectator") {
+          return `🎉 Checkmate! ${winner === "white" ? "White" : "Black"} wins!`;
         }
+        const didIWin = winner === playerRole;
         return didIWin ? "🎉 Checkmate! You won!" : "💀 Checkmate! You lost.";
       }
-      if (gameState.result?.includes('stalemate')) {
+      if (gameState.result?.includes("stalemate")) {
         return "🤝 Stalemate - It's a draw!";
       }
-      if (gameState.result?.includes('draw')) {
+      if (gameState.result?.includes("draw")) {
         return "🤝 Game drawn";
       }
       return gameState.result || "Game Over";
     }
-    
-    if (gameState.isSoloGame) {
-      const color = turn === 'white' ? 'White' : 'Black';
+
+    // Handle spectators
+    if (playerRole === "spectator") {
+      const color = turn === "white" ? "White" : "Black";
       if (actionType === "ban") {
-        return `Playing as ${color}: Ban one of ${
+        return `${color} to ban one of ${
           turn === "white" ? "Black" : "White"
         }'s moves`;
       } else {
-        return `Playing as ${color}: Make a move`;
+        return `${color} to move`;
       }
     }
 
-    // Game is still playing
+    // Handle players (game is still playing)
     if (actionType === "ban") {
       if (isMyTurn) {
         return `Your turn: Ban one of ${
           turn === "white" ? "Black" : "White"
         }'s moves`;
       } else {
-        return `Waiting for ${turn} to ban a move`;
+        const playerName =
+          turn === "white"
+            ? gameState.players.white?.username || "White"
+            : gameState.players.black?.username || "Black";
+        return `Waiting for ${playerName} to ban a move`;
       }
     } else {
       if (isMyTurn) {
         return "Your turn: Make a move";
       } else {
-        return `Waiting for ${turn} to move`;
+        const playerName =
+          turn === "white"
+            ? gameState.players.white?.username || "White"
+            : gameState.players.black?.username || "Black";
+        return `Waiting for ${playerName} to move`;
       }
     }
   };
 
   const getMainStatus = () => {
     if (gameState.gameOver) {
-      return gameState.result || 'Game Over';
+      return gameState.result || "Game Over";
     }
-    return `${turn === "white" ? "White" : "Black"} to ${gameState.nextAction || 'move'}`;
+    return `${turn === "white" ? "White" : "Black"} to ${
+      gameState.nextAction || "move"
+    }`;
   };
 
   return (
     <div className="p-4 pb-3">
-      <div className={`text-lg font-semibold ${
-        gameState.gameOver ? 'text-warning-500' : 'text-foreground'
-      }`}>
+      <div
+        className={`text-lg font-semibold ${
+          gameState.gameOver ? "text-warning-500" : "text-foreground"
+        }`}
+      >
         {getMainStatus()}
       </div>
       <div className="text-sm text-foreground-muted mt-1">
