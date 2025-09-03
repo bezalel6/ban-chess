@@ -1,6 +1,6 @@
 "use client";
 
-import { Volume2, Play, Music, Wand2, RotateCcw, MousePointer, X } from "lucide-react";
+import { Play, Music, Wand2, RotateCcw, MousePointer, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import soundManager, { eventTypes, eventMetadata, type EventType } from "@/lib/sound-manager";
 
@@ -8,16 +8,20 @@ interface SoundLibrary {
   themes: Record<string, Array<{ file: string; name: string; displayName: string }>>;
 }
 
-export default function SettingsClient() {
-  // Sound settings state
-  const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
-  const [volume, setVolume] = useState(soundManager.getVolume());
-  const [eventSoundMap, setEventSoundMap] = useState(soundManager.getEventSoundMap());
+interface SettingsClientProps {
+  initialSoundLibrary: SoundLibrary;
+}
+
+export default function SettingsClient({ initialSoundLibrary }: SettingsClientProps) {
+  // Sound settings state - initialize with defaults to avoid hydration mismatch
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [eventSoundMap, setEventSoundMap] = useState<Record<EventType, string | null>>({} as Record<EventType, string | null>);
   
-  // Sound exploration state
-  const [soundLibrary, setSoundLibrary] = useState<SoundLibrary | null>(null);
+  // Sound exploration state - initialize with server data
+  const [soundLibrary] = useState<SoundLibrary>(initialSoundLibrary);
   const [activeTheme, setActiveTheme] = useState<string>("standard");
   const [isPlayingSound, setIsPlayingSound] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   
   // Simple assignment state - no persistent selections
   const [pendingAssignment, setPendingAssignment] = useState<{
@@ -25,25 +29,16 @@ export default function SettingsClient() {
     soundName: string;
   } | null>(null);
 
-  // Load sound library from API
-  useEffect(() => {
-    fetch("/api/sounds")
-      .then(res => res.json())
-      .then(data => setSoundLibrary(data))
-      .catch(err => console.error("Failed to load sound library:", err));
-  }, []);
+  // No need to load sound library - it's passed as props from server
 
-  // Load initial preferences
+  // Load initial preferences after hydration to avoid mismatch
   useEffect(() => {
     setSoundEnabled(soundManager.isEnabled());
-    setVolume(soundManager.getVolume());
     setEventSoundMap(soundManager.getEventSoundMap());
+    setIsHydrated(true);
   }, []);
 
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    soundManager.setVolume(newVolume);
-  };
+  // Volume is controlled via header component, not here
 
   // Play any sound for exploration
   const playSound = async (soundFile: string) => {
@@ -51,9 +46,9 @@ export default function SettingsClient() {
     
     setIsPlayingSound(soundFile);
     
-    // Play the sound directly
+    // Play the sound directly with current manager volume
     const audio = new Audio(soundFile);
-    audio.volume = volume;
+    audio.volume = soundManager.getVolume();
     audio.play().catch(err => console.error("Failed to play sound:", err));
     
     // Clear playing state after a short delay
@@ -96,7 +91,7 @@ export default function SettingsClient() {
   };
 
   // Sort themes alphabetically and categorize them
-  const allThemes = soundLibrary ? Object.keys(soundLibrary.themes).sort() : [];
+  const allThemes = Object.keys(soundLibrary.themes).sort();
   
   // Separate Lichess themes from other sources
   const lichessThemes = allThemes.filter(theme => 
@@ -110,10 +105,8 @@ export default function SettingsClient() {
   );
   
   // Count total sound effects across all Lichess themes
-  const totalLichessSounds = soundLibrary 
-    ? lichessThemes.reduce((total, theme) => 
-        total + (soundLibrary.themes[theme]?.length || 0), 0)
-    : 0;
+  const totalLichessSounds = lichessThemes.reduce((total, theme) => 
+    total + (soundLibrary.themes[theme]?.length || 0), 0);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -150,42 +143,11 @@ export default function SettingsClient() {
           {/* Sound Explorer */}
           {soundLibrary && (
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4">
                 <h3 className="font-semibold flex items-center gap-2">
                   <Music className="h-4 w-4 text-foreground-muted" />
                   Sound Explorer
                 </h3>
-                
-                {/* Integrated Volume Control */}
-                <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2">
-                  <Volume2 className={`h-5 w-5 ${soundEnabled ? 'text-lichess-orange-500' : 'text-gray-500'}`} />
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={soundEnabled ? volume * 100 : 0}
-                    onChange={(e) => {
-                      const newVolume = Number(e.target.value) / 100;
-                      if (newVolume === 0) {
-                        setSoundEnabled(false);
-                        soundManager.setEnabled(false);
-                      } else {
-                        if (!soundEnabled) {
-                          setSoundEnabled(true);
-                          soundManager.setEnabled(true);
-                        }
-                        handleVolumeChange(newVolume);
-                      }
-                    }}
-                    className="w-32 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer volume-slider"
-                    style={{
-                      background: `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) 100%)`,
-                    }}
-                  />
-                  <span className="text-base text-lichess-orange-500 font-medium font-mono w-12 text-right">
-                    {soundEnabled ? Math.round(volume * 100) : 0}%
-                  </span>
-                </div>
               </div>
 
               {/* Theme Tabs - Grouped and Labeled */}
@@ -194,7 +156,7 @@ export default function SettingsClient() {
                 <div className="flex-1 border border-lichess-orange-500/30 rounded-lg p-3 bg-lichess-orange-500/5">
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs text-foreground font-medium">
-                      All {totalLichessSounds} sound effects from
+                      {totalLichessSounds} sound effects from
                     </p>
                     <a 
                       href="https://lichess.org" 
@@ -228,7 +190,7 @@ export default function SettingsClient() {
                   <div className="border border-[rgb(93,153,72)]/30 rounded-lg p-3 bg-[rgb(93,153,72)]/5">
                     <div className="mb-2">
                       <p className="text-xs text-gray-400 font-medium">
-                        External sounds (compatibility)
+                        External sounds
                       </p>
                     </div>
                     <div className="flex gap-2 overflow-x-auto pb-2">
@@ -243,7 +205,7 @@ export default function SettingsClient() {
                               : 'bg-background hover:bg-[rgb(93,153,72)]/20 border border-[rgb(93,153,72)]/20'
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                          {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                          Yoinks
                         </button>
                       ))}
                     </div>
@@ -344,7 +306,7 @@ export default function SettingsClient() {
                   >
                     <EventIcon className="h-5 w-5 mb-1 mx-auto text-foreground-muted" />
                     <p className="text-xs font-medium">{eventMetadata[eventType].name}</p>
-                    {currentSound && (
+                    {currentSound && isHydrated && (
                       <p className="text-[10px] text-foreground-muted mt-1 truncate">
                         {currentSound.split('/').pop()?.replace('.mp3', '')}
                       </p>

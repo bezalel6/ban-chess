@@ -137,7 +137,7 @@ const defaultEventSoundMap: Record<EventType, string | null> = {
   move: "/sounds/standard/Move.mp3",
   "opponent-move": "/sounds/standard/Move.mp3",
   capture: "/sounds/standard/Capture.mp3",
-  castle: "/sounds/lisp/Castles.mp3",
+  castle: "/sounds/standard/Move.mp3", // Use Move.mp3 as standard doesn't have Castles.mp3
   check: "/sounds/standard/Check.mp3",
   promote: "/sounds/standard/Checkmate.mp3",
   "draw-offer": "/sounds/standard/GenericNotify.mp3",
@@ -553,7 +553,8 @@ class SoundManager {
       capture: this.findAvailableSound(themePath, soundFiles["Capture"]),
       castle:
         this.findAvailableSound(themePath, soundFiles["Castles"]) ||
-        "/sounds/lisp/Castles.mp3",
+        this.findAvailableSound(themePath, soundFiles["Move"]) ||
+        "/sounds/standard/Move.mp3",
       check: this.findAvailableSound(themePath, soundFiles["Check"]),
       promote: this.findAvailableSound(themePath, soundFiles["Checkmate"]),
       "draw-offer": this.findAvailableSound(
