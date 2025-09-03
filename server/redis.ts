@@ -427,26 +427,38 @@ export async function getActiveGames(): Promise<string[]> {
  * Clean up expired data (call periodically)
  */
 export async function cleanupExpiredData(): Promise<void> {
-  console.log("[Redis] Running cleanup task...");
+  // Only log in development mode
+  if (process.env.NODE_ENV === "development") {
+    console.log("[Redis] Running cleanup task...");
+  }
 
   // Remove inactive games from active set
   const activeGames = await getActiveGames();
+  let cleanedGames = 0;
   for (const gameId of activeGames) {
     const exists = await redis.exists(KEYS.GAME(gameId));
     if (!exists) {
       await redis.srem("games:active", gameId);
+      cleanedGames++;
       console.log(`[Redis] Removed expired game from active set: ${gameId}`);
     }
   }
 
   // Clean up orphaned player sessions
   const onlinePlayers = await redis.smembers(KEYS.ONLINE_PLAYERS);
+  let cleanedPlayers = 0;
   for (const userId of onlinePlayers) {
     const exists = await redis.exists(KEYS.PLAYER_SESSION(userId));
     if (!exists) {
       await redis.srem(KEYS.ONLINE_PLAYERS, userId);
+      cleanedPlayers++;
       console.log(`[Redis] Removed expired player from online set: ${userId}`);
     }
+  }
+
+  // Log summary only if something was cleaned in production
+  if (cleanedGames > 0 || cleanedPlayers > 0) {
+    console.log(`[Redis] Cleanup completed: ${cleanedGames} games, ${cleanedPlayers} players removed`);
   }
 }
 

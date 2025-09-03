@@ -45,8 +45,8 @@ ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S wsuser -u 1001
 
-# Install tsx in production stage
-RUN npm install -g tsx
+# Install tsx in production stage (suppress npm notices)
+RUN npm install -g tsx --loglevel=error 2>/dev/null || npm install -g tsx
 
 # Copy dependencies from deps stage
 COPY --from=deps --chown=wsuser:nodejs /app/node_modules ./node_modules
