@@ -82,6 +82,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
           fen: game.fen(),
           activePlayer: game.getActivePlayer() as "white" | "black",
           actionType: game.getActionType() as "ban" | "move",
+          inCheck: game.inCheck(),
           gameOver: game.gameOver(),
           result: data.result,
           actionHistory: data.bcn,
@@ -113,6 +114,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
       fen: navGame.fen(),
       activePlayer: navGame.getActivePlayer() as "white" | "black",
       actionType: navGame.getActionType() as "ban" | "move",
+      inCheck: navGame.inCheck(),
     } : null);
   }, [gameData]);
 

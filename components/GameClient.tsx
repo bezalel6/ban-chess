@@ -245,7 +245,7 @@ export default function GameClient({ gameId }: GameClientProps) {
         {/* Mobile Layout - Minimal padding to maximize board size */}
         <div className="flex flex-col gap-2 p-1">
           <MobileBoard
-            gameState={navigationGame ? { ...gameState, fen: navigationGame.fen() } : gameState}
+            gameState={navigationGame ? { ...gameState, fen: navigationGame.fen(), inCheck: navigationGame.inCheck() } : gameState}
             game={navigationGame || game}
             dests={navigationGame ? new Map() : dests}
             activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
@@ -336,7 +336,7 @@ export default function GameClient({ gameId }: GameClientProps) {
               </div>
             )}
             <ResizableBoard
-              gameState={navigationGame ? { ...gameState, fen: navigationGame.fen() } : gameState}
+              gameState={navigationGame ? { ...gameState, fen: navigationGame.fen(), inCheck: navigationGame.inCheck() } : gameState}
               game={navigationGame || game}
               dests={navigationGame ? new Map() : dests}
               activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
