@@ -1,6 +1,6 @@
 "use client";
 
-import { Volume2, Play, Music, Wand2, Info, RotateCcw } from "lucide-react";
+import { Volume2, Play, Music, Wand2, RotateCcw, MousePointer, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import soundManager, { eventTypes, eventMetadata, type EventType } from "@/lib/sound-manager";
 
@@ -18,11 +18,12 @@ export default function SettingsClient() {
   const [soundLibrary, setSoundLibrary] = useState<SoundLibrary | null>(null);
   const [activeTheme, setActiveTheme] = useState<string>("standard");
   const [isPlayingSound, setIsPlayingSound] = useState<string | null>(null);
-  const [lastPlayedSound, setLastPlayedSound] = useState<string | null>(null);
   
-  // Event customization state (optional)
-  const [selectedEventForCustomization, setSelectedEventForCustomization] = useState<EventType | null>(null);
-  const [eventMode, setEventMode] = useState<'assign' | 'play'>('assign'); // New state for mode toggle
+  // Simple assignment state - no persistent selections
+  const [pendingAssignment, setPendingAssignment] = useState<{
+    soundFile: string;
+    soundName: string;
+  } | null>(null);
 
   // Load sound library from API
   useEffect(() => {
@@ -49,7 +50,6 @@ export default function SettingsClient() {
     if (!soundEnabled) return;
     
     setIsPlayingSound(soundFile);
-    setLastPlayedSound(soundFile);
     
     // Play the sound directly
     const audio = new Audio(soundFile);
@@ -60,17 +60,31 @@ export default function SettingsClient() {
     setTimeout(() => setIsPlayingSound(null), 1000);
   };
 
-  // Assign sound to event
+  // Start assignment process - prepare to assign sound to next clicked event
+  const startAssignment = (soundFile: string, soundName: string) => {
+    setPendingAssignment({ soundFile, soundName });
+  };
+
+  // Cancel assignment
+  const cancelAssignment = () => {
+    setPendingAssignment(null);
+  };
+
+  // Assign sound to event - immediate assignment
   const assignSoundToEvent = (eventType: EventType, soundFile: string) => {
     soundManager.setEventSound(eventType, soundFile);
     setEventSoundMap(soundManager.getEventSoundMap());
-    setSelectedEventForCustomization(null);
+    setPendingAssignment(null); // Clear assignment state
   };
 
-  // Quick assign last played sound to an event
-  const quickAssignToEvent = (eventType: EventType) => {
-    if (lastPlayedSound) {
-      assignSoundToEvent(eventType, lastPlayedSound);
+  // Handle event click - either play test sound or complete assignment
+  const handleEventClick = (eventType: EventType) => {
+    if (pendingAssignment) {
+      // Complete assignment
+      assignSoundToEvent(eventType, pendingAssignment.soundFile);
+    } else {
+      // Test current event sound
+      soundManager.playEvent(eventType);
     }
   };
 
@@ -91,6 +105,30 @@ export default function SettingsClient() {
       <div className="bg-background-secondary rounded-lg p-6">
         <div className="space-y-6">
 
+          {/* Assignment Status Banner */}
+          {pendingAssignment && (
+            <div className="bg-lichess-orange-500/20 border border-lichess-orange-500/50 rounded-lg p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MousePointer className="h-5 w-5 text-lichess-orange-500" />
+                <div>
+                  <p className="font-medium text-lichess-orange-500">
+                    Ready to assign: {pendingAssignment.soundName}
+                  </p>
+                  <p className="text-sm text-foreground-muted">
+                    Click any game event below to assign this sound to it
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={cancelAssignment}
+                className="p-2 hover:bg-lichess-orange-500/20 rounded-lg transition-colors"
+                title="Cancel assignment"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {/* Sound Explorer */}
           {soundLibrary && (
             <div>
@@ -101,43 +139,34 @@ export default function SettingsClient() {
                 </h3>
                 
                 {/* Integrated Volume Control */}
-                <div className="flex items-center gap-4">
-                  {lastPlayedSound && (
-                    <div className="text-xs text-foreground-muted flex items-center gap-2">
-                      <Play className="h-3 w-3" />
-                      Last played: {lastPlayedSound.split('/').pop()?.replace('.mp3', '')}
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2">
-                    <Volume2 className={`h-5 w-5 ${soundEnabled ? 'text-lichess-orange-500' : 'text-gray-500'}`} />
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={soundEnabled ? volume * 100 : 0}
-                      onChange={(e) => {
-                        const newVolume = Number(e.target.value) / 100;
-                        if (newVolume === 0) {
-                          setSoundEnabled(false);
-                          soundManager.setEnabled(false);
-                        } else {
-                          if (!soundEnabled) {
-                            setSoundEnabled(true);
-                            soundManager.setEnabled(true);
-                          }
-                          handleVolumeChange(newVolume);
+                <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2">
+                  <Volume2 className={`h-5 w-5 ${soundEnabled ? 'text-lichess-orange-500' : 'text-gray-500'}`} />
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={soundEnabled ? volume * 100 : 0}
+                    onChange={(e) => {
+                      const newVolume = Number(e.target.value) / 100;
+                      if (newVolume === 0) {
+                        setSoundEnabled(false);
+                        soundManager.setEnabled(false);
+                      } else {
+                        if (!soundEnabled) {
+                          setSoundEnabled(true);
+                          soundManager.setEnabled(true);
                         }
-                      }}
-                      className="w-32 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer volume-slider"
-                      style={{
-                        background: `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) 100%)`,
-                      }}
-                    />
-                    <span className="text-base text-lichess-orange-500 font-medium font-mono w-12 text-right">
-                      {soundEnabled ? Math.round(volume * 100) : 0}%
-                    </span>
-                  </div>
+                        handleVolumeChange(newVolume);
+                      }
+                    }}
+                    className="w-32 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer volume-slider"
+                    style={{
+                      background: `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) 100%)`,
+                    }}
+                  />
+                  <span className="text-base text-lichess-orange-500 font-medium font-mono w-12 text-right">
+                    {soundEnabled ? Math.round(volume * 100) : 0}%
+                  </span>
                 </div>
               </div>
 
@@ -159,170 +188,119 @@ export default function SettingsClient() {
                 ))}
               </div>
 
-              {/* Sound Grid - Organized in columns */}
+              {/* Sound Grid - with direct assignment buttons */}
               <div className="bg-background rounded-lg p-4">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 max-h-[400px] overflow-y-auto pr-2">
                   {soundLibrary.themes[activeTheme]?.map((sound) => {
                     const isPlaying = isPlayingSound === sound.file;
-                    const isLastPlayed = lastPlayedSound === sound.file;
                     
                     return (
-                      <button
-                        key={sound.file}
-                        onClick={() => playSound(sound.file)}
-                        disabled={!soundEnabled}
-                        className={`px-4 py-3 rounded-lg text-sm transition-all relative group flex items-center justify-center gap-2 min-h-[44px] ${
-                          isLastPlayed
-                            ? 'bg-lichess-orange-500/20 ring-1 ring-lichess-orange-500/50'
-                            : 'bg-background-secondary hover:bg-lichess-orange-500/10'
-                        } ${
-                          isPlaying ? 'animate-pulse bg-lichess-orange-500/30' : ''
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        title={`Click to play: ${sound.displayName}`}
-                      >
-                        {isPlaying && (
-                          <Play className="h-4 w-4 text-lichess-orange-500 flex-shrink-0" />
-                        )}
-                        <span className="text-center break-words leading-tight">{sound.displayName}</span>
-                      </button>
+                      <div key={sound.file} className="relative group">
+                        <button
+                          onClick={() => playSound(sound.file)}
+                          disabled={!soundEnabled}
+                          className={`w-full px-4 py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 min-h-[44px] ${
+                            isPlaying 
+                              ? 'animate-pulse bg-lichess-orange-500/30' 
+                              : 'bg-background-secondary hover:bg-lichess-orange-500/10'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={`Click to play: ${sound.displayName}`}
+                        >
+                          {isPlaying && (
+                            <Play className="h-4 w-4 text-lichess-orange-500 flex-shrink-0" />
+                          )}
+                          <span className="text-center break-words leading-tight">{sound.displayName}</span>
+                        </button>
+                        
+                        {/* Assign Button - visible on hover */}
+                        <button
+                          onClick={() => startAssignment(sound.file, sound.displayName)}
+                          disabled={!soundEnabled}
+                          className="absolute -top-2 -right-2 p-2 bg-lichess-orange-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-lichess-orange-600 disabled:opacity-50"
+                          title={`Assign ${sound.displayName} to a game event`}
+                        >
+                          <MousePointer className="h-3 w-3" />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Subtle Instructions */}
-              <div className="mt-3 flex items-start gap-2 text-xs text-foreground-muted/70">
-                <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                <p>
-                  Click any sound to preview it. To customize event sounds: Switch to &quot;Customize event sounds&quot; mode below, 
-                  play a sound from the explorer, then click the event you want to assign it to.
+              {/* Instructions */}
+              <div className="mt-3 p-3 bg-background rounded-lg">
+                <p className="text-sm text-foreground-muted">
+                  <strong>How to use:</strong> Click any sound to preview it. 
+                  To customize game events: hover over a sound and click the 
+                  <MousePointer className="inline h-3 w-3 mx-1" /> 
+                  button, then click the game event you want to assign it to.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Event Customization (Optional) */}
+          {/* Game Event Sounds */}
           <div className="border-t border-gray-700 pt-6">
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold flex items-center gap-2 mb-2">
-                  <Wand2 className="h-4 w-4 text-foreground-muted" />
-                  Game Event Sounds
-                </h3>
-                <button
-                  onClick={() => {
-                    const newMode = eventMode === 'assign' ? 'play' : 'assign';
-                    setEventMode(newMode);
-                    // Reset state when switching modes
-                    if (newMode === 'play') {
-                      // Entering play mode - clear assignment state
-                      setLastPlayedSound(null);
-                      setSelectedEventForCustomization(null);
-                    }
-                  }}
-                  className="text-xs text-foreground-muted hover:text-lichess-orange-500 transition-colors"
-                >
-                  Mode: <span className="font-medium text-lichess-orange-500">
-                    {eventMode === 'assign' ? 'Customize event sounds' : 'Test event sounds'}
-                  </span> (click to toggle)
-                </button>
-              </div>
-              <div className="flex items-center gap-3">
-                {eventMode === 'assign' && lastPlayedSound && (
-                  <p className="text-xs text-lichess-orange-500">
-                    Click any event to assign: {lastPlayedSound.split('/').pop()?.replace('.mp3', '')}
-                  </p>
-                )}
-                <button
-                  onClick={resetToDefaults}
-                  disabled={!soundEnabled}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Reset all event sounds to default"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  Reset to Defaults
-                </button>
-              </div>
+              <h3 className="font-semibold flex items-center gap-2">
+                <Wand2 className="h-4 w-4 text-foreground-muted" />
+                Game Event Sounds
+              </h3>
+              <button
+                onClick={resetToDefaults}
+                disabled={!soundEnabled}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Reset all event sounds to default"
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset to Defaults
+              </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
               {eventTypes.map((eventType) => {
                 const EventIcon = eventMetadata[eventType].icon;
                 const currentSound = eventSoundMap[eventType];
-                const isSelected = selectedEventForCustomization === eventType;
+                const isAssignmentTarget = pendingAssignment !== null;
                 
                 return (
-                  <div key={eventType} className="relative group">
-                    <button
-                      onClick={() => {
-                        if (eventMode === 'play') {
-                          // In play mode, use sound manager's playEvent to play the event sound
-                          // This respects user's custom sound assignments
-                          soundManager.playEvent(eventType);
-                        } else {
-                          // In assign mode, assign the last played sound or select for assignment
-                          if (lastPlayedSound) {
-                            quickAssignToEvent(eventType);
-                          } else {
-                            setSelectedEventForCustomization(eventType);
-                          }
-                        }
-                      }}
-                      disabled={!soundEnabled}
-                      className={`w-full p-3 rounded-lg transition-all ${
-                        isSelected
-                          ? 'bg-lichess-orange-500/20 ring-2 ring-lichess-orange-500'
-                          : 'bg-background hover:bg-lichess-orange-500/10'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      title={eventMode === 'play' ? `Play ${eventMetadata[eventType].name} sound` : `Assign sound to ${eventMetadata[eventType].name}`}
-                    >
-                      <EventIcon className="h-5 w-5 mb-1 mx-auto text-foreground-muted" />
-                      <p className="text-xs font-medium">{eventMetadata[eventType].name}</p>
-                      {currentSound && (
-                        <p className="text-[10px] text-foreground-muted mt-1 truncate">
-                          {currentSound.split('/').pop()?.replace('.mp3', '')}
-                        </p>
-                      )}
-                    </button>
-                    
-                    {/* Quick Play Current Sound - only show in assign mode */}
-                    {eventMode === 'assign' && currentSound && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          playSound(currentSound);
-                        }}
-                        className="absolute -top-1 -right-1 p-1 bg-background-secondary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Play current sound"
-                      >
-                        <Play className="h-3 w-3 text-foreground-muted" />
-                      </button>
+                  <button
+                    key={eventType}
+                    onClick={() => handleEventClick(eventType)}
+                    disabled={!soundEnabled}
+                    className={`w-full p-3 rounded-lg transition-all ${
+                      isAssignmentTarget
+                        ? 'bg-lichess-orange-500/10 hover:bg-lichess-orange-500/20 ring-1 ring-lichess-orange-500/50 cursor-pointer'
+                        : 'bg-background hover:bg-lichess-orange-500/10'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    title={
+                      isAssignmentTarget 
+                        ? `Assign "${pendingAssignment.soundName}" to ${eventMetadata[eventType].name}`
+                        : `Test ${eventMetadata[eventType].name} sound`
+                    }
+                  >
+                    <EventIcon className="h-5 w-5 mb-1 mx-auto text-foreground-muted" />
+                    <p className="text-xs font-medium">{eventMetadata[eventType].name}</p>
+                    {currentSound && (
+                      <p className="text-[10px] text-foreground-muted mt-1 truncate">
+                        {currentSound.split('/').pop()?.replace('.mp3', '')}
+                      </p>
                     )}
-                  </div>
+                    {isAssignmentTarget && (
+                      <div className="mt-1 flex items-center justify-center">
+                        <MousePointer className="h-3 w-3 text-lichess-orange-500" />
+                      </div>
+                    )}
+                  </button>
                 );
               })}
             </div>
 
-            {/* Alternative Assignment Method - only in assign mode */}
-            {eventMode === 'assign' && selectedEventForCustomization && !lastPlayedSound && (
-              <div className="mt-4 p-3 bg-lichess-orange-500/10 rounded-lg border border-lichess-orange-500/30">
-                <p className="text-xs text-lichess-orange-500">
-                  Now play any sound above to assign it to {eventMetadata[selectedEventForCustomization].name}
-                </p>
-                <button
-                  onClick={() => setSelectedEventForCustomization(null)}
-                  className="mt-2 text-xs text-foreground-muted hover:text-white transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-
-            {/* Auto-assign on next sound play when event is selected - only in assign mode */}
-            {eventMode === 'assign' && selectedEventForCustomization && lastPlayedSound && (
-              <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/30">
-                <p className="text-xs text-green-500 mb-2">
-                  Sound assigned to {eventMetadata[selectedEventForCustomization].name}!
+            {!pendingAssignment && (
+              <div className="mt-4 p-3 bg-background rounded-lg">
+                <p className="text-sm text-foreground-muted">
+                  <strong>Current mode:</strong> Click any game event to test its current sound. 
+                  To change sounds, use the assignment button on any sound above.
                 </p>
               </div>
             )}
@@ -331,17 +309,4 @@ export default function SettingsClient() {
       </div>
     </div>
   );
-}
-
-// Add effect to auto-assign when both event and sound are selected
-export function useAutoAssign(
-  selectedEvent: EventType | null,
-  lastPlayedSound: string | null,
-  assignSoundToEvent: (event: EventType, sound: string) => void
-) {
-  useEffect(() => {
-    if (selectedEvent && lastPlayedSound) {
-      assignSoundToEvent(selectedEvent, lastPlayedSound);
-    }
-  }, [selectedEvent, lastPlayedSound, assignSoundToEvent]);
 }

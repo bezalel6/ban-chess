@@ -73,16 +73,26 @@ export default function MoveList(props: MoveListProps) {
       if (!history || history.length === 0) return;
 
       const totalMoves = history.length;
-      let newIndex = selectedIndex ?? -1;
+      let newIndex = selectedIndex ?? (totalMoves - 1); // Default to last move if nothing selected
 
       switch (e.key) {
         case "ArrowLeft":
           e.preventDefault();
-          newIndex = Math.max(0, newIndex - 1);
+          // If no selection or at start, stay at 0
+          if (selectedIndex === null) {
+            newIndex = totalMoves > 0 ? totalMoves - 2 : 0; // Go to second-to-last move
+          } else {
+            newIndex = Math.max(0, newIndex - 1);
+          }
           break;
         case "ArrowRight":
           e.preventDefault();
-          newIndex = Math.min(totalMoves - 1, newIndex + 1);
+          // If no selection, go to last move
+          if (selectedIndex === null) {
+            newIndex = totalMoves - 1;
+          } else {
+            newIndex = Math.min(totalMoves - 1, newIndex + 1);
+          }
           break;
         case "ArrowUp":
           e.preventDefault();
@@ -109,6 +119,7 @@ export default function MoveList(props: MoveListProps) {
       if (newIndex !== selectedIndex) {
         setSelectedIndex(newIndex);
         onMoveSelect?.(newIndex);
+        playNavigationSound(newIndex);
       }
     },
     [history, selectedIndex, onMoveSelect]
@@ -124,7 +135,43 @@ export default function MoveList(props: MoveListProps) {
   const handleMoveClick = (index: number) => {
     setSelectedIndex(index);
     onMoveSelect?.(index);
+    playNavigationSound(index);
   };
+
+  // Play sound when navigating to a historical move
+  const playNavigationSound = useCallback((moveIndex: number) => {
+    if (!history || history.length === 0 || moveIndex < 0 || moveIndex >= history.length) {
+      return;
+    }
+    
+    // Check if this is a HistoryEntry array
+    if (typeof history[0] === 'object') {
+      const entries = history as HistoryEntry[];
+      const entry = entries[moveIndex];
+      
+      if (entry.actionType === 'ban') {
+        // Play ban sound
+        soundManager.playEvent('ban');
+      } else if (entry.actionType === 'move' && entry.san) {
+        // Analyze the SAN to determine move type
+        const san = entry.san;
+        const isCapture = san.includes('x');
+        const isCheck = san.includes('+');
+        const isCheckmate = san.includes('#');
+        const isCastle = san === 'O-O' || san === 'O-O-O';
+        const isPromotion = san.includes('=');
+        
+        // Play appropriate move sound (treat all navigation as non-opponent moves)
+        soundManager.playMoveSound({
+          check: isCheck || isCheckmate,
+          capture: isCapture,
+          castle: isCastle,
+          promotion: isPromotion,
+          isOpponent: false, // Navigation sounds are always "our" perspective
+        });
+      }
+    }
+  }, [history]);
   // When history updates and we're at the end, auto-follow
   useEffect(() => {
     // If we were at the last move before update, stay at the last move
