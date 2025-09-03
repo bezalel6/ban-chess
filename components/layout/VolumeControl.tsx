@@ -5,15 +5,18 @@ import { Volume2, VolumeX, Volume1 } from "lucide-react";
 import soundManager from "@/lib/sound-manager";
 
 export default function VolumeControl() {
-  const [soundEnabled, setSoundEnabled] = useState(soundManager.isEnabled());
-  const [volume, setVolume] = useState(soundManager.getVolume());
+  // Initialize with default values for SSR - will be updated in useEffect
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [volume, setVolume] = useState(0.5);
   const [isOpen, setIsOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const controlRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load initial state
+  // Load actual state after mount (client-side only)
   useEffect(() => {
+    setIsMounted(true);
     setSoundEnabled(soundManager.isEnabled());
     setVolume(soundManager.getVolume());
   }, []);
@@ -48,11 +51,16 @@ export default function VolumeControl() {
     }
   };
 
-  // Get appropriate volume icon
+  // Don't render dynamic values until mounted to prevent hydration mismatch
+  const displayVolume = isMounted ? volume : 0.5;
+  const displayEnabled = isMounted ? soundEnabled : true;
+  const displayPercentage = Math.round(displayVolume * 100);
+
+  // Get appropriate volume icon - use display values for consistency
   const getVolumeIcon = () => {
-    if (!soundEnabled || volume === 0) {
+    if (!displayEnabled || displayVolume === 0) {
       return VolumeX;
-    } else if (volume < 0.5) {
+    } else if (displayVolume < 0.5) {
       return Volume1;
     } else {
       return Volume2;
@@ -142,12 +150,12 @@ export default function VolumeControl() {
         onClick={handleButtonClick}
         onKeyDown={handleKeyDown}
         className={`p-3 rounded-lg transition-all duration-200 ${
-          soundEnabled 
+          displayEnabled 
             ? 'text-lichess-orange-500 hover:bg-background-secondary' 
             : 'text-foreground-muted hover:text-foreground hover:bg-background-secondary'
         }`}
-        title={`Volume: ${soundEnabled ? Math.round(volume * 100) : 0}% (Click to ${soundEnabled ? 'mute' : 'unmute'})`}
-        aria-label={`Volume control: ${soundEnabled ? Math.round(volume * 100) : 0}%`}
+        title={`Volume: ${displayPercentage}% (Click to ${displayEnabled ? 'mute' : 'unmute'})`}
+        aria-label={`Volume control: ${displayPercentage}%`}
       >
         <VolumeIcon className="h-4 w-4" />
       </button>
@@ -155,14 +163,14 @@ export default function VolumeControl() {
       {/* Volume Slider - appears on hover */}
       <div className={`
         absolute top-full right-0 mt-2 p-4 bg-background-secondary border border-border rounded-lg shadow-lg z-50 
-        w-48 sm:min-w-[200px]
+        w-64 sm:w-72
         transition-all duration-200 transform-gpu
         ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-95 pointer-events-none'}
       `}>
         <div className="flex items-center gap-3">
           {/* Small volume icon */}
           <VolumeIcon className={`h-4 w-4 flex-shrink-0 ${
-            soundEnabled ? 'text-lichess-orange-500' : 'text-foreground-muted'
+            displayEnabled ? 'text-lichess-orange-500' : 'text-foreground-muted'
           }`} />
           
           {/* Volume slider */}
@@ -171,32 +179,32 @@ export default function VolumeControl() {
               type="range"
               min="0"
               max="100"
-              value={soundEnabled ? volume * 100 : 0}
+              value={displayEnabled ? displayVolume * 100 : 0}
               onChange={(e) => {
                 const newVolume = Number(e.target.value) / 100;
                 handleVolumeChange(newVolume);
               }}
               className="w-full h-2 bg-background rounded-lg appearance-none cursor-pointer volume-slider"
               style={{
-                background: `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) ${soundEnabled ? volume * 100 : 0}%, rgb(55 65 81) 100%)`,
+                background: `linear-gradient(to right, rgb(251 127 36) 0%, rgb(251 127 36) ${displayEnabled ? displayVolume * 100 : 0}%, rgb(55 65 81) ${displayEnabled ? displayVolume * 100 : 0}%, rgb(55 65 81) 100%)`,
               }}
             />
           </div>
           
           {/* Volume percentage */}
-          <span className="text-xs font-mono w-8 text-right text-lichess-orange-500 font-medium flex-shrink-0">
-            {soundEnabled ? Math.round(volume * 100) : 0}%
+          <span className="text-xs font-mono w-10 text-right text-lichess-orange-500 font-medium flex-shrink-0">
+            {displayPercentage}%
           </span>
         </div>
         
-        {/* Quick volume presets */}
+        {/* Quick volume presets - now with equal spacing */}
         <div className="flex justify-between mt-3 gap-1">
           {[0, 25, 50, 75, 100].map((preset) => (
             <button
               key={preset}
               onClick={() => handleVolumeChange(preset / 100)}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                Math.round(volume * 100) === preset && soundEnabled
+              className={`flex-1 px-1 py-1 text-xs rounded transition-colors ${
+                displayPercentage === preset && displayEnabled
                   ? 'bg-lichess-orange-500 text-white'
                   : 'bg-background hover:bg-lichess-orange-500/20 text-foreground-muted hover:text-foreground'
               }`}
