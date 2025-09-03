@@ -8,6 +8,31 @@ async function cleanup() {
 }
 
 async function seed() {
+  // Seed global settings first
+  await prisma.globalSettings.upsert({
+    where: { id: 'global' },
+    update: {},
+    create: {
+      id: 'global',
+      soundEnabled: true,
+      soundVolume: 0.5,
+      eventSoundMap: {
+        "Move": "standard/Move",
+        "Capture": "standard/Capture",
+        "Check": "standard/Check",
+        "Checkmate": "standard/Checkmate",
+        "Draw": "standard/Draw",
+        "Victory": "standard/Victory",
+        "Defeat": "standard/Defeat",
+        "GenericNotify": "standard/GenericNotify",
+        "Error": "standard/Error",
+        "LowTime": "standard/LowTime",
+        "Confirmation": "standard/Confirmation"
+      }
+    }
+  })
+  console.log('✅ Seeded global sound settings')
+
   // Add your seeding logic here
   const users = await prisma.user.createMany({
     data: [
@@ -29,7 +54,7 @@ async function seed() {
     skipDuplicates: true,
   })
 
-  console.log(`Seeded ${users.count} users`)
+  console.log(`✅ Seeded ${users.count} users`)
 }
 
 async function main() {
