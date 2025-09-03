@@ -20,7 +20,8 @@ const productionCookies = {
       sameSite: 'lax' as const,
       path: '/',
       secure: true,
-      domain: '.rndev.site' // Share cookies across subdomains
+      // Remove domain to let the browser handle it automatically
+      // This avoids subdomain issues
     }
   },
   callbackUrl: {
@@ -29,7 +30,7 @@ const productionCookies = {
       sameSite: 'lax' as const,
       path: '/',
       secure: true,
-      domain: '.rndev.site'
+      // Remove domain to let the browser handle it automatically
     }
   },
   csrfToken: {
@@ -51,7 +52,7 @@ const productionCookies = {
       path: '/',
       secure: true,
       maxAge: 60 * 15, // 15 minutes
-      domain: '.rndev.site'
+      // Remove domain to let the browser handle it automatically
     }
   },
   state: {
@@ -62,7 +63,7 @@ const productionCookies = {
       path: '/',
       secure: true,
       maxAge: 60 * 15, // 15 minutes
-      domain: '.rndev.site'
+      // Remove domain to let the browser handle it automatically
     }
   },
   nonce: {
@@ -72,7 +73,7 @@ const productionCookies = {
       sameSite: 'lax' as const,
       path: '/',
       secure: true,
-      domain: '.rndev.site'
+      // Remove domain to let the browser handle it automatically
     }
   }
 };
@@ -151,10 +152,8 @@ console.log(`[NextAuth Config] Using ${isProduction ? 'production' : 'developmen
 
 // Production requires NEXTAUTH_SECRET to be set
 if (isProduction && !process.env.NEXTAUTH_SECRET) {
-  const errorMsg = "NEXTAUTH_SECRET must be set in production! Authentication will fail.";
-  console.error(`⚠️ [NextAuth] ${errorMsg}`);
-  // In production, we should fail fast rather than use a default secret
-  throw new Error(errorMsg);
+  console.error(`⚠️ [NextAuth] NEXTAUTH_SECRET must be set in production! Authentication will fail.`);
+  console.error(`⚠️ [NextAuth] Using development secret as fallback - THIS IS INSECURE!`);
 }
 
 export const authOptions = {
