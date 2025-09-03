@@ -76,6 +76,43 @@ async function handleGameEnd(
     try {
       await saveCompletedGame(gameId);
       console.log(`[GameEnd] Game ${gameId} saved to database`);
+      
+      // Clean up Redis data immediately after successful database save
+      // Since database now has priority for completed games, we can safely remove from Redis
+      try {
+        const pipeline = redis.pipeline();
+        pipeline.del(KEYS.GAME_STATE(gameId));
+        pipeline.del(KEYS.GAME_ACTIONS(gameId));
+        pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
+
+        // Remove player-game associations if they exist
+        if (gameState.whitePlayerId) {
+          const whiteGameId = await redis.get(
+            KEYS.PLAYER_GAME(gameState.whitePlayerId)
+          );
+          if (whiteGameId === gameId) {
+            pipeline.del(KEYS.PLAYER_GAME(gameState.whitePlayerId));
+          }
+        }
+        if (gameState.blackPlayerId) {
+          const blackGameId = await redis.get(
+            KEYS.PLAYER_GAME(gameState.blackPlayerId)
+          );
+          if (blackGameId === gameId) {
+            pipeline.del(KEYS.PLAYER_GAME(gameState.blackPlayerId));
+          }
+        }
+
+        await pipeline.exec();
+        console.log(
+          `[GameEnd] Cleaned up Redis data for game ${gameId} - database is now the authoritative source`
+        );
+      } catch (cleanupError) {
+        console.error(
+          `[GameEnd] Failed to clean up Redis data for game ${gameId}:`,
+          cleanupError
+        );
+      }
     } catch (error) {
       console.error(
         `[GameEnd] Failed to save game ${gameId} to database:`,
@@ -84,53 +121,7 @@ async function handleGameEnd(
     }
   } else {
     console.log(`[GameEnd] Skipping database save for local game ${gameId}`);
-  }
-
-  // Clean up Redis data immediately after successful database save
-  // No need to keep completed games in Redis wasting memory
-  if (
-    gameState.whitePlayerId &&
-    gameState.blackPlayerId &&
-    gameState.whitePlayerId !== gameState.blackPlayerId
-  ) {
-    // For online games that were saved to database, clean Redis immediately
-    try {
-      const pipeline = redis.pipeline();
-      pipeline.del(KEYS.GAME_STATE(gameId));
-      pipeline.del(KEYS.GAME_ACTIONS(gameId));
-      pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
-
-      // Remove player-game associations if they exist
-      if (gameState.whitePlayerId) {
-        const whiteGameId = await redis.get(
-          KEYS.PLAYER_GAME(gameState.whitePlayerId)
-        );
-        if (whiteGameId === gameId) {
-          pipeline.del(KEYS.PLAYER_GAME(gameState.whitePlayerId));
-        }
-      }
-      if (gameState.blackPlayerId) {
-        const blackGameId = await redis.get(
-          KEYS.PLAYER_GAME(gameState.blackPlayerId)
-        );
-        if (blackGameId === gameId) {
-          pipeline.del(KEYS.PLAYER_GAME(gameState.blackPlayerId));
-        }
-      }
-
-      await pipeline.exec();
-      console.log(
-        `[GameEnd] Cleaned up Redis data for game ${gameId} immediately after database save`
-      );
-    } catch (error) {
-      console.error(
-        `[GameEnd] Failed to clean up Redis data for game ${gameId}:`,
-        error
-      );
-    }
-  } else {
-    // For local/solo games, keep in Redis for a short time then clean up
-    // These aren't saved to database but we don't want them lingering forever
+    // For games not saved to database, keep in Redis briefly then clean up
     setTimeout(async () => {
       try {
         const pipeline = redis.pipeline();
@@ -139,15 +130,15 @@ async function handleGameEnd(
         pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
         await pipeline.exec();
         console.log(
-          `[GameEnd] Cleaned up local game ${gameId} from Redis after 1 minute`
+          `[GameEnd] Cleaned up unsaved game ${gameId} from Redis after 1 minute`
         );
       } catch (error) {
         console.error(
-          `[GameEnd] Failed to clean up local game ${gameId}:`,
+          `[GameEnd] Failed to clean up unsaved game ${gameId}:`,
           error
         );
       }
-    }, 60 * 1000); // 1 minute for local games
+    }, 60 * 1000); // 1 minute delay for unsaved games
   }
 }
 
@@ -613,37 +604,17 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
       bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
     }));
 
-    // Get or fetch player info (for completed games, we might need to fetch from DB)
-    let players;
-    if (gameSource.type === "active") {
-      const activeGameState = await getGameState(gameId);
-      if (activeGameState) {
-        players = await getPlayerInfo(activeGameState);
-      } else {
-        // Fallback if Redis state is missing
-        players = {
-          white: {
-            id: gameSource.whitePlayerId,
-            username: gameSource.whitePlayerId,
-          },
-          black: {
-            id: gameSource.blackPlayerId,
-            username: gameSource.blackPlayerId,
-          },
-        };
-      }
-    } else {
-      players = {
-        white: {
-          id: gameSource.whitePlayerId,
-          username: gameSource.whitePlayerId,
-        },
-        black: {
-          id: gameSource.blackPlayerId,
-          username: gameSource.blackPlayerId,
-        },
-      };
-    }
+    // Use usernames from gameSource which now always includes them
+    const players = {
+      white: {
+        id: gameSource.whitePlayerId,
+        username: gameSource.whiteUsername,
+      },
+      black: {
+        id: gameSource.blackPlayerId,
+        username: gameSource.blackUsername,
+      },
+    };
 
     // Get time manager if active
     const timeManager =
