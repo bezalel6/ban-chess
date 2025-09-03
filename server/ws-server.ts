@@ -1424,32 +1424,41 @@ wss.on("connection", (ws: WebSocket, request) => {
             return;
           }
           
-          console.log(`[join-game] Found game ${gameId} in ${gameSource.type} storage`);
+          // Reconstruct the game to check if it's over
+          const game = reconstructGameFromBCN(gameSource.bcn);
+          const isGameOver = game.gameOver() || !!gameSource.result;
+          
+          console.log(`[join-game] Game ${gameId}: storage=${gameSource.type}, gameOver=${isGameOver}`);
 
-          // Only set player-game association and subscribe for active games
-          if (gameSource.type === 'active') {
-            await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
-            await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
-          }
-
-          // Always send joined message first (even for completed games for backward compatibility)
-          ws.send(
-            JSON.stringify({
-              type: "joined",
-              gameId,
-            } as SimpleServerMsg)
-          );
-
-          // For completed games from database, always send state
-          // For active games, check if we need to send state
-          if (gameSource.type === 'completed') {
-            // Always send state for completed games
+          // For games that are over (regardless of where they're stored), just send the state
+          // For active games still in progress, handle subscriptions and associations
+          if (isGameOver) {
+            // Game is over - just send the state for viewing
+            // No need to set up subscriptions or player associations
+            ws.send(
+              JSON.stringify({
+                type: "joined",
+                gameId,
+              } as SimpleServerMsg)
+            );
+            
             await sendFullGameState(gameId, ws);
             console.log(
-              `Player ${currentPlayer.username} joined completed game ${gameId} from database`
+              `Player ${currentPlayer.username} viewing completed game ${gameId}`
             );
           } else {
-            // Active game - check if we already sent the state during authentication/reconnection
+            // Game is still active - set up proper associations and subscriptions
+            await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
+            await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+            
+            ws.send(
+              JSON.stringify({
+                type: "joined",
+                gameId,
+              } as SimpleServerMsg)
+            );
+
+            // Check if we already sent the state during authentication/reconnection
             const playerGameId = await redis.get(
               KEYS.PLAYER_GAME(currentPlayer.userId)
             );
@@ -1457,11 +1466,10 @@ wss.on("connection", (ws: WebSocket, request) => {
               // Player is joining a different game, send full state
               await sendFullGameState(gameId, ws);
               console.log(
-                `Player ${currentPlayer.username} joined game ${gameId}, sent full state`
+                `Player ${currentPlayer.username} joined active game ${gameId}`
               );
             } else {
-              // Player already in this game (reconnection handled it), send state anyway for solo games
-              // Since solo games don't have reconnection logic
+              // Check if it's a solo game that needs state sent anyway
               const gameState = await getGameState(gameId);
               if (
                 gameState &&
@@ -1470,7 +1478,7 @@ wss.on("connection", (ws: WebSocket, request) => {
                 // It's a solo game, send the state
                 await sendFullGameState(gameId, ws);
                 console.log(
-                  `Player ${currentPlayer.username} joined solo game ${gameId}, sent state`
+                  `Player ${currentPlayer.username} joined solo game ${gameId}`
                 );
               } else {
                 console.log(
