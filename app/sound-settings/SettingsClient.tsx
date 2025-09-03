@@ -169,11 +169,20 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
     if (!editingGlobalDefaults) {
       // Personal mode - save to localStorage via soundManager
       soundManager.setEventSound(eventType, soundFile);
+      setEventSoundMap(soundManager.getEventSoundMap());
     } else {
-      // Global mode - just update state, don't save to localStorage
+      // Global mode - update both state and soundManager (but don't save to localStorage)
       const newMap = { ...eventSoundMap };
       newMap[eventType] = soundFile;
       setEventSoundMap(newMap);
+      
+      // Also update soundManager temporarily so preview plays correct sound
+      // This won't save to localStorage since we're not calling setEventSound
+      const audio = new Audio(soundFile);
+      audio.volume = soundManager.getVolume();
+      // Store it for preview purposes
+      soundManager['_tempGlobalSounds'] = soundManager['_tempGlobalSounds'] || {};
+      soundManager['_tempGlobalSounds'][eventType] = soundFile;
     }
     setPendingAssignment(null); // Clear assignment state
   };
@@ -183,8 +192,16 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
     if (pendingAssignment) {
       // Complete assignment
       assignSoundToEvent(eventType, pendingAssignment.soundFile);
+    } else if (editingGlobalDefaults) {
+      // In global mode, play the sound from our current state
+      const soundPath = eventSoundMap[eventType];
+      if (soundPath) {
+        const audio = new Audio(soundPath);
+        audio.volume = soundManager.getVolume();
+        audio.play().catch(err => console.error("Failed to play sound:", err));
+      }
     } else {
-      // Test current event sound
+      // Personal mode - test current event sound from soundManager
       soundManager.playEvent(eventType);
     }
   };
@@ -266,13 +283,6 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Debug info - remove this after testing */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-500 font-mono">
-          Debug: isAdmin={String(isAdmin)}, editingGlobalDefaults={String(editingGlobalDefaults)}
-        </div>
-      )}
-      
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">
           {editingGlobalDefaults ? 'Global Default Sound Settings' : 'Sound Settings'}
@@ -541,11 +551,15 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
                     className={`w-full p-3 rounded-lg transition-all min-h-[100px] ${
                       isAssignmentTarget
                         ? 'bg-lichess-orange-500/10 hover:bg-lichess-orange-500/20 ring-1 ring-lichess-orange-500/50 cursor-pointer'
+                        : editingGlobalDefaults
+                        ? 'bg-blue-600/10 hover:bg-blue-600/20 ring-1 ring-blue-600/30'
                         : 'bg-background hover:bg-lichess-orange-500/10'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                     title={
                       isAssignmentTarget 
                         ? `Assign "${pendingAssignment.soundName}" to ${eventMetadata[eventType].name}`
+                        : editingGlobalDefaults
+                        ? `Test global default ${eventMetadata[eventType].name} sound`
                         : `Test ${eventMetadata[eventType].name} sound`
                     }
                   >
@@ -577,9 +591,11 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
             </div>
 
             {!pendingAssignment && (
-              <div className="mt-4 p-3 bg-background rounded-lg">
+              <div className={`mt-4 p-3 rounded-lg ${editingGlobalDefaults ? 'bg-blue-600/10 border border-blue-600/30' : 'bg-background'}`}>
                 <p className="text-sm text-foreground-muted">
-                  <strong>Current mode:</strong> Click any game event to test its current sound. 
+                  <strong>Current mode:</strong> {editingGlobalDefaults 
+                    ? 'Editing global defaults - Click any game event to test the global sound being set.' 
+                    : 'Click any game event to test its current sound.'} 
                   To change sounds, use the assignment button on any sound above.
                 </p>
               </div>

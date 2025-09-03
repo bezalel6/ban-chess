@@ -10,18 +10,13 @@ export async function isAdmin() {
   const userId = (session?.user as { userId?: string })?.userId;
   
   if (!userId) {
-    console.log('[Admin Check] No userId found in session');
     return false;
   }
   
-  console.log('[Admin Check] Checking admin status for userId:', userId);
-  
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { isAdmin: true, email: true }
+    select: { isAdmin: true }
   });
-  
-  console.log('[Admin Check] User found:', user);
   
   return user?.isAdmin === true;
 }
@@ -29,17 +24,13 @@ export async function isAdmin() {
 export async function requireAdmin() {
   const admin = await isAdmin();
   
-  console.log('[requireAdmin] isAdmin result:', admin);
-  
   if (!admin) {
-    console.log('[requireAdmin] Returning 403 - not admin');
     return NextResponse.json(
       { error: 'Unauthorized. Admin access required.' },
       { status: 403 }
     );
   }
   
-  console.log('[requireAdmin] Admin verified - returning null to continue');
   return null; // Continue if admin
 }
 
