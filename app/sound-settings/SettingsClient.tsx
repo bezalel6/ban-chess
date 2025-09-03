@@ -194,11 +194,16 @@ export default function SettingsClient() {
                 <div className="flex-1 border border-lichess-orange-500/30 rounded-lg p-3 bg-lichess-orange-500/5">
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs text-foreground font-medium">
-                      All {totalLichessSounds} sound effects from
+                      All {totalLichessSounds} sound effects from{' '}
+                      <a 
+                        href="https://lichess.org" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-lichess-orange-500 hover:underline font-bold"
+                      >
+                        Lichess.org
+                      </a> ❤️
                     </p>
-                    <span className="text-xs text-lichess-orange-500 bg-lichess-orange-500/20 px-3 py-0.5 rounded font-bold">
-                      Lichess.org ❤️
-                    </span>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {lichessThemes.map((theme) => (
@@ -221,13 +226,10 @@ export default function SettingsClient() {
                 {/* Other Themes Section - Yoinks */}
                 {otherThemes.length > 0 && (
                   <div className="border border-[rgb(93,153,72)]/30 rounded-lg p-3 bg-[rgb(93,153,72)]/5">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="mb-2">
                       <p className="text-xs text-gray-400 font-medium">
                         External sounds (compatibility)
                       </p>
-                      <span className="text-[10px] text-[rgb(93,153,72)] bg-[rgb(93,153,72)]/20 px-2 py-0.5 rounded">
-                        Alternative
-                      </span>
                     </div>
                     <div className="flex gap-2 overflow-x-auto pb-2">
                       {otherThemes.map((theme) => (
