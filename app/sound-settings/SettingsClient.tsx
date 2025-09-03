@@ -280,6 +280,38 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
       setSavingGlobalDefaults(false);
     }
   };
+  
+  // Copy personal settings as global defaults (admin only)
+  const copyPersonalAsGlobal = async () => {
+    setSavingGlobalDefaults(true);
+    
+    try {
+      // Get current personal settings directly
+      const personalSettings = {
+        soundEnabled: soundManager.isEnabled(),
+        soundVolume: soundManager.getVolume(),
+        eventSoundMap: soundManager.getEventSoundMap()
+      };
+      
+      // Save personal settings as global defaults
+      const res = await fetch('/api/admin/global-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(personalSettings)
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to copy settings as global defaults');
+      }
+      
+      // Optional: Show success feedback
+      console.log('Successfully copied personal settings as global defaults');
+    } catch (err) {
+      console.error('Error copying settings:', err);
+    } finally {
+      setSavingGlobalDefaults(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -308,12 +340,22 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => handleModeSwitch(true)}
-                className="px-4 py-2 text-sm bg-lichess-orange-500 hover:bg-lichess-orange-600 rounded-lg transition-colors"
-              >
-                Edit Global Defaults
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleModeSwitch(true)}
+                  className="px-4 py-2 text-sm bg-lichess-orange-500 hover:bg-lichess-orange-600 rounded-lg transition-colors"
+                >
+                  Edit Global Defaults
+                </button>
+                <button
+                  onClick={copyPersonalAsGlobal}
+                  disabled={savingGlobalDefaults}
+                  className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg transition-colors"
+                  title="Copy your current personal settings as the global defaults"
+                >
+                  Use My Settings as Default
+                </button>
+              </div>
             )}
           </div>
         )}
