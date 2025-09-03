@@ -15,11 +15,17 @@ export default function SignOutButton({
   redirectTo = '/'
 }: SignOutButtonProps) {
   const handleSignOut = async () => {
-    // First clear cookies with proper domain configuration
-    await fetch('/api/auth/signout', { method: 'POST' });
-    
-    // Then use NextAuth signOut
-    await signOut({ callbackUrl: redirectTo });
+    try {
+      // First clear cookies with proper domain configuration
+      await fetch('/api/auth/signout', { method: 'POST' });
+      
+      // Force a hard reload to disconnect WebSocket and clear all state
+      window.location.href = redirectTo;
+    } catch (error) {
+      console.error('[SignOut] Error during signout:', error);
+      // Fallback to NextAuth signOut
+      await signOut({ callbackUrl: redirectTo });
+    }
   };
 
   return (

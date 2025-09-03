@@ -22,49 +22,40 @@ export async function POST() {
 
   // Clear each cookie with the same domain configuration used when setting
   cookiesToClear.forEach(cookieName => {
-    // Clear with subdomain configuration for production
-    if (process.env.NODE_ENV === 'production') {
-      cookieStore.set(cookieName, '', {
-        maxAge: 0,
-        path: '/',
-        domain: '.rndev.site',
-        secure: true,
-        sameSite: 'lax'
-      });
-    }
-    
-    // Also try to clear without domain (for cookies set without domain)
-    cookieStore.set(cookieName, '', {
-      maxAge: 0,
-      path: '/',
-      secure: true,
-      sameSite: 'lax'
-    });
-  });
-
-  // Also clear any cookies that exist
-  allCookies.forEach(cookie => {
-    if (cookie.name.includes('next-auth') || cookie.name.includes('iron-session')) {
-      // Clear with domain for production
+    // For session token, we must clear with the domain since that's how it's set
+    if (cookieName.includes('session-token')) {
       if (process.env.NODE_ENV === 'production') {
-        cookieStore.set(cookie.name, '', {
+        // Session token is set with domain: '.rndev.site'
+        cookieStore.set(cookieName, '', {
           maxAge: 0,
           path: '/',
           domain: '.rndev.site',
           secure: true,
           sameSite: 'lax'
         });
+      } else {
+        // Development doesn't use domain
+        cookieStore.set(cookieName, '', {
+          maxAge: 0,
+          path: '/',
+          secure: false,
+          sameSite: 'lax'
+        });
       }
-      
-      // Clear without domain as fallback
-      cookieStore.set(cookie.name, '', {
+    } else {
+      // Other cookies are set without domain in production
+      cookieStore.set(cookieName, '', {
         maxAge: 0,
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
       });
     }
   });
+
+  // Log what we're clearing for debugging
+  console.log('[SignOut] Clearing cookies in', process.env.NODE_ENV, 'mode');
+  console.log('[SignOut] Found cookies:', allCookies.map(c => c.name).join(', '));
 
   return NextResponse.json({ success: true }, { status: 200 });
 }
