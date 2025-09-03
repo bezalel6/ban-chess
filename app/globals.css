@@ -381,6 +381,42 @@ a {
     height: 12.5% !important;
   }
 
+  /* Style for banned move destination - subtle red tint */
+  .chess-board-inner .cg-wrap square.banned-dest {
+    background: radial-gradient(
+      rgba(220, 20, 60, 0.4) 22%, 
+      rgba(139, 0, 0, 0.3) 23%, 
+      rgba(139, 0, 0, 0.15) 24%, 
+      transparent 25%
+    ) !important;
+    position: relative;
+  }
+  
+  /* Add a subtle pulse to banned move destinations */
+  .chess-board-inner .cg-wrap square.banned-dest::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30%;
+    height: 30%;
+    border-radius: 50%;
+    background: rgba(220, 20, 60, 0.3);
+    animation: banned-pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes banned-pulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+  }
+
   /* Mini board styles for game history */
   .mini-board-container {
     @apply relative rounded overflow-hidden bg-background-tertiary;
@@ -465,6 +501,22 @@ a {
 
 .animate-shake-alert {
   animation: shake-alert 0.6s ease-in-out;
+}
+
+/* Fade-in animation for easy mode */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }
 
 /* Custom scrollbar for settings modal */

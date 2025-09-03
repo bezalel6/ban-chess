@@ -59,7 +59,7 @@ const ChessBoard = memo(function ChessBoard({
   orientation: propOrientation,
 }: ChessBoardProps) {
   // Get user role from context (already memoized)
-  const { role, orientation: contextOrientation } = useUserRole();
+  const { role, orientation: contextOrientation, banDifficulty } = useUserRole();
 
   // Use prop orientation if provided, otherwise use context
   const orientation = propOrientation || contextOrientation;
@@ -135,8 +135,23 @@ const ChessBoard = memo(function ChessBoard({
       destsMap.set(from as Key, squares as Key[]);
     });
 
+    // Add the banned move to destinations if we're in move phase and there's a banned move
+    // This makes the banned move appear as a valid destination, but we'll catch it in the handler
+    if (canMove && currentBan && currentBan.from && currentBan.to) {
+      const fromKey = currentBan.from as Key;
+      const toKey = currentBan.to as Key;
+      
+      // Get existing destinations for this square or create new array
+      const existingDests = destsMap.get(fromKey) || [];
+      
+      // Add the banned destination if it's not already there
+      if (!existingDests.includes(toKey)) {
+        destsMap.set(fromKey, [...existingDests, toKey]);
+      }
+    }
+
     return destsMap;
-  }, [propDests]);
+  }, [propDests, canMove, currentBan]);
 
   // State for banned move alert
   const [bannedMoveAlert, setBannedMoveAlert] = useState<boolean>(false);
@@ -151,18 +166,30 @@ const ChessBoard = memo(function ChessBoard({
       } else {
         // Check if this move is banned
         if (currentBan && currentBan.from === orig && currentBan.to === dest) {
-          // This is a banned move! Show alert
+          // This is a banned move! Show alert based on difficulty
           setBannedMoveAlert(true);
           
-          // Play error sound if available (using explosion sound from futuristic theme)
-          if (typeof window !== 'undefined' && window.Audio) {
-            const audio = new Audio('/sounds/futuristic/Explosion.mp3');
-            audio.volume = 0.3; // Lower volume for explosion sound
-            audio.play().catch(() => {
-              // Fallback if audio fails
-              console.log('Banned move attempted:', orig, dest);
-            });
+          // Different feedback based on difficulty level
+          if (banDifficulty === 'hard') {
+            // Hard mode: Play explosion sound (not for the faint of heart!)
+            if (typeof window !== 'undefined' && window.Audio) {
+              const audio = new Audio('/sounds/futuristic/Explosion.mp3');
+              audio.volume = 0.3; // Lower volume for explosion sound
+              audio.play().catch(() => {
+                console.log('Banned move attempted:', orig, dest);
+              });
+            }
+          } else if (banDifficulty === 'medium') {
+            // Medium mode: Play a subtle error/buzz sound
+            if (typeof window !== 'undefined' && window.Audio) {
+              const audio = new Audio('/sounds/standard/Error.mp3');
+              audio.volume = 0.4;
+              audio.play().catch(() => {
+                console.log('Banned move attempted:', orig, dest);
+              });
+            }
           }
+          // Easy mode: No sound, just visual feedback
           
           // Reset the alert after animation
           setTimeout(() => {
@@ -191,7 +218,7 @@ const ChessBoard = memo(function ChessBoard({
       }
       return true;
     },
-    [gameState, fenData, nextAction, onMove, onBan, currentBan]
+    [gameState, fenData, nextAction, onMove, onBan, currentBan, banDifficulty]
   );
 
   // Board key that incorporates external refresh trigger
@@ -284,27 +311,52 @@ const ChessBoard = memo(function ChessBoard({
     '--cg-move-dest-center': '#8b0000',
     '--cg-move-dest-hover': 'rgba(220, 20, 60, 0.4)',
     '--cg-selected-color': 'rgba(220, 20, 60, 0.5)',
+    '--cg-oc-move-dest': 'rgba(139, 0, 0, 0.3)', // Outer circle for move destinations in red
   } as React.CSSProperties : {};
 
   return (
     <div className="chess-board-outer" style={boardStyle}>
       <div className="chess-board-inner">
         <Chessground key={boardKey} {...config} />
-        {/* Banned Move Alert Overlay */}
+        {/* Banned Move Alert Overlay - Different based on difficulty */}
         {bannedMoveAlert && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-50">
-            <div className="bg-red-600/95 text-white px-8 py-4 rounded-xl shadow-2xl animate-shake-alert border-2 border-red-400">
-              <div className="flex items-center gap-3">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" 
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-                <div>
-                  <span className="font-bold text-xl block">Banned Move!</span>
-                  <p className="text-sm opacity-90">This move is not allowed</p>
+            {banDifficulty === 'hard' ? (
+              // Hard mode: Aggressive red alert with shake
+              <div className="bg-red-600/95 text-white px-8 py-4 rounded-xl shadow-2xl animate-shake-alert border-2 border-red-400">
+                <div className="flex items-center gap-3">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" 
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  <div>
+                    <span className="font-bold text-xl block">BANNED MOVE!</span>
+                    <p className="text-sm opacity-90">This move is not allowed</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : banDifficulty === 'medium' ? (
+              // Medium mode: Softer warning with subtle animation
+              <div className="bg-orange-500/90 text-white px-6 py-3 rounded-lg shadow-xl animate-pulse border border-orange-300">
+                <div className="flex items-center gap-2">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" 
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <span className="font-semibold">Banned Move</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Easy mode: Simple X indicator
+              <div className="bg-gray-800/80 text-white p-4 rounded-full shadow-lg animate-fade-in">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" 
+                    d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            )}
           </div>
         )}
       </div>

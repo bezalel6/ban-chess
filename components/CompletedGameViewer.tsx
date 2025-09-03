@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { BanChess } from "ban-chess.ts";
-import type { SimpleGameState } from "@/lib/game-types";
+import type { SimpleGameState, PlayerClock } from "@/lib/game-types";
 import { formatDistanceToNow } from "date-fns";
 import MoveList from "./game/MoveList";
 import NavigationBar from "./game/NavigationBar";
+import PlayerInfo from "./game/PlayerInfo";
+import { calculateClocksAtMove } from "@/lib/clock-calculator";
 
 const ChessBoard = dynamic(() => import("./ChessBoard"), {
   ssr: false,
@@ -47,6 +49,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null);
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [gameState, setGameState] = useState<SimpleGameState | null>(null);
+  const [historicalClocks, setHistoricalClocks] = useState<{ white: PlayerClock; black: PlayerClock } | null>(null);
 
   useEffect(() => {
     loadGame();
@@ -81,13 +84,22 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
         setGameState({
           gameId: gameId,
           fen: game.fen(),
-          players: data.players,
+          players: {
+            white: { id: "", username: data.whitePlayer.username },
+            black: { id: "", username: data.blackPlayer.username },
+          },
           activePlayer: game.getActivePlayer() as "white" | "black",
           inCheck: game.inCheck(),
           gameOver: game.gameOver(),
           result: data.result,
           actionHistory: data.bcn,
         });
+        
+        // Calculate initial clocks at final position
+        if (data.timeControl !== "unlimited") {
+          const clocks = calculateClocksAtMove(data.bcn, data.moveTimes, data.timeControl, data.bcn.length - 1);
+          setHistoricalClocks(clocks);
+        }
       }
     } catch (err) {
       console.error("Error loading game:", err);
@@ -117,6 +129,12 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
       actionType: navGame.getActionType() as "ban" | "move",
       inCheck: navGame.inCheck(),
     } : null);
+    
+    // Calculate clocks at this position
+    if (gameData && gameData.timeControl !== "unlimited") {
+      const clocks = calculateClocksAtMove(gameData.bcn, gameData.moveTimes, gameData.timeControl, moveIndex);
+      setHistoricalClocks(clocks);
+    }
   }, [gameData]);
 
   const handleFlipBoard = useCallback(() => {
@@ -191,8 +209,21 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
-          {/* Chess Board */}
+          {/* Chess Board with Player Info */}
           <div className="flex flex-col gap-4">
+            {/* Top Player (based on board orientation) */}
+            {gameData.timeControl !== "unlimited" && historicalClocks && (
+              <div className="bg-background-secondary rounded-lg p-3">
+                <PlayerInfo
+                  username={boardOrientation === "white" ? gameData.blackPlayer.username : gameData.whitePlayer.username}
+                  isTurn={false}
+                  clock={boardOrientation === "white" ? historicalClocks.black : historicalClocks.white}
+                  isClockActive={false}
+                  isOnline={true}
+                />
+              </div>
+            )}
+            
             <div className="aspect-square max-w-full">
               <ChessBoard
                 gameState={gameState}
@@ -203,6 +234,19 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
                 orientation={boardOrientation}
               />
             </div>
+            
+            {/* Bottom Player (based on board orientation) */}
+            {gameData.timeControl !== "unlimited" && historicalClocks && (
+              <div className="bg-background-secondary rounded-lg p-3">
+                <PlayerInfo
+                  username={boardOrientation === "white" ? gameData.whitePlayer.username : gameData.blackPlayer.username}
+                  isTurn={false}
+                  clock={boardOrientation === "white" ? historicalClocks.white : historicalClocks.black}
+                  isClockActive={false}
+                  isOnline={true}
+                />
+              </div>
+            )}
             
             {/* Navigation Bar */}
             <NavigationBar

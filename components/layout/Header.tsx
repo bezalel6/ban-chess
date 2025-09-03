@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { Search, LogOut, Volume2, User } from "lucide-react";
+import { useState, useTransition, useEffect, useRef } from "react";
+import { Search, LogOut, Volume2, User, Shield, ChevronRight, Check } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "next-auth/react";
 import MobileMenu from "./MobileMenu";
 import Image from "next/image";
+import { useUserRole } from "@/contexts/UserRoleContext";
 
 function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showDifficultySubmenu, setShowDifficultySubmenu] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { banDifficulty, setBanDifficulty } = useUserRole();
 
   const handleSignOut = () => {
     startTransition(() => {
@@ -18,59 +22,153 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
     });
   };
 
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-4 py-2.5 bg-background-secondary rounded-lg hover:bg-background-tertiary transition-colors"
-      >
-        <div className="w-8 h-8 bg-lichess-orange-500 rounded-full flex items-center justify-center">
-          <span className="text-xs font-bold text-white">
-            {user.username?.slice(0, 2).toUpperCase() || "U"}
-          </span>
-        </div>
-        <span className="text-sm font-medium">{user.username || "User"}</span>
-        <div
-          className="w-2 h-2 bg-green-500 rounded-full ml-1"
-          title="Online"
-        />
-      </button>
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setShowDifficultySubmenu(false);
+      }
+    };
 
-      {isOpen && (
-        <div className="absolute top-full right-0 w-56 bg-background-secondary border border-border rounded-lg shadow-lg py-3 z-50 mt-2">
-          {/* Only show Profile link for registered users (not guests) */}
-          {user.userId && (
-            <>
-              <Link
-                href={`/user/${user.username || "profile"}`}
-                className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                <User className="h-4 w-4 mr-2" />
-                Profile
-              </Link>
-              <Link
-                href="/sound-settings"
-                className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                <Volume2 className="h-4 w-4 mr-2" />
-                Sound Settings
-              </Link>
-              <div className="border-t border-border my-1"></div>
-            </>
-          )}
-          <button
-            onClick={handleSignOut}
-            disabled={isPending}
-            className="flex items-center w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            {isPending ? "Signing out..." : "Sign out"}
-          </button>
-        </div>
-      )}
-    </div>
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Close dropdown on escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (showDifficultySubmenu) {
+          setShowDifficultySubmenu(false);
+        } else {
+          setIsOpen(false);
+        }
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+    }
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen, showDifficultySubmenu]);
+
+  return (
+    <>
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center space-x-2 px-4 py-2.5 bg-background-secondary rounded-lg hover:bg-background-tertiary transition-colors"
+        >
+          <div className="w-8 h-8 bg-lichess-orange-500 rounded-full flex items-center justify-center">
+            <span className="text-xs font-bold text-white">
+              {user.username?.slice(0, 2).toUpperCase() || "U"}
+            </span>
+          </div>
+          <span className="text-sm font-medium">{user.username || "User"}</span>
+          <div
+            className="w-2 h-2 bg-green-500 rounded-full ml-1"
+            title="Online"
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute top-full right-0 w-56 bg-background-secondary border border-border rounded-lg shadow-lg py-3 z-50 mt-2">
+            {/* Only show Profile link for registered users (not guests) */}
+            {user.userId && (
+              <>
+                <Link
+                  href={`/user/${user.username || "profile"}`}
+                  className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Profile
+                </Link>
+                <button
+                  onClick={() => setShowDifficultySubmenu(!showDifficultySubmenu)}
+                  className="flex items-center justify-between w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                >
+                  <span className="flex items-center">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Ban Difficulty
+                  </span>
+                  <ChevronRight className={`h-4 w-4 transition-transform ${showDifficultySubmenu ? 'rotate-90' : ''}`} />
+                </button>
+                
+                {/* Difficulty Submenu */}
+                {showDifficultySubmenu && (
+                  <div className="ml-4 border-l-2 border-border">
+                    <button
+                      onClick={() => {
+                        setBanDifficulty('easy');
+                        setShowDifficultySubmenu(false);
+                        setIsOpen(false);
+                      }}
+                      className={`flex items-center justify-between w-full px-5 py-2 text-sm hover:bg-background-tertiary transition-colors ${
+                        banDifficulty === 'easy' ? 'text-green-500' : 'text-foreground'
+                      }`}
+                    >
+                      <span>Easy</span>
+                      {banDifficulty === 'easy' && <Check className="h-3 w-3" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBanDifficulty('medium');
+                        setShowDifficultySubmenu(false);
+                        setIsOpen(false);
+                      }}
+                      className={`flex items-center justify-between w-full px-5 py-2 text-sm hover:bg-background-tertiary transition-colors ${
+                        banDifficulty === 'medium' ? 'text-orange-500' : 'text-foreground'
+                      }`}
+                    >
+                      <span>Medium</span>
+                      {banDifficulty === 'medium' && <Check className="h-3 w-3" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setBanDifficulty('hard');
+                        setShowDifficultySubmenu(false);
+                        setIsOpen(false);
+                      }}
+                      className={`flex items-center justify-between w-full px-5 py-2 text-sm hover:bg-background-tertiary transition-colors ${
+                        banDifficulty === 'hard' ? 'text-red-500' : 'text-foreground'
+                      }`}
+                    >
+                      <span>Hard</span>
+                      {banDifficulty === 'hard' && <Check className="h-3 w-3" />}
+                    </button>
+                  </div>
+                )}
+                <Link
+                  href="/sound-settings"
+                  className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Volume2 className="h-4 w-4 mr-2" />
+                  Sound Settings
+                </Link>
+                <div className="border-t border-border my-1"></div>
+              </>
+            )}
+            <button
+              onClick={handleSignOut}
+              disabled={isPending}
+              className="flex items-center w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              {isPending ? "Signing out..." : "Sign out"}
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
