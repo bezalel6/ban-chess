@@ -36,6 +36,9 @@ RUN addgroup -g 1001 -S nodejs && \
 # The standalone folder contains everything needed to run
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# IMPORTANT: Copy public folder AFTER standalone to ensure it's not overwritten
+# Public folder contains all static assets (sounds, images, etc)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copy Prisma schema and generated client

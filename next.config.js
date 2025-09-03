@@ -7,6 +7,12 @@ const nextConfig = {
     ignoreBuildErrors: false,
     // This ensures tsc runs in strict mode
     tsconfigPath: './tsconfig.json'
+  },
+  // Ensure public files are served correctly in standalone mode
+  experimental: {
+    outputFileTracingIncludes: {
+      '/': ['./public/**/*']
+    }
   }
 }
 
