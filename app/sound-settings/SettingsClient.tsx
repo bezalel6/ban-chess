@@ -1,7 +1,8 @@
 "use client";
 
-import { Play, Music, Wand2, RotateCcw, MousePointer, X } from "lucide-react";
+import { Music, Wand2, RotateCcw, MousePointer, X, Volume2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Masonry } from "masonic";
 import soundManager, { eventTypes, eventMetadata, type EventType } from "@/lib/sound-manager";
 
 interface SoundLibrary {
@@ -234,43 +235,85 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
                 )}
               </div>
 
-              {/* Sound Grid - with direct assignment buttons */}
-              <div className="bg-background rounded-lg p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 max-h-[400px] overflow-y-auto pr-2 pt-2 auto-rows-fr">
-                  {soundLibrary.themes[activeTheme]?.map((sound) => {
+              {/* Masonic Grid - Dense, Large Text, Beautiful */}
+              <div className="bg-gradient-to-br from-background via-background to-background-secondary rounded-xl p-4 shadow-inner border border-gray-700/30" style={{ height: '500px', overflow: 'auto' }}>
+                <Masonry
+                  items={soundLibrary.themes[activeTheme] || []}
+                  columnGutter={8}
+                  columnWidth={150}
+                  overscanBy={2}
+                  render={({ data: sound, index }) => {
                     const isPlaying = isPlayingSound === sound.file;
-                    
-                    return (
-                      <div key={sound.file} className="relative group h-full">
-                        <button
-                          onClick={() => playSound(sound.file)}
-                          disabled={!soundEnabled}
-                          className={`w-full h-full px-3 py-2 rounded-lg text-xs transition-all flex flex-col items-center justify-center gap-1 min-h-[60px] ${
-                            isPlaying 
-                              ? 'animate-pulse bg-lichess-orange-500/30' 
-                              : 'bg-background-secondary hover:bg-lichess-orange-500/10'
-                          } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          title={`Click to play: ${sound.displayName}`}
-                        >
-                          {isPlaying && (
-                            <Play className="h-3 w-3 text-lichess-orange-500 flex-shrink-0" />
-                          )}
-                          <span className="text-center break-words leading-tight text-xs">{sound.displayName}</span>
-                        </button>
-                        
-                        {/* Assign Button - visible on hover */}
-                        <button
-                          onClick={() => startAssignment(sound.file, sound.displayName)}
-                          disabled={!soundEnabled}
-                          className="absolute -top-2 -right-2 p-2 bg-lichess-orange-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-lichess-orange-600 disabled:opacity-50"
-                          title={`Assign ${sound.displayName} to a game event`}
-                        >
-                          <MousePointer className="h-3 w-3" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                      
+                      // Dynamic height classes for masonry effect - larger sizes
+                      const heightVariants = ['h-24', 'h-32', 'h-28', 'h-36', 'h-24', 'h-30', 'h-28', 'h-32'];
+                      const heightClass = heightVariants[index % heightVariants.length];
+                      
+                      // Dynamic gradient backgrounds
+                      const gradientVariants = [
+                        'from-violet-500/10 to-purple-500/5',
+                        'from-blue-500/10 to-cyan-500/5',
+                        'from-green-500/10 to-emerald-500/5',
+                        'from-orange-500/10 to-red-500/5',
+                        'from-pink-500/10 to-rose-500/5',
+                        'from-indigo-500/10 to-blue-500/5'
+                      ];
+                      const gradientClass = gradientVariants[index % gradientVariants.length];
+                      
+                      return (
+                        <div key={sound.file} className={`relative group ${heightClass}`}>
+                          <button
+                            onClick={() => playSound(sound.file)}
+                            disabled={!soundEnabled}
+                            className={`w-full h-full px-3 py-2 rounded-xl text-xs transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden border backdrop-blur-sm ${
+                              isPlaying 
+                                ? 'bg-gradient-to-br from-lichess-orange-400/30 to-lichess-orange-600/20 border-lichess-orange-400/50 shadow-lg shadow-lichess-orange-500/20 scale-105' 
+                                : `bg-gradient-to-br ${gradientClass} border-gray-600/30 hover:border-gray-500/50 hover:shadow-lg hover:shadow-gray-500/10 hover:scale-102 hover:-translate-y-1`
+                            } disabled:opacity-50 disabled:cursor-not-allowed group-hover:bg-opacity-80`}
+                            title={`Click to play: ${sound.displayName}`}
+                          >
+                            {/* Subtle pattern overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50" />
+                            
+                            {/* Playing indicator with Volume icon */}
+                            {isPlaying && (
+                              <div className="absolute top-1 right-1">
+                                <Volume2 className="h-3 w-3 text-lichess-orange-400 animate-pulse" />
+                              </div>
+                            )}
+                            
+                            {/* LARGE TEXT - fills the space properly */}
+                            <span className={`text-center font-bold relative z-10 ${
+                              isPlaying ? 'text-lichess-orange-200' : 'text-gray-100'
+                            } leading-tight break-words px-2`}
+                            style={{
+                              fontSize: sound.displayName.length > 15 ? '14px' : 
+                                       sound.displayName.length > 10 ? '16px' : '18px'
+                            }}>
+                              {sound.displayName}
+                            </span>
+                            
+                            {/* Subtle glow effect on hover */}
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                          </button>
+                          
+                          {/* Enhanced Assign Button with floating animation */}
+                          <button
+                            onClick={() => startAssignment(sound.file, sound.displayName)}
+                            disabled={!soundEnabled}
+                            className="absolute -top-2 -right-2 p-2 bg-gradient-to-r from-lichess-orange-500 to-lichess-orange-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl hover:shadow-lichess-orange-500/50 hover:scale-110 hover:-translate-y-0.5 disabled:opacity-50 z-20 border-2 border-white/20"
+                            title={`Assign ${sound.displayName} to a game event`}
+                          >
+                            <MousePointer className="h-3 w-3" />
+                            <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse" />
+                          </button>
+                          
+                          {/* Decorative corner accent */}
+                          <div className="absolute top-1 left-1 w-2 h-2 bg-gradient-to-br from-white/20 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                      );
+                  }}
+                />
               </div>
 
               {/* Instructions */}
