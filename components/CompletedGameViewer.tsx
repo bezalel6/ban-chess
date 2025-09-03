@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { BanChess } from "ban-chess.ts";
 import type { SimpleGameState, PlayerClock } from "@/lib/game-types";
-import GameSidebar from "./game/GameSidebar";
+import CompletedGameSidebar from "./game/CompletedGameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 import { calculateClocksAtMove } from "@/lib/clock-calculator";
 
@@ -96,6 +96,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
       if (data.bcn && data.bcn.length > 0) {
         const game = BanChess.replayFromActions(data.bcn);
         setNavigationGame(game);
+        // Set to last action index (which should be a move, not a ban)
         setCurrentMoveIndex(data.bcn.length - 1);
         
         // Get the FULL game history - this should never change during navigation
@@ -103,14 +104,14 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
         const fullHistory = fullGame.history();
         
         // Calculate initial clocks at final position - make them static (no lastUpdate)
-        let initialClocks = null;
+        let initialClocks: { white: PlayerClock; black: PlayerClock } | null = null;
         if (data.timeControl !== "unlimited") {
           const clocks = calculateClocksAtMove(data.bcn, data.moveTimes, data.timeControl, data.bcn.length - 1);
-          // Remove lastUpdate to prevent ticking
-          initialClocks = clocks ? {
-            white: { remaining: clocks.white.remaining, lastUpdate: 0 },
-            black: { remaining: clocks.black.remaining, lastUpdate: 0 }
-          } : null;
+          // Create completely frozen clock objects
+          initialClocks = clocks ? Object.freeze({
+            white: Object.freeze({ remaining: clocks.white.remaining, lastUpdate: 0 }) as PlayerClock,
+            black: Object.freeze({ remaining: clocks.black.remaining, lastUpdate: 0 }) as PlayerClock
+          }) as { white: PlayerClock; black: PlayerClock } : null;
           setHistoricalClocks(initialClocks);
         }
         
@@ -127,10 +128,9 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
           gameOver: game.gameOver(),
           result: data.result,
           actionHistory: data.bcn,
-          history: fullHistory, // FULL move history that won't change
-          clocks: initialClocks, // Add clocks for PlayerInfo
-          moveTimes: data.moveTimes, // Add move times
-          timeControl: data.timeControl, // Add time control
+          history: fullHistory as never, // FULL move history that won't change - type mismatch between ban-chess and our types
+          clocks: initialClocks || undefined, // Add clocks for PlayerInfo
+          timeControl: data.timeControl // Add time control
         });
       }
     } catch (err) {
@@ -140,6 +140,20 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
       setLoading(false);
     }
   };
+
+  // Memoize clock calculations to prevent ticking
+  const getStaticClocksForPosition = useCallback((targetIndex: number): { white: PlayerClock; black: PlayerClock } | null => {
+    if (!gameData || gameData.timeControl === "unlimited") {
+      return null;
+    }
+    
+    const clocks = calculateClocksAtMove(gameData.bcn, gameData.moveTimes, gameData.timeControl, targetIndex);
+    // Create completely frozen clock objects to prevent any updates
+    return clocks ? Object.freeze({
+      white: Object.freeze({ remaining: clocks.white.remaining, lastUpdate: 0 }) as PlayerClock,
+      black: Object.freeze({ remaining: clocks.black.remaining, lastUpdate: 0 }) as PlayerClock
+    }) as { white: PlayerClock; black: PlayerClock } : null;
+  }, [gameData]);
 
   const handleNavigate = useCallback((targetIndex: number) => {
     if (!gameData || !gameData.bcn || targetIndex < -1 || targetIndex >= gameData.bcn.length) {
@@ -163,17 +177,9 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
     setNavigationGame(game);
     setCurrentMoveIndex(targetIndex);
     
-    // Update clocks for this position - make them static (no lastUpdate)
-    let clocksAtPosition = null;
-    if (gameData.timeControl !== "unlimited") {
-      const clocks = calculateClocksAtMove(gameData.bcn, gameData.moveTimes, gameData.timeControl, targetIndex);
-      // Remove lastUpdate to prevent ticking
-      clocksAtPosition = clocks ? {
-        white: { remaining: clocks.white.remaining, lastUpdate: 0 },
-        black: { remaining: clocks.black.remaining, lastUpdate: 0 }
-      } : null;
-      setHistoricalClocks(clocksAtPosition);
-    }
+    // Get static clocks for this position
+    const clocksAtPosition = getStaticClocksForPosition(targetIndex);
+    setHistoricalClocks(clocksAtPosition);
     
     // Update game state but KEEP THE FULL HISTORY - don't change it!
     setGameState(prev => prev ? {
@@ -183,9 +189,9 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
       inCheck: game.inCheck(),
       gameOver: targetIndex === gameData.bcn.length - 1 ? game.gameOver() : false,
       // DON'T update history - keep the full game history for the move list
-      clocks: clocksAtPosition, // Update clocks for PlayerInfo
+      clocks: clocksAtPosition || undefined, // Update clocks for PlayerInfo
     } : null);
-  }, [gameData]);
+  }, [gameData, getStaticClocksForPosition]);
 
   const handleFlipBoard = () => {
     setBoardOrientation(prev => prev === "white" ? "black" : "white");
@@ -253,36 +259,34 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
 
         {/* Center - Board (matches GameClient) */}
         <div className="flex flex-col items-center justify-center">
-          <ResizableBoard
-            gameState={navigationGame && gameState ? { 
-              ...gameState, 
-              fen: navigationGame.fen(), 
-              inCheck: navigationGame.inCheck() 
-            } : gameState}
-            game={navigationGame}
-            dests={new Map()} // No moves allowed in completed games
-            activePlayer={navigationGame?.getActivePlayer() as "white" | "black"}
-            actionType={navigationGame?.getActionType() as "move" | "ban"}
-            onMove={() => {}} // No-op
-            onBan={() => {}} // No-op
-            refreshKey={0}
-            orientation={boardOrientation}
-          />
+          {gameState && (
+            <ResizableBoard
+              gameState={navigationGame ? { 
+                ...gameState, 
+                fen: navigationGame.fen(), 
+                inCheck: navigationGame.inCheck() 
+              } : gameState}
+              game={navigationGame}
+              dests={new Map()} // No moves allowed in completed games
+              activePlayer={navigationGame?.getActivePlayer() as "white" | "black"}
+              actionType={navigationGame?.getActionType() as "move" | "ban"}
+              onMove={() => {}} // No-op
+              onBan={() => {}} // No-op
+              refreshKey={0}
+              orientation={boardOrientation}
+            />
+          )}
         </div>
 
         {/* Right Panel - Sidebar (matches GameClient) - Made wider for move list */}
         <div className="w-80 flex-shrink-0">
-          <GameSidebar
+          <CompletedGameSidebar
             gameState={gameState!} // gameState already has history, clocks, etc.
-            onGiveTime={() => {}} // No-op
-            onResign={() => {}} // No-op
             onMoveSelect={handleMoveSelect}
             // Convert action index to move index for MoveList display
             currentMoveIndex={currentMoveIndex !== null ? Math.floor(currentMoveIndex / 2) : undefined}
-            isLocalGame={false}
             onFlipBoard={handleFlipBoard}
             isViewingHistory={isViewingHistory}
-            // Don't pass onReturnToLive - no "Live" button for completed games
           />
         </div>
       </div>

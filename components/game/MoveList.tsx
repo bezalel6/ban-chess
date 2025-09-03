@@ -113,20 +113,24 @@ export default function MoveList(props: MoveListProps) {
       switch (e.key) {
         case "ArrowLeft":
           e.preventDefault();
-          // If no selection or at start, stay at 0
+          // Handle navigation based on current position
           if (selectedIndex === null) {
-            newIndex = totalMoves > 0 ? totalMoves - 2 : 0; // Go to second-to-last move
+            // If no selection (viewing final position), go to second-to-last move
+            newIndex = Math.max(0, totalMoves - 2);
           } else {
-            newIndex = Math.max(0, newIndex - 1);
+            // If we have a selection, go one move back
+            newIndex = Math.max(0, selectedIndex - 1);
           }
           break;
         case "ArrowRight":
           e.preventDefault();
-          // If no selection, go to last move
+          // Handle navigation based on current position
           if (selectedIndex === null) {
+            // Already at final position, stay there
             newIndex = totalMoves - 1;
           } else {
-            newIndex = Math.min(totalMoves - 1, newIndex + 1);
+            // Move forward one move
+            newIndex = Math.min(totalMoves - 1, selectedIndex + 1);
           }
           break;
         case "ArrowUp":
