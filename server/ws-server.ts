@@ -41,8 +41,26 @@ import {
   reconstructGameFromBCN,
 } from "./services/game-retrieval";
 import { GameService } from "./services/game-service";
-import { ensureDbSchema, runDataMigrations } from "../lib/db-migration";
-import { initializeAdmins } from "../lib/startup-admin";
+
+// Optional imports for new features - won't break if files don't exist yet
+let ensureDbSchema: (() => Promise<void>) | undefined;
+let runDataMigrations: (() => Promise<void>) | undefined;
+let initializeAdmins: (() => Promise<void>) | undefined;
+
+try {
+  const dbMigration = require("../lib/db-migration");
+  ensureDbSchema = dbMigration.ensureDbSchema;
+  runDataMigrations = dbMigration.runDataMigrations;
+} catch {
+  console.log("[WebSocket] db-migration module not found, skipping schema checks");
+}
+
+try {
+  const startupAdmin = require("../lib/startup-admin");
+  initializeAdmins = startupAdmin.initializeAdmins;
+} catch {
+  console.log("[WebSocket] startup-admin module not found, skipping admin initialization");
+}
 
 // Import the type from redis
 type GameStateData = Awaited<ReturnType<typeof getGameState>>;
@@ -257,17 +275,23 @@ redis
 // Initialize database schema and admin users on startup
 (async () => {
   try {
-    console.log("🔧 Checking database schema...");
-    await ensureDbSchema();
-    console.log("✅ Database schema: OK");
+    if (ensureDbSchema) {
+      console.log("🔧 Checking database schema...");
+      await ensureDbSchema();
+      console.log("✅ Database schema: OK");
+    }
     
-    console.log("📊 Running data migrations...");
-    await runDataMigrations();
-    console.log("✅ Data migrations: Complete");
+    if (runDataMigrations) {
+      console.log("📊 Running data migrations...");
+      await runDataMigrations();
+      console.log("✅ Data migrations: Complete");
+    }
     
-    console.log("👤 Initializing admin users...");
-    await initializeAdmins();
-    console.log("✅ Admin initialization: Complete");
+    if (initializeAdmins) {
+      console.log("👤 Initializing admin users...");
+      await initializeAdmins();
+      console.log("✅ Admin initialization: Complete");
+    }
   } catch (error) {
     console.error("❌ Startup initialization error:", error);
     // Don't exit - server can still run for non-admin users
