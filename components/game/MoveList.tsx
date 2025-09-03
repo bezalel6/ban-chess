@@ -112,8 +112,11 @@ export default function MoveList(props: MoveListProps) {
 
       switch (e.key) {
         case "ArrowLeft":
+        case "a":
+        case "A":
           e.preventDefault();
-          // Handle navigation based on current position
+          e.stopPropagation();
+          // Handle navigation based on current position (same as left arrow button)
           if (selectedIndex === null) {
             // If no selection (viewing final position), go to second-to-last move
             newIndex = Math.max(0, totalMoves - 2);
@@ -123,8 +126,11 @@ export default function MoveList(props: MoveListProps) {
           }
           break;
         case "ArrowRight":
+        case "d":
+        case "D":
           e.preventDefault();
-          // Handle navigation based on current position
+          e.stopPropagation();
+          // Handle navigation based on current position (same as right arrow button)
           if (selectedIndex === null) {
             // Already at final position, stay there
             newIndex = totalMoves - 1;
@@ -134,21 +140,29 @@ export default function MoveList(props: MoveListProps) {
           }
           break;
         case "ArrowUp":
+        case "w":
+        case "W":
           e.preventDefault();
-          // Move up by 4 (one full turn in ban-chess)
-          newIndex = Math.max(0, newIndex - 4);
+          e.stopPropagation();
+          // Go to beginning of game (same as extreme left arrow button)
+          newIndex = -1; // Starting position
           break;
         case "ArrowDown":
+        case "s":
+        case "S":
           e.preventDefault();
-          // Move down by 4 (one full turn in ban-chess)
-          newIndex = Math.min(totalMoves - 1, newIndex + 4);
+          e.stopPropagation();
+          // Go to end of game (same as extreme right arrow button)
+          newIndex = totalMoves - 1;
           break;
         case "Home":
           e.preventDefault();
-          newIndex = 0;
+          e.stopPropagation();
+          newIndex = -1; // Starting position
           break;
         case "End":
           e.preventDefault();
+          e.stopPropagation();
           newIndex = totalMoves - 1;
           break;
         default:
@@ -158,7 +172,10 @@ export default function MoveList(props: MoveListProps) {
       if (newIndex !== selectedIndex) {
         setSelectedIndex(newIndex);
         onMoveSelect?.(newIndex);
-        playNavigationSound(newIndex);
+        // Only play navigation sound for valid move indices (not starting position)
+        if (newIndex >= 0) {
+          playNavigationSound(newIndex);
+        }
       }
     },
     [history, selectedIndex, onMoveSelect, playNavigationSound]
