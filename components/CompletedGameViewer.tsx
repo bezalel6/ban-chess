@@ -79,14 +79,14 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
         
         // Set initial game state
         setGameState({
+          gameId: gameId,
           fen: game.fen(),
+          players: data.players,
           activePlayer: game.getActivePlayer() as "white" | "black",
-          actionType: game.getActionType() as "ban" | "move",
           inCheck: game.inCheck(),
           gameOver: game.gameOver(),
           result: data.result,
           actionHistory: data.bcn,
-          moveTimes: data.moveTimes,
         });
       }
     } catch (err) {
@@ -220,7 +220,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
             <MoveList
               actions={gameData.bcn}
               moveTimes={gameData.moveTimes}
-              currentIndex={currentMoveIndex}
+              currentIndex={currentMoveIndex ?? undefined}
               onNavigate={handleNavigate}
             />
           </div>

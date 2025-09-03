@@ -104,6 +104,7 @@ export default function GameClient({ gameId }: GameClientProps) {
     joinGame,
     giveTime,
     resignGame,
+    isLocalGame,
   } = useGameState();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
@@ -271,6 +272,7 @@ export default function GameClient({ gameId }: GameClientProps) {
             onResign={resignGame}
             onMoveSelect={handleMoveSelect}
             currentMoveIndex={currentMoveIndex ?? undefined}
+            isLocalGame={isLocalGame}
           />
         </div>
         <WebSocketStats />
@@ -374,6 +376,7 @@ export default function GameClient({ gameId }: GameClientProps) {
               onResign={resignGame}
               onMoveSelect={handleMoveSelect}
               currentMoveIndex={currentMoveIndex ?? undefined}
+              isLocalGame={isLocalGame}
             />
           </div>
         </div>

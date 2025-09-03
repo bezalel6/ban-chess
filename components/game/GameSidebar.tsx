@@ -14,6 +14,7 @@ interface GameSidebarProps {
   onResign?: () => void;
   onMoveSelect?: (moveIndex: number) => void;
   currentMoveIndex?: number;
+  isLocalGame?: boolean;
 }
 
 export default function GameSidebar({
@@ -22,6 +23,7 @@ export default function GameSidebar({
   onResign,
   onMoveSelect,
   currentMoveIndex,
+  isLocalGame = false,
 }: GameSidebarProps) {
   const { activePlayer } = useGameState();
   const { role, orientation } = useUserRole();
@@ -76,7 +78,8 @@ export default function GameSidebar({
           canGiveTimeToTop &&
           !!onGiveTime &&
           !!gameState.timeControl &&
-          !gameState.gameOver
+          !gameState.gameOver &&
+          !isLocalGame
         }
         onGiveTime={onGiveTime}
         isOnline={topPlayer !== "Waiting..."}
@@ -86,6 +89,7 @@ export default function GameSidebar({
       <div className="h-[120px] overflow-hidden">
         <MoveList 
           history={gameState.history || []} 
+          gameState={gameState}
           onMoveSelect={onMoveSelect}
           currentMoveIndex={currentMoveIndex}
         />
@@ -108,7 +112,8 @@ export default function GameSidebar({
           canGiveTimeToBottom &&
           !!onGiveTime &&
           !!gameState.timeControl &&
-          !gameState.gameOver
+          !gameState.gameOver &&
+          !isLocalGame
         }
         onGiveTime={onGiveTime}
         isOnline={bottomPlayer !== "Waiting..."}

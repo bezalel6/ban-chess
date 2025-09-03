@@ -171,7 +171,7 @@ const ChessBoard = memo(function ChessBoard({
   const boardKey = useMemo(() => `board-${refreshKey}`, [refreshKey]);
 
   // Memoize config early to comply with Rules of Hooks
-  const config: ReactChessGroundProps = useMemo(
+  const config = useMemo<ReactChessGroundProps>(
     () => ({
       fen:
         gameState?.fen ||
@@ -201,9 +201,6 @@ const ChessBoard = memo(function ChessBoard({
       },
       selectable: {
         enabled: canMove || canBan,
-      },
-      premovable: {
-        enabled: false,
       },
       drawable: {
         enabled: true,
