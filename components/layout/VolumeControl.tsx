@@ -13,6 +13,7 @@ export default function VolumeControl() {
   const [isMounted, setIsMounted] = useState(false);
   const controlRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const soundPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load actual state after mount (client-side only)
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function VolumeControl() {
   }, []);
 
   // Handle volume change
-  const handleVolumeChange = (newVolume: number) => {
+  const handleVolumeChange = (newVolume: number, playPreview: boolean = true) => {
     setVolume(newVolume);
     soundManager.setVolume(newVolume);
     
@@ -35,6 +36,21 @@ export default function VolumeControl() {
     else if (newVolume === 0) {
       setSoundEnabled(false);
       soundManager.setEnabled(false);
+    }
+    
+    // Play a preview sound when adjusting volume (but not when it's 0)
+    // Debounce the sound to avoid playing too many sounds while dragging
+    if (playPreview && newVolume > 0) {
+      // Clear any existing timeout
+      if (soundPreviewTimeoutRef.current) {
+        clearTimeout(soundPreviewTimeoutRef.current);
+      }
+      
+      // Set a new timeout to play the sound
+      soundPreviewTimeoutRef.current = setTimeout(() => {
+        // Use a short, pleasant sound for volume preview
+        soundManager.playEvent('move');
+      }, 150); // Small delay to debounce rapid changes while dragging
     }
   };
 
@@ -127,11 +143,14 @@ export default function VolumeControl() {
     };
   }, [isOpen]);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+      }
+      if (soundPreviewTimeoutRef.current) {
+        clearTimeout(soundPreviewTimeoutRef.current);
       }
     };
   }, []);
