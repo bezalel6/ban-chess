@@ -62,7 +62,7 @@ export default function ServerStatus() {
 
   if (!isVisible) return null;
 
-  const issues = [];
+  const issues: string[] = [];
   if (!status.websocket) issues.push("WebSocket");
   if (!status.redis) issues.push("Redis");
   if (!status.database) issues.push("Database");
