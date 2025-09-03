@@ -162,8 +162,8 @@ export default function HeadsetMode() {
             ? 'text-lichess-orange-500 hover:bg-background-secondary' 
             : 'text-foreground-muted hover:text-foreground hover:bg-background-secondary'
         }`}
-        title={enabled ? "Headset Mode: Active" : "Headset Mode: Configure"}
-        aria-label="Headset mode settings"
+        title={enabled ? "Wireless Headset Mode: Active" : "Wireless Headset Mode: Configure"}
+        aria-label="Wireless headset mode settings"
       >
         <Headphones className="h-4 w-4" />
       </button>
@@ -177,7 +177,7 @@ export default function HeadsetMode() {
       `}>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-sm">Headset Mode</h3>
+          <h3 className="font-semibold text-sm">Wireless Headset Mode</h3>
           <button
             onClick={enabled ? handleDisable : handleEnable}
             className={`px-3 py-1 rounded text-xs font-medium text-white transition-colors ${
