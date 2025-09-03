@@ -203,14 +203,10 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
 
 
   const handleMoveSelect = (moveIndex: number) => {
-    // MoveList gives us move index, but we need to navigate by action index (BCN)
-    // In ban-chess, each move corresponds to 2 actions (ban + move)
-    // So action index = moveIndex * 2 + 1 (the +1 gets us to the move action, not the ban)
-    const actionIndex = moveIndex * 2 + 1;
-    
-    // Make sure we don't go out of bounds
-    if (gameData && actionIndex < gameData.bcn.length) {
-      handleNavigate(actionIndex);
+    // MoveList gives us the action index directly (each ban and move is a separate ply)
+    // No conversion needed - just pass it through
+    if (gameData && moveIndex >= -1 && moveIndex < gameData.bcn.length) {
+      handleNavigate(moveIndex);
     }
   };
 
@@ -283,8 +279,8 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
           <CompletedGameSidebar
             gameState={gameState!} // gameState already has history, clocks, etc.
             onMoveSelect={handleMoveSelect}
-            // Convert action index to move index for MoveList display
-            currentMoveIndex={currentMoveIndex !== null ? Math.floor(currentMoveIndex / 2) : undefined}
+            // Pass the action index directly - each ban and move is a separate ply
+            currentMoveIndex={currentMoveIndex ?? undefined}
             onFlipBoard={handleFlipBoard}
             isViewingHistory={isViewingHistory}
           />

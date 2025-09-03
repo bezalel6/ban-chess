@@ -30,8 +30,8 @@ export default function MoveList(props: MoveListProps) {
   let gameState: SimpleGameState | undefined;
   
   if ('actions' in props) {
-    // CompletedGameViewer format - for now just return empty until it's fixed
-    // This component expects HistoryEntry[] not BCN actions
+    // CompletedGameViewer format - convert BCN actions to display format
+    // Note: This is a temporary solution until we properly integrate BCN
     history = [];
     onMoveSelect = props.onNavigate;
     currentMoveIndex = props.currentIndex;
@@ -49,8 +49,11 @@ export default function MoveList(props: MoveListProps) {
   useEffect(() => {
     if (currentMoveIndex !== undefined) {
       setSelectedIndex(currentMoveIndex);
+    } else if (history.length > 0) {
+      // If no current index specified, default to the last move
+      setSelectedIndex(history.length - 1);
     }
-  }, [currentMoveIndex]);
+  }, [currentMoveIndex, history.length]);
 
   // Auto-scroll to selected move when it changes
   useEffect(() => {
@@ -116,13 +119,16 @@ export default function MoveList(props: MoveListProps) {
         case "A":
           e.preventDefault();
           e.stopPropagation();
-          // Handle navigation based on current position (same as left arrow button)
+          // Handle navigation - move one ply back
           if (selectedIndex === null) {
-            // If no selection (viewing final position), go to second-to-last move
-            newIndex = Math.max(0, totalMoves - 2);
+            // No selection means we're at the end, go to second-to-last
+            newIndex = Math.max(-1, totalMoves - 2);
+          } else if (selectedIndex <= 0) {
+            // At first ply or before, go to starting position
+            newIndex = -1;
           } else {
-            // If we have a selection, go one move back
-            newIndex = Math.max(0, selectedIndex - 1);
+            // Go one ply back
+            newIndex = selectedIndex - 1;
           }
           break;
         case "ArrowRight":
@@ -130,13 +136,19 @@ export default function MoveList(props: MoveListProps) {
         case "D":
           e.preventDefault();
           e.stopPropagation();
-          // Handle navigation based on current position (same as right arrow button)
+          // Handle navigation - move one ply forward
           if (selectedIndex === null) {
-            // Already at final position, stay there
+            // No selection, already at end
             newIndex = totalMoves - 1;
+          } else if (selectedIndex >= totalMoves - 1) {
+            // Already at last move, stay there
+            newIndex = totalMoves - 1;
+          } else if (selectedIndex === -1) {
+            // At starting position, go to first ply
+            newIndex = 0;
           } else {
-            // Move forward one move
-            newIndex = Math.min(totalMoves - 1, selectedIndex + 1);
+            // Move forward one ply
+            newIndex = selectedIndex + 1;
           }
           break;
         case "ArrowUp":
@@ -169,7 +181,8 @@ export default function MoveList(props: MoveListProps) {
           return;
       }
 
-      if (newIndex !== selectedIndex) {
+      // Always update if we have a valid new index
+      if (newIndex !== selectedIndex && newIndex >= -1 && newIndex < totalMoves) {
         setSelectedIndex(newIndex);
         onMoveSelect?.(newIndex);
         // Only play navigation sound for valid move indices (not starting position)
@@ -194,14 +207,23 @@ export default function MoveList(props: MoveListProps) {
     playNavigationSound(index);
   };
 
+  // Track previous history length to detect when new moves arrive
+  const prevHistoryLengthRef = useRef(history.length);
+  
   // When history updates and we're at the end, auto-follow
   useEffect(() => {
-    // If we were at the last move before update, stay at the last move
-    if (selectedIndex === null || selectedIndex === history.length - 2) {
-      setSelectedIndex(history.length - 1);
+    // Only auto-follow if the history actually grew (new moves added)
+    if (history.length > prevHistoryLengthRef.current && history.length > 0) {
+      // If selectedIndex is at or near the end, follow to the new end
+      if (selectedIndex === null || selectedIndex >= prevHistoryLengthRef.current - 2) {
+        setSelectedIndex(history.length - 1);
+      }
+      // Otherwise, maintain current position in history
     }
-    // Otherwise, maintain current position in history
-  }, [history.length, selectedIndex]); // React to length changes and selected index
+    
+    // Update the ref for next comparison
+    prevHistoryLengthRef.current = history.length;
+  }, [history.length, selectedIndex]); // React to history length and selected index changes
 
   // Auto-scroll to bottom when new moves are added
   useEffect(() => {
