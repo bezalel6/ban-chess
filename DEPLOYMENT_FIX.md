@@ -1,12 +1,21 @@
 # Database Migration Fix for Production
 
-## Problem
+## UPDATE: Automatic Migrations Now Integrated
+The Dockerfile.standalone has been updated to automatically run database migrations on startup. This means migrations will run automatically when you deploy.
+
+## Previous Problem
 The production database is missing the `bcn` and `moveTimes` columns in the `Game` table, causing the error:
 ```
 The column `Game.bcn` does not exist in the current database.
 ```
 
-## Solution
+## Automatic Solution (After Latest Update)
+Simply redeploy your application. The container will now:
+1. Run `npx prisma db push` automatically on startup
+2. Update the database schema to match the Prisma schema
+3. Start the application
+
+## Manual Solution (If Auto-Migration Fails)
 
 ### Option 1: Using Prisma Migrate (Recommended)
 Run these commands on your production server:

@@ -47,12 +47,26 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Set environment to production
 ENV NODE_ENV=production
 
+# Create entrypoint script for migrations
+USER root
+RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
+    echo 'set -e' >> /app/entrypoint.sh && \
+    echo '' >> /app/entrypoint.sh && \
+    echo 'echo "Running database migrations..."' >> /app/entrypoint.sh && \
+    echo 'npx prisma db push --skip-generate || echo "Migration failed, but continuing..."' >> /app/entrypoint.sh && \
+    echo 'echo "Starting application..."' >> /app/entrypoint.sh && \
+    echo 'exec node server.js' >> /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh && \
+    chown nextjs:nodejs /app/entrypoint.sh
+
+# Install prisma CLI for migrations (lightweight)
+RUN npm install -g prisma
+
 # Switch to non-root user
 USER nextjs
 
 # Expose port
 EXPOSE 3000
 
-# Start the standalone server
-# This is the key difference - we run server.js directly, not 'next start'
-CMD ["node", "server.js"]
+# Start with entrypoint that runs migrations first
+CMD ["/app/entrypoint.sh"]

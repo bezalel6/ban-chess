@@ -3,7 +3,7 @@
 version: '3.8'
 
 services:
-  # Next.js Application
+  # Next.js Application (includes automatic database migrations on startup)
   app:
     build:
       context: .
