@@ -235,85 +235,100 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
                 )}
               </div>
 
-              {/* Masonic Grid - Dense, Large Text, Beautiful */}
-              <div className="bg-gradient-to-br from-background via-background to-background-secondary rounded-xl p-4 shadow-inner border border-gray-700/30" style={{ height: '500px', overflow: 'auto' }}>
-                <Masonry
-                  items={soundLibrary.themes[activeTheme] || []}
-                  columnGutter={8}
-                  columnWidth={150}
-                  overscanBy={2}
-                  render={({ data: sound, index }) => {
-                    const isPlaying = isPlayingSound === sound.file;
+              {/* Brick Wall Grid - No Scrolling, Tight Packed */}
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-3 border border-gray-600">
+                <div style={{ height: '400px' }}>
+                  <Masonry
+                    items={soundLibrary.themes[activeTheme] || []}
+                    columnGutter={4}
+                    columnWidth={120}
+                    overscanBy={0}
+                    render={({ data: sound, index }) => {
+                      const isPlaying = isPlayingSound === sound.file;
                       
-                      // Dynamic height classes for masonry effect - larger sizes
-                      const heightVariants = ['h-24', 'h-32', 'h-28', 'h-36', 'h-24', 'h-30', 'h-28', 'h-32'];
-                      const heightClass = heightVariants[index % heightVariants.length];
+                      // Calculate brick height based on text length for natural variation
+                      const textLength = sound.displayName.length;
+                      const brickHeight = textLength <= 8 ? 50 : 
+                                         textLength <= 12 ? 60 : 
+                                         textLength <= 16 ? 70 : 80;
                       
-                      // Dynamic gradient backgrounds
-                      const gradientVariants = [
-                        'from-violet-500/10 to-purple-500/5',
-                        'from-blue-500/10 to-cyan-500/5',
-                        'from-green-500/10 to-emerald-500/5',
-                        'from-orange-500/10 to-red-500/5',
-                        'from-pink-500/10 to-rose-500/5',
-                        'from-indigo-500/10 to-blue-500/5'
+                      // Lighter, more vibrant colors for bricks
+                      const brickColors = [
+                        'bg-amber-600',
+                        'bg-orange-600', 
+                        'bg-red-600',
+                        'bg-rose-600',
+                        'bg-pink-600',
+                        'bg-purple-600',
+                        'bg-indigo-600',
+                        'bg-blue-600',
+                        'bg-cyan-600',
+                        'bg-teal-600',
+                        'bg-green-600',
+                        'bg-lime-600'
                       ];
-                      const gradientClass = gradientVariants[index % gradientVariants.length];
+                      const brickColor = brickColors[index % brickColors.length];
                       
                       return (
-                        <div key={sound.file} className={`relative group ${heightClass}`}>
+                        <div 
+                          key={sound.file} 
+                          className="relative group"
+                          style={{ height: `${brickHeight}px` }}
+                        >
                           <button
                             onClick={() => playSound(sound.file)}
                             disabled={!soundEnabled}
-                            className={`w-full h-full px-3 py-2 rounded-xl text-xs transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden border backdrop-blur-sm ${
+                            className={`w-full h-full px-2 py-1 rounded-sm transition-all duration-200 flex items-center justify-center relative overflow-hidden border-2 ${
                               isPlaying 
-                                ? 'bg-gradient-to-br from-lichess-orange-400/30 to-lichess-orange-600/20 border-lichess-orange-400/50 shadow-lg shadow-lichess-orange-500/20 scale-105' 
-                                : `bg-gradient-to-br ${gradientClass} border-gray-600/30 hover:border-gray-500/50 hover:shadow-lg hover:shadow-gray-500/10 hover:scale-102 hover:-translate-y-1`
-                            } disabled:opacity-50 disabled:cursor-not-allowed group-hover:bg-opacity-80`}
+                                ? 'bg-lichess-orange-500 border-lichess-orange-300 shadow-lg scale-105 z-10' 
+                                : `${brickColor} border-gray-800 hover:border-gray-600 hover:brightness-110`
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            style={{
+                              boxShadow: 'inset 0 -3px 0 rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2)'
+                            }}
                             title={`Click to play: ${sound.displayName}`}
                           >
-                            {/* Subtle pattern overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50" />
+                            {/* Brick texture effect */}
+                            <div className="absolute inset-0 opacity-20" style={{
+                              background: `repeating-linear-gradient(
+                                90deg,
+                                transparent,
+                                transparent 2px,
+                                rgba(0,0,0,0.1) 2px,
+                                rgba(0,0,0,0.1) 4px
+                              )`
+                            }} />
                             
-                            {/* Playing indicator with Volume icon */}
+                            {/* Playing indicator */}
                             {isPlaying && (
-                              <div className="absolute top-1 right-1">
-                                <Volume2 className="h-3 w-3 text-lichess-orange-400 animate-pulse" />
-                              </div>
+                              <Volume2 className="absolute top-1 right-1 h-3 w-3 text-white animate-pulse" />
                             )}
                             
-                            {/* LARGE TEXT - fills the space properly */}
-                            <span className={`text-center font-bold relative z-10 ${
-                              isPlaying ? 'text-lichess-orange-200' : 'text-gray-100'
-                            } leading-tight break-words px-2`}
+                            {/* Text - large and readable */}
+                            <span className={`text-center font-bold relative z-10 text-white leading-tight`}
                             style={{
-                              fontSize: sound.displayName.length > 15 ? '14px' : 
-                                       sound.displayName.length > 10 ? '16px' : '18px'
+                              fontSize: textLength <= 10 ? '16px' : 
+                                       textLength <= 15 ? '14px' : '12px',
+                              textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                             }}>
                               {sound.displayName}
                             </span>
-                            
-                            {/* Subtle glow effect on hover */}
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                           </button>
                           
-                          {/* Enhanced Assign Button with floating animation */}
+                          {/* Assign Button - smaller, corner positioned */}
                           <button
                             onClick={() => startAssignment(sound.file, sound.displayName)}
                             disabled={!soundEnabled}
-                            className="absolute -top-2 -right-2 p-2 bg-gradient-to-r from-lichess-orange-500 to-lichess-orange-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl hover:shadow-lichess-orange-500/50 hover:scale-110 hover:-translate-y-0.5 disabled:opacity-50 z-20 border-2 border-white/20"
+                            className="absolute -top-1 -right-1 w-6 h-6 bg-lichess-orange-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center hover:scale-110 disabled:opacity-50 z-20 border border-white shadow-lg"
                             title={`Assign ${sound.displayName} to a game event`}
                           >
                             <MousePointer className="h-3 w-3" />
-                            <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse" />
                           </button>
-                          
-                          {/* Decorative corner accent */}
-                          <div className="absolute top-1 left-1 w-2 h-2 bg-gradient-to-br from-white/20 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </div>
                       );
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
 
               {/* Instructions */}
