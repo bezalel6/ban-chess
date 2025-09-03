@@ -125,6 +125,24 @@ export default function NavigationBar({
           <path d="M7 16V4m0 0L3 8m4-4l4 4m6-4v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       </button>
+
+      {/* Auto-flip toggle for local games */}
+      {isLocalGame && onToggleAutoFlip && (
+        <>
+          <div className="w-px h-6 bg-border mx-2" />
+          <button
+            onClick={onToggleAutoFlip}
+            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+              autoFlipEnabled 
+                ? 'bg-lichess-orange-500 text-white hover:bg-lichess-orange-600' 
+                : 'bg-background-tertiary text-foreground-muted hover:bg-background-secondary'
+            }`}
+            title={autoFlipEnabled ? "Auto-flip enabled (click to disable)" : "Auto-flip disabled (click to enable)"}
+          >
+            {autoFlipEnabled ? 'Auto' : 'Manual'}
+          </button>
+        </>
+      )}
     </div>
   );
 }
