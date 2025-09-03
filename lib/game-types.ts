@@ -93,6 +93,7 @@ export interface SimpleGameState {
   gameOver?: boolean;  // For UI display only
   result?: string;     // For UI display only
   history?: HistoryEntry[] | string[]; // For move replay only
+  actionHistory?: string[]; // BCN format actions for position reconstruction
   timeControl?: TimeControl; // Time control settings
   clocks?: {
     white: PlayerClock;

@@ -633,6 +633,7 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
       ply,
       inCheck: game.inCheck(),
       history,
+      actionHistory: gameSource.bcn, // Include BCN for navigation
       messageId: `state-full-${++messageIdCounter}`,
       gameOver: isGameOver,
       result: gameSource.result,

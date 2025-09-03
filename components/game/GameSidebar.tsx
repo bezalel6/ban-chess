@@ -12,12 +12,16 @@ interface GameSidebarProps {
   gameState: SimpleGameState;
   onGiveTime?: () => void;
   onResign?: () => void;
+  onMoveSelect?: (moveIndex: number) => void;
+  currentMoveIndex?: number;
 }
 
 export default function GameSidebar({
   gameState,
   onGiveTime,
   onResign,
+  onMoveSelect,
+  currentMoveIndex,
 }: GameSidebarProps) {
   const { activePlayer } = useGameState();
   const { role, orientation } = useUserRole();
@@ -80,7 +84,11 @@ export default function GameSidebar({
       <div className="my-2 border-t border-border"></div>
       {/* Fixed height for 4 rows of moves (approximately 120px) */}
       <div className="h-[120px] overflow-hidden">
-        <MoveList history={gameState.history || []} />
+        <MoveList 
+          history={gameState.history || []} 
+          onMoveSelect={onMoveSelect}
+          currentMoveIndex={currentMoveIndex}
+        />
       </div>
       <div className="my-2 border-t border-border"></div>
       {/* Game Actions section */}

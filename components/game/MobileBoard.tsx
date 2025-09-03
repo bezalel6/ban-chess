@@ -15,6 +15,7 @@ interface MobileBoardProps {
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
   refreshKey?: number;
+  orientation?: 'white' | 'black';
 }
 
 const MobileBoard = memo(function MobileBoard({
@@ -26,6 +27,7 @@ const MobileBoard = memo(function MobileBoard({
   onMove,
   onBan,
   refreshKey,
+  orientation = 'white',
 }: MobileBoardProps) {
   return (
     <div className="flex flex-col items-center w-full">
@@ -44,6 +46,7 @@ const MobileBoard = memo(function MobileBoard({
                 onMove={onMove} 
                 onBan={onBan}
                 refreshKey={refreshKey}
+                orientation={orientation}
               />
             </ChessBoardErrorBoundary>
           </div>

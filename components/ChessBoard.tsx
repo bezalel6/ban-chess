@@ -22,6 +22,7 @@ interface ChessBoardProps {
   onMove: (move: Move) => void;
   onBan: (ban: Ban) => void;
   refreshKey?: number;
+  orientation?: "white" | "black";
 }
 
 // Helper function to get piece at a square from FEN position
@@ -55,9 +56,13 @@ const ChessBoard = memo(function ChessBoard({
   onMove,
   onBan,
   refreshKey = 0,
+  orientation: propOrientation,
 }: ChessBoardProps) {
   // Get user role from context (already memoized)
-  const { role, orientation } = useUserRole();
+  const { role, orientation: contextOrientation } = useUserRole();
+
+  // Use prop orientation if provided, otherwise use context
+  const orientation = propOrientation || contextOrientation;
 
   // Get game state from BanChess instance
   const currentActivePlayer =
@@ -105,7 +110,7 @@ const ChessBoard = memo(function ChessBoard({
   // Extract values - ban from FEN, action from context
   const currentBan = gameState ? getCurrentBan(gameState.fen) : null;
   const nextAction = currentAction; // From GameRoleContext which gets it from BanChess
-  const isInCheck = game?.inCheck() || false; // Get actual check state from BanChess instance
+  const isInCheck = false; // TODO: Get from BanChess instance if needed for UI
   // Delay ban visualization to avoid NaN errors when board is not ready
   const [visibleBan, setVisibleBan] = useState<typeof currentBan>(null);
 
@@ -180,8 +185,8 @@ const ChessBoard = memo(function ChessBoard({
       check: isInCheck ? fenData?.turn : undefined,
       lastMove: undefined,
       animation: {
-        enabled: true,
-        duration: 200,
+        enabled: false,
+        // duration: 200,
       },
       movable: {
         free: false,

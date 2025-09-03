@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
+import { BanChess } from "ban-chess.ts";
 import type { Move, Ban } from "@/lib/game-types";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 import WebSocketStats from "./WebSocketStats";
 import DebugPanel from "./game/DebugPanel";
+import NavigationBar from "./game/NavigationBar";
 
 const ResizableBoard = dynamic(
   () =>
@@ -107,6 +109,10 @@ export default function GameClient({ gameId }: GameClientProps) {
   const [debugMode, setDebugMode] = useState(false);
   const [boardRefreshKey, setBoardRefreshKey] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null);
+  const [navigationGame, setNavigationGame] = useState<BanChess | null>(null);
+  const [isViewingHistory, setIsViewingHistory] = useState(false);
+  const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
   const router = useRouter();
   const joinedGameId = useRef<string | null>(null);
 
@@ -149,6 +155,71 @@ export default function GameClient({ gameId }: GameClientProps) {
     }
   }, [connected, gameId, hasJoined, joinGame]);
 
+  // Handle move selection for navigation
+  const handleMoveSelect = useCallback((moveIndex: number) => {
+    if (!gameState?.history || !gameState.history.length) return;
+    
+    // Set the current move index for highlighting
+    setCurrentMoveIndex(moveIndex);
+    
+    // Use BCN actionHistory if available for precise position reconstruction
+    if (gameState.actionHistory && gameState.actionHistory.length > 0) {
+      // Check if we're navigating to the current position
+      const isAtCurrentPosition = moveIndex === gameState.actionHistory.length - 1;
+      
+      if (isAtCurrentPosition) {
+        // Return to live position
+        setNavigationGame(null);
+        setIsViewingHistory(false);
+        console.log('Returned to current position');
+      } else {
+        // Get BCN actions up to the selected move
+        const bcnActions = moveIndex >= 0 ? gameState.actionHistory.slice(0, moveIndex + 1) : [];
+        
+        if (bcnActions.length > 0) {
+          // Reconstruct the game at the selected position
+          const navGame = BanChess.replayFromActions(bcnActions);
+          setNavigationGame(navGame);
+          setIsViewingHistory(true);
+          console.log(`Navigated to move ${moveIndex + 1} of ${gameState.actionHistory.length}`);
+          console.log(`Position FEN: ${navGame.fen()}`);
+        } else {
+          // Show starting position
+          const navGame = new BanChess();
+          setNavigationGame(navGame);
+          setIsViewingHistory(true);
+          console.log('Showing starting position');
+        }
+      }
+    } else {
+      // Fallback if actionHistory not available
+      console.log(`Navigate to move ${moveIndex} - BCN history not available`);
+      setNavigationGame(null);
+      setIsViewingHistory(false);
+    }
+  }, [gameState]);
+
+  // Reset navigation when game state updates (new moves arrive)
+  useEffect(() => {
+    if (gameState?.history) {
+      // If we're at the last move or no move selected, follow the game
+      if (currentMoveIndex === null || currentMoveIndex === gameState.history.length - 1) {
+        setCurrentMoveIndex(null);
+        setNavigationGame(null);
+        setIsViewingHistory(false);
+      }
+    }
+  }, [gameState?.history?.length, currentMoveIndex, gameState?.history]);
+
+  // Function to return to live position
+  const returnToLive = useCallback(() => {
+    if (!gameState?.actionHistory) return;
+    
+    setCurrentMoveIndex(gameState.actionHistory.length - 1);
+    setNavigationGame(null);
+    setIsViewingHistory(false);
+  }, [gameState?.actionHistory]);
+
   const handleMove = (move: Move) => sendAction({ move });
   const handleBan = (ban: Ban) => sendAction({ ban });
   const handleNewGame = () => router.push("/");
@@ -174,20 +245,32 @@ export default function GameClient({ gameId }: GameClientProps) {
         {/* Mobile Layout - Minimal padding to maximize board size */}
         <div className="flex flex-col gap-2 p-1">
           <MobileBoard
-            gameState={gameState}
-            game={game}
-            dests={dests}
-            activePlayer={activePlayer}
-            actionType={actionType}
+            gameState={navigationGame ? { ...gameState, fen: navigationGame.fen() } : gameState}
+            game={navigationGame || game}
+            dests={navigationGame ? new Map() : dests}
+            activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
+            actionType={navigationGame ? navigationGame.getActionType() : actionType}
             onMove={handleMove}
             onBan={handleBan}
             refreshKey={boardRefreshKey}
+            orientation={boardOrientation}
+          />
+          {/* Navigation Bar for mobile */}
+          <NavigationBar
+            currentMoveIndex={currentMoveIndex}
+            totalMoves={gameState?.actionHistory?.length || 0}
+            isViewingHistory={isViewingHistory}
+            onNavigate={handleMoveSelect}
+            onFlipBoard={() => setBoardOrientation(prev => prev === 'white' ? 'black' : 'white')}
+            onReturnToLive={returnToLive}
           />
           <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
           <GameSidebar
             gameState={gameState}
             onGiveTime={giveTime}
             onResign={resignGame}
+            onMoveSelect={handleMoveSelect}
+            currentMoveIndex={currentMoveIndex ?? undefined}
           />
         </div>
         <WebSocketStats />
@@ -243,7 +326,7 @@ export default function GameClient({ gameId }: GameClientProps) {
 
           {/* Center - Board */}
           <div
-            className={`flex justify-center ${
+            className={`flex flex-col items-center gap-2 ${
               debugMode ? "border-4 border-yellow-500 relative" : ""
             }`}
           >
@@ -253,14 +336,24 @@ export default function GameClient({ gameId }: GameClientProps) {
               </div>
             )}
             <ResizableBoard
-              gameState={gameState}
-              game={game}
-              dests={dests}
-              activePlayer={activePlayer}
-              actionType={actionType}
+              gameState={navigationGame ? { ...gameState, fen: navigationGame.fen() } : gameState}
+              game={navigationGame || game}
+              dests={navigationGame ? new Map() : dests}
+              activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
+              actionType={navigationGame ? navigationGame.getActionType() : actionType}
               onMove={handleMove}
               onBan={handleBan}
               refreshKey={boardRefreshKey}
+              orientation={boardOrientation}
+            />
+            {/* Navigation Bar */}
+            <NavigationBar
+              currentMoveIndex={currentMoveIndex}
+              totalMoves={gameState?.actionHistory?.length || 0}
+              isViewingHistory={isViewingHistory}
+              onNavigate={handleMoveSelect}
+              onFlipBoard={() => setBoardOrientation(prev => prev === 'white' ? 'black' : 'white')}
+              onReturnToLive={returnToLive}
             />
           </div>
 
@@ -279,6 +372,8 @@ export default function GameClient({ gameId }: GameClientProps) {
               gameState={gameState}
               onGiveTime={giveTime}
               onResign={resignGame}
+              onMoveSelect={handleMoveSelect}
+              currentMoveIndex={currentMoveIndex ?? undefined}
             />
           </div>
         </div>
