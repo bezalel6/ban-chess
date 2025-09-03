@@ -1,3 +1,5 @@
+# Coolify deployment using GHCR images
+# Redis is managed externally by Coolify - set REDIS_URL in environment
 version: '3.8'
 
 services:
@@ -24,17 +26,16 @@ services:
     depends_on:
       - websocket
     networks:
-      - app-network
+      - coolify
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`chess.rndev.site`)"
-      - "traefik.http.routers.app.tls=true"
-      - "traefik.http.services.app.loadbalancer.server.port=3000"
+      - coolify.managed=true
+      - coolify.port=3000
+      - coolify.domain=${SERVICE_FQDN_APP:-chess.rndev.site}
 
   # WebSocket Server from GHCR
   websocket:
@@ -46,7 +47,8 @@ services:
       - NODE_ENV=production
       - WS_PORT=3001
       - HEALTH_PORT=3002
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      # Use Coolify's external Redis
+      - REDIS_URL=${REDIS_URL}
       - DATABASE_URL=${DATABASE_URL}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
@@ -56,46 +58,17 @@ services:
       - ADMIN_EMAILS=${ADMIN_EMAILS}
     restart: unless-stopped
     networks:
-      - app-network
+      - coolify
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
       interval: 10s
       timeout: 5s
       retries: 5
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.websocket.rule=Host(`ws-chess.rndev.site`)"
-      - "traefik.http.routers.websocket.tls=true"
-      - "traefik.http.services.websocket.loadbalancer.server.port=3001"
-      # Health endpoint routing
-      - "traefik.http.routers.ws-health.rule=Host(`ws-chess.rndev.site`) && Path(`/health`)"
-      - "traefik.http.routers.ws-health.tls=true"
-      - "traefik.http.services.ws-health.loadbalancer.server.port=3002"
-
-  # Redis - OPTIONAL (uncomment if not using external Redis)
-  # NOTE: If deploying to Coolify or using external Redis, comment out this entire service
-  # and set REDIS_URL environment variable to your external Redis URL
-  #
-  # redis:
-  #   image: redis:7-alpine
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis-data:/data
-  #   networks:
-  #     - app-network
-  #   restart: unless-stopped
-  #   command: redis-server --appendonly yes
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "ping"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
+      - coolify.managed=true
+      - coolify.port=3001
+      - coolify.domain=${SERVICE_FQDN_WEBSOCKET:-ws-chess.rndev.site}
 
 networks:
-  app-network:
-    driver: bridge
-
-# Volumes - only needed if using local Redis
-# volumes:
-#   redis-data:
+  coolify:
+    external: true
