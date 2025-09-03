@@ -8,30 +8,34 @@ async function cleanup() {
 }
 
 async function seed() {
-  // Seed global settings first
+  // Seed global settings with actual production defaults
   await prisma.globalSettings.upsert({
     where: { id: 'global' },
     update: {},
     create: {
       id: 'global',
       soundEnabled: true,
-      soundVolume: 0.5,
+      soundVolume: 1,
       eventSoundMap: {
-        "Move": "standard/Move",
-        "Capture": "standard/Capture",
-        "Check": "standard/Check",
-        "Checkmate": "standard/Checkmate",
-        "Draw": "standard/Draw",
-        "Victory": "standard/Victory",
-        "Defeat": "standard/Defeat",
-        "GenericNotify": "standard/GenericNotify",
-        "Error": "standard/Error",
-        "LowTime": "standard/LowTime",
-        "Confirmation": "standard/Confirmation"
+        "ban": "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/notification.mp3",
+        "move": "/sounds/standard/Move.mp3",
+        "check": "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3",
+        "castle": "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/castle.mp3",
+        "capture": "/sounds/standard/Capture.mp3",
+        "promote": "/sounds/standard/Checkmate.mp3",
+        "game-end": "/sounds/standard/Victory.mp3",
+        "draw-offer": "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/notify.mp3",
+        "game-start": "https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-start.mp3",
+        "game-invite": "/sounds/standard/NewChallenge.mp3",
+        "time-warning": "/sounds/standard/LowTime.mp3",
+        "opponent-move": "/sounds/standard/Move.mp3",
+        "ban-attempt-easy": "/sounds/other/no-go.mp3",
+        "ban-attempt-hard": "/sounds/futuristic/Explosion.mp3",
+        "ban-attempt-medium": "/sounds/standard/Error.mp3"
       }
     }
   })
-  console.log('✅ Seeded global sound settings')
+  console.log('✅ Seeded global sound settings with production defaults')
 
   // Add your seeding logic here
   const users = await prisma.user.createMany({
