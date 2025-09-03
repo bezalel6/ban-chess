@@ -95,7 +95,11 @@ export default function SettingsClient() {
     setEventSoundMap(soundManager.getEventSoundMap());
   };
 
-  const themeNames = soundLibrary ? Object.keys(soundLibrary.themes) : [];
+  // Sort themes alphabetically and identify Lichess themes
+  const themeNames = soundLibrary ? Object.keys(soundLibrary.themes).sort() : [];
+  const lichessThemes = themeNames.filter(theme => 
+    theme !== 'custom' && theme !== 'user' // Exclude any non-Lichess themes if they exist
+  );
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -170,22 +174,35 @@ export default function SettingsClient() {
                 </div>
               </div>
 
-              {/* Theme Tabs */}
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                {themeNames.map((theme) => (
-                  <button
-                    key={theme}
-                    onClick={() => setActiveTheme(theme)}
-                    disabled={!soundEnabled}
-                    className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                      activeTheme === theme
-                        ? 'bg-lichess-orange-500 text-white'
-                        : 'bg-background hover:bg-lichess-orange-500/20'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                  </button>
-                ))}
+              {/* Theme Tabs - Grouped and Labeled */}
+              <div className="space-y-3 mb-4">
+                {/* Lichess Themes Section */}
+                <div className="border border-border/50 rounded-lg p-3 bg-background/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-xs text-foreground-muted font-medium">
+                      Sound Themes from Lichess.org
+                    </p>
+                    <span className="text-[10px] text-foreground-muted/70 bg-background-secondary px-2 py-0.5 rounded">
+                      Open Source
+                    </span>
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {lichessThemes.map((theme) => (
+                      <button
+                        key={theme}
+                        onClick={() => setActiveTheme(theme)}
+                        disabled={!soundEnabled}
+                        className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                          activeTheme === theme
+                            ? 'bg-lichess-orange-500 text-white'
+                            : 'bg-background hover:bg-lichess-orange-500/20'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Sound Grid - with direct assignment buttons */}
