@@ -1,6 +1,6 @@
 "use client";
 
-import { Music, Wand2, RotateCcw, MousePointer, X, Play } from "lucide-react";
+import { Music, Wand2, RotateCcw, MousePointer, X, Play, AlertCircle } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import soundManager, { eventTypes, eventMetadata, type EventType } from "@/lib/sound-manager";
 
@@ -23,6 +23,7 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
   const [activeTheme, setActiveTheme] = useState<string>("standard");
   const [isPlayingSound, setIsPlayingSound] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [failedSounds, setFailedSounds] = useState<Set<string>>(new Set());
   
   // Admin mode state
   const [editingGlobalDefaults, setEditingGlobalDefaults] = useState(false);
@@ -149,9 +150,15 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
     const audio = new Audio(soundFile);
     audio.volume = soundManager.getVolume();
     
-    // Just log errors quietly, no special UI handling needed
+    // Track failed sounds for UI indication
+    audio.onerror = () => {
+      console.warn(`Sound not available: ${soundFile}`);
+      setFailedSounds(prev => new Set(prev).add(soundFile));
+    };
+    
     audio.play().catch(() => {
       console.warn(`Sound not available: ${soundFile}`);
+      setFailedSounds(prev => new Set(prev).add(soundFile));
     });
     
     // Clear playing state after a short delay
@@ -204,14 +211,28 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
         audio.volume = soundManager.getVolume();
         audio.onerror = () => {
           console.warn(`Sound not available for ${eventType}: ${soundPath}`);
+          setFailedSounds(prev => new Set(prev).add(soundPath));
         };
         audio.play().catch(() => {
           console.warn(`Could not play ${eventType} sound`);
+          setFailedSounds(prev => new Set(prev).add(soundPath));
         });
       }
     } else {
       // Personal mode - test current event sound from soundManager
-      soundManager.playEvent(eventType);
+      const currentSound = eventSoundMap[eventType];
+      if (currentSound) {
+        const audio = new Audio(currentSound);
+        audio.volume = soundManager.getVolume();
+        audio.onerror = () => {
+          setFailedSounds(prev => new Set(prev).add(currentSound));
+        };
+        audio.play().catch(() => {
+          setFailedSounds(prev => new Set(prev).add(currentSound));
+        });
+      } else {
+        soundManager.playEvent(eventType);
+      }
     }
   };
 
@@ -491,6 +512,7 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
                     }}>
                     {(soundLibrary.themes[activeTheme] || []).map((sound) => {
                       const isPlaying = isPlayingSound === sound.file;
+                      const isFailed = failedSounds.has(sound.file);
                       
                       return (
                         <div
@@ -505,24 +527,30 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
                               border-2 transition-all duration-200
                               flex flex-col items-center justify-center gap-1
                               min-h-[80px]
-                              ${isPlaying 
+                              ${isFailed
+                                ? 'bg-red-900/20 border-red-500/50 opacity-60'
+                                : isPlaying 
                                 ? 'bg-lichess-orange-500/20 border-lichess-orange-500 scale-105' 
                                 : 'bg-background-secondary border-gray-700 hover:bg-background hover:border-gray-600'
                               }
                               disabled:opacity-50 disabled:cursor-not-allowed
                             `}
                           >
-                            {/* Play icon on hover */}
-                            <Play className={`
-                              h-4 w-4 mb-1 transition-opacity
-                              ${isPlaying ? 'text-lichess-orange-500' : 'text-gray-400'}
-                              ${isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
-                            `} />
+                            {/* Show error icon for failed sounds, play icon otherwise */}
+                            {isFailed ? (
+                              <AlertCircle className="h-4 w-4 mb-1 text-red-500" />
+                            ) : (
+                              <Play className={`
+                                h-4 w-4 mb-1 transition-opacity
+                                ${isPlaying ? 'text-lichess-orange-500' : 'text-gray-400'}
+                                ${isPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                              `} />
+                            )}
                             
                             {/* Sound name - large and readable */}
                             <span className={`
                               text-center font-semibold leading-tight
-                              ${isPlaying ? 'text-lichess-orange-500' : 'text-foreground'}
+                              ${isFailed ? 'text-red-500' : isPlaying ? 'text-lichess-orange-500' : 'text-foreground'}
                             `}
                             style={{
                               fontSize: sound.displayName.length > 12 ? '12px' : '14px',
@@ -530,6 +558,9 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
                             }}>
                               {sound.displayName}
                             </span>
+                            {isFailed && (
+                              <span className="text-[10px] text-red-400">Unavailable</span>
+                            )}
                           </button>
                           
                           {/* Assign button */}
@@ -593,6 +624,7 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
                 const EventIcon = eventMetadata[eventType].icon;
                 const currentSound = eventSoundMap[eventType];
                 const isAssignmentTarget = pendingAssignment !== null;
+                const isSoundFailed = currentSound ? failedSounds.has(currentSound) : false;
                 
                 return (
                   <button
@@ -600,35 +632,47 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
                     onClick={() => handleEventClick(eventType)}
                     disabled={!soundEnabled}
                     className={`w-full p-3 rounded-lg transition-all min-h-[100px] ${
-                      isAssignmentTarget
+                      isSoundFailed
+                        ? 'bg-red-900/20 border-2 border-red-500/50'
+                        : isAssignmentTarget
                         ? 'bg-lichess-orange-500/10 hover:bg-lichess-orange-500/20 ring-1 ring-lichess-orange-500/50 cursor-pointer'
                         : editingGlobalDefaults
                         ? 'bg-blue-600/10 hover:bg-blue-600/20 ring-1 ring-blue-600/30'
                         : 'bg-background hover:bg-lichess-orange-500/10'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                     title={
-                      isAssignmentTarget 
+                      isSoundFailed
+                        ? `Sound unavailable for ${eventMetadata[eventType].name}`
+                        : isAssignmentTarget 
                         ? `Assign "${pendingAssignment.soundName}" to ${eventMetadata[eventType].name}`
                         : editingGlobalDefaults
                         ? `Test global default ${eventMetadata[eventType].name} sound`
                         : `Test ${eventMetadata[eventType].name} sound`
                     }
                   >
-                    <EventIcon className="h-5 w-5 mb-1 mx-auto text-foreground-muted" />
-                    <p className="text-xs font-medium">{eventMetadata[eventType].name}</p>
+                    <EventIcon className={`h-5 w-5 mb-1 mx-auto ${isSoundFailed ? 'text-red-500' : 'text-foreground-muted'}`} />
+                    <p className={`text-xs font-medium ${isSoundFailed ? 'text-red-500' : ''}`}>
+                      {eventMetadata[eventType].name}
+                    </p>
                     {currentSound && isHydrated && (
                       <div className="mt-1 space-y-0.5">
-                        <p className="text-[10px] text-foreground-muted truncate">
-                          {currentSound.split('/').pop()?.replace('.mp3', '')}
-                        </p>
-                        {(() => {
-                          const theme = getThemeFromSoundPath(currentSound);
-                          return theme ? (
-                            <p className={`text-[9px] font-medium ${getThemeColor(theme)}`}>
-                              {theme === 'yoinks' ? 'Yoinks' : theme.charAt(0).toUpperCase() + theme.slice(1)}
+                        {isSoundFailed ? (
+                          <p className="text-[10px] text-red-400">Sound unavailable</p>
+                        ) : (
+                          <>
+                            <p className="text-[10px] text-foreground-muted truncate">
+                              {currentSound.split('/').pop()?.replace('.mp3', '')}
                             </p>
-                          ) : null;
-                        })()}
+                            {(() => {
+                              const theme = getThemeFromSoundPath(currentSound);
+                              return theme ? (
+                                <p className={`text-[9px] font-medium ${getThemeColor(theme)}`}>
+                                  {theme === 'yoinks' ? 'Yoinks' : theme.charAt(0).toUpperCase() + theme.slice(1)}
+                                </p>
+                              ) : null;
+                            })()}
+                          </>
+                        )}
                       </div>
                     )}
                     {isAssignmentTarget && (
