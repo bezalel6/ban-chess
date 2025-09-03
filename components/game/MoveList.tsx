@@ -206,6 +206,9 @@ export default function MoveList(props: MoveListProps) {
   let moveCount = 0;
   let actionIndex = 0;
 
+  // Debug logging
+  console.log(`[MoveList] Rendering with history length: ${history.length}, type: ${history.length > 0 ? typeof history[0] : 'empty'}`);
+
   // Process history entries directly
   if (history.length > 0 && typeof history[0] === "object") {
     // New format: array of HistoryEntry objects

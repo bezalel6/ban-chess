@@ -194,13 +194,17 @@ export function useGameState() {
               
               if (msg.history) {
                 // Full history provided - use it
+                console.log(`[GameState] Full history received with ${msg.history.length} entries`);
                 history = msg.history;
               } else if (msg.lastMove && Array.isArray(history)) {
                 // Incremental update - append to existing history
                 // Only append if history is HistoryEntry[] (not string[])
                 if (history.length === 0 || typeof history[0] !== 'string') {
+                  console.log(`[GameState] Appending lastMove to history, SAN: ${msg.lastMove.san}`);
                   history = [...(history as HistoryEntry[]), msg.lastMove];
                 }
+              } else {
+                console.log(`[GameState] No history update - history: ${history?.length}, lastMove: ${!!msg.lastMove}`);
               }
               
               return {

@@ -9,6 +9,9 @@ interface NavigationBarProps {
   onNavigate: (index: number) => void;
   onFlipBoard: () => void;
   onReturnToLive?: () => void;
+  onToggleAutoFlip?: () => void;
+  autoFlipEnabled?: boolean;
+  isLocalGame?: boolean;
 }
 
 export default function NavigationBar({
@@ -18,6 +21,9 @@ export default function NavigationBar({
   onNavigate,
   onFlipBoard,
   onReturnToLive,
+  onToggleAutoFlip,
+  autoFlipEnabled,
+  isLocalGame,
 }: NavigationBarProps) {
   const currentIndex = currentMoveIndex ?? totalMoves - 1;
   const canGoBack = currentIndex >= 0; // Can go back from move 0 to starting position (-1)

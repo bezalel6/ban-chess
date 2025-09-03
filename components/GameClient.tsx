@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
+import { useUserRole } from "@/contexts/UserRoleContext";
 import { BanChess } from "ban-chess.ts";
 import type { Move, Ban } from "@/lib/game-types";
 import GameSidebar from "./game/GameSidebar";
@@ -106,6 +107,7 @@ export default function GameClient({ gameId }: GameClientProps) {
     resignGame,
     isLocalGame,
   } = useGameState();
+  const { orientation: contextOrientation, flipBoard, autoFlipEnabled, isLocalGame: isLocal, setAutoFlipEnabled } = useUserRole();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [boardRefreshKey, setBoardRefreshKey] = useState(0);
@@ -113,9 +115,23 @@ export default function GameClient({ gameId }: GameClientProps) {
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null);
   const [navigationGame, setNavigationGame] = useState<BanChess | null>(null);
   const [isViewingHistory, setIsViewingHistory] = useState(false);
-  const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white');
+  const [manualBoardOrientation, setManualBoardOrientation] = useState<'white' | 'black' | null>(null);
   const router = useRouter();
   const joinedGameId = useRef<string | null>(null);
+
+  // Determine the board orientation
+  const boardOrientation = useCallback(() => {
+    // If viewing history or manual orientation is set, use that
+    if (manualBoardOrientation !== null) {
+      return manualBoardOrientation;
+    }
+    // In local games with auto-flip enabled, use the context orientation
+    if (isLocal && autoFlipEnabled) {
+      return contextOrientation;
+    }
+    // Otherwise use context orientation (for online games or disabled auto-flip)
+    return contextOrientation;
+  }, [isLocal, autoFlipEnabled, contextOrientation, manualBoardOrientation])();
 
   // Check for debug mode in URL or localStorage
   useEffect(() => {
@@ -262,7 +278,27 @@ export default function GameClient({ gameId }: GameClientProps) {
             totalMoves={gameState?.actionHistory?.length || 0}
             isViewingHistory={isViewingHistory}
             onNavigate={handleMoveSelect}
-            onFlipBoard={() => setBoardOrientation(prev => prev === 'white' ? 'black' : 'white')}
+            onFlipBoard={() => {
+              if (isLocal && !autoFlipEnabled) {
+                // In local games with auto-flip disabled, toggle manual orientation
+                setManualBoardOrientation(prev => 
+                  prev === null ? (contextOrientation === 'white' ? 'black' : 'white') :
+                  prev === 'white' ? 'black' : 'white'
+                );
+              } else {
+                // Use the context flipBoard for spectators or when auto-flip is enabled
+                flipBoard();
+              }
+            }}
+            onToggleAutoFlip={isLocal ? () => {
+              setAutoFlipEnabled(!autoFlipEnabled);
+              if (!autoFlipEnabled) {
+                // Reset manual orientation when enabling auto-flip
+                setManualBoardOrientation(null);
+              }
+            } : undefined}
+            autoFlipEnabled={autoFlipEnabled}
+            isLocalGame={isLocal}
             onReturnToLive={returnToLive}
           />
           <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
@@ -354,7 +390,27 @@ export default function GameClient({ gameId }: GameClientProps) {
               totalMoves={gameState?.actionHistory?.length || 0}
               isViewingHistory={isViewingHistory}
               onNavigate={handleMoveSelect}
-              onFlipBoard={() => setBoardOrientation(prev => prev === 'white' ? 'black' : 'white')}
+              onFlipBoard={() => {
+              if (isLocal && !autoFlipEnabled) {
+                // In local games with auto-flip disabled, toggle manual orientation
+                setManualBoardOrientation(prev => 
+                  prev === null ? (contextOrientation === 'white' ? 'black' : 'white') :
+                  prev === 'white' ? 'black' : 'white'
+                );
+              } else {
+                // Use the context flipBoard for spectators or when auto-flip is enabled
+                flipBoard();
+              }
+            }}
+            onToggleAutoFlip={isLocal ? () => {
+              setAutoFlipEnabled(!autoFlipEnabled);
+              if (!autoFlipEnabled) {
+                // Reset manual orientation when enabling auto-flip
+                setManualBoardOrientation(null);
+              }
+            } : undefined}
+            autoFlipEnabled={autoFlipEnabled}
+            isLocalGame={isLocal}
               onReturnToLive={returnToLive}
             />
           </div>
