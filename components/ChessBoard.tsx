@@ -162,6 +162,7 @@ const ChessBoard = memo(function ChessBoard({
           });
         }
       }
+      return true;
     },
     [gameState, fenData, nextAction, onMove, onBan]
   );
@@ -185,8 +186,8 @@ const ChessBoard = memo(function ChessBoard({
       check: isInCheck ? fenData?.turn : undefined,
       lastMove: undefined,
       animation: {
-        enabled: false,
-        // duration: 200,
+        enabled: true,
+        duration: 100,
       },
       movable: {
         free: false,

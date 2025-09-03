@@ -54,10 +54,13 @@ async function handleGameEnd(
   result: string,
   gameState: NonNullable<GameStateData>
 ): Promise<void> {
+  const startTime = Date.now();
+  
   // Update game state
   gameState.gameOver = true;
   gameState.result = result;
   await saveGameState(gameId, gameState);
+  console.log(`[handleGameEnd] Saved game state in ${Date.now() - startTime}ms`);
 
   // Stop any active timers
   const timeManager = timeManagers.get(gameId);
@@ -74,8 +77,9 @@ async function handleGameEnd(
     SAVE_PRACTICE_GAMES
   ) {
     try {
+      const dbStart = Date.now();
       await saveCompletedGame(gameId);
-      console.log(`[GameEnd] Game ${gameId} saved to database`);
+      console.log(`[GameEnd] Game ${gameId} saved to database in ${Date.now() - dbStart}ms`);
       
       // Clean up Redis data immediately after successful database save
       // Since database now has priority for completed games, we can safely remove from Redis
@@ -1420,6 +1424,13 @@ wss.on("connection", (ws: WebSocket, request) => {
             );
           } else {
             // Game is still active - set up proper associations and subscriptions
+            
+            // Check if player was already in this game before setting the new association
+            const previousGameId = await redis.get(
+              KEYS.PLAYER_GAME(currentPlayer.userId)
+            );
+            
+            // Now set the new association and subscribe
             await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
             await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
             
@@ -1430,34 +1441,12 @@ wss.on("connection", (ws: WebSocket, request) => {
               } as SimpleServerMsg)
             );
 
-            // Check if we already sent the state during authentication/reconnection
-            const playerGameId = await redis.get(
-              KEYS.PLAYER_GAME(currentPlayer.userId)
+            // Always send the full game state when joining an active game
+            // This ensures players get the current state regardless of reconnection scenario
+            await sendFullGameState(gameId, ws);
+            console.log(
+              `Player ${currentPlayer.username} joined active game ${gameId} (previous game: ${previousGameId || 'none'})`
             );
-            if (playerGameId !== gameId) {
-              // Player is joining a different game, send full state
-              await sendFullGameState(gameId, ws);
-              console.log(
-                `Player ${currentPlayer.username} joined active game ${gameId}`
-              );
-            } else {
-              // Check if it's a solo game that needs state sent anyway
-              const gameState = await getGameState(gameId);
-              if (
-                gameState &&
-                gameState.whitePlayerId === gameState.blackPlayerId
-              ) {
-                // It's a solo game, send the state
-                await sendFullGameState(gameId, ws);
-                console.log(
-                  `Player ${currentPlayer.username} joined solo game ${gameId}`
-                );
-              } else {
-                console.log(
-                  `Player ${currentPlayer.username} already in game ${gameId}, skipping duplicate state`
-                );
-              }
-            }
           }
           break;
         }
@@ -1733,6 +1722,9 @@ wss.on("connection", (ws: WebSocket, request) => {
         }
 
         case "resign": {
+          const resignStart = Date.now();
+          console.log(`[resign] Starting resignation process for game ${msg.gameId}`);
+          
           if (!currentPlayer) {
             ws.send(
               JSON.stringify({
@@ -1745,6 +1737,7 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           const { gameId } = msg;
           const gameState = await getGameState(gameId);
+          console.log(`[resign] Got game state in ${Date.now() - resignStart}ms`);
 
           if (!gameState) {
             ws.send(
@@ -1774,12 +1767,16 @@ wss.on("connection", (ws: WebSocket, request) => {
           const winner = isWhite ? "black" : "white";
           const loser = isWhite ? "white" : "black";
 
+          console.log(`[resign] Handling game end at ${Date.now() - resignStart}ms`);
+          
           // Handle resignation
           await handleGameEnd(
             gameId,
             `${winner === "white" ? "White" : "Black"} wins by resignation`,
             gameState
           );
+
+          console.log(`[resign] Game end handled at ${Date.now() - resignStart}ms`);
 
           // Create and store resignation event
           const event: GameEvent = {
@@ -1790,12 +1787,14 @@ wss.on("connection", (ws: WebSocket, request) => {
           };
           await addGameEvent(gameId, event);
 
+          console.log(`[resign] Event added at ${Date.now() - resignStart}ms`);
+
           // Broadcast game over state
           console.log(`[resign] Broadcasting resignation for game ${gameId}`);
           await broadcastGameState(gameId);
 
           console.log(
-            `[resign] ${currentPlayer.username} (${loser}) resigned in game ${gameId}`
+            `[resign] ${currentPlayer.username} (${loser}) resigned in game ${gameId} - Total time: ${Date.now() - resignStart}ms`
           );
 
           // Note: We don't clean up Redis data anymore - it's persisted to database
