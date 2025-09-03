@@ -45,9 +45,10 @@ export async function saveCompletedGame(gameId: string): Promise<void> {
       return;
     }
 
-    // Save to database
+    // Save to database WITH THE ORIGINAL GAME ID
     const savedGame = await prisma.game.create({
       data: {
+        id: gameId, // USE THE ACTUAL GAME ID!!!
         whitePlayerId: gameState.whitePlayerId,
         blackPlayerId: gameState.blackPlayerId,
         bcn,

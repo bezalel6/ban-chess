@@ -83,7 +83,13 @@ export class GameService {
 
     // Calculate time taken for this action
     const now = Date.now();
-    const timeTaken = now - (gameState.lastMoveTime || gameState.startTime);
+    const baseTime = gameState.lastMoveTime || gameState.startTime || now;
+    const timeTaken = now - baseTime;
+    
+    // Log timing info for debugging
+    if (!gameState.startTime) {
+      console.warn(`[GameService] No startTime for game ${gameId}, using current time`);
+    }
     
     // Serialize and store the action
     const serializedAction = BanChess.serializeAction(
@@ -93,6 +99,7 @@ export class GameService {
     
     // Track the time for this action (in milliseconds)
     await addMoveTime(gameId, timeTaken);
+    console.log(`[GameService] Added move time for game ${gameId}: ${timeTaken}ms`);
 
     // Check for game over conditions
     const gameOver = this.checkGameOver(game);
@@ -107,10 +114,10 @@ export class GameService {
       gameState.gameOver = true;
       gameState.result = gameOver.result;
       
-      // Save the final state to Redis first
+      // Save the final state to Redis first (needed for saveCompletedGame to read)
       await saveGameState(gameId, gameState);
       
-      // Handle game ending - save to database and clean up Redis
+      // Handle game ending - save to database THEN clean up Redis
       await this.handleGameEnd(gameId, gameOver.result || "Game over", gameState);
     } else {
       // Only save to Redis if game is not over
