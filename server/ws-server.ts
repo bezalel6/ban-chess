@@ -41,6 +41,8 @@ import {
   reconstructGameFromBCN,
 } from "./services/game-retrieval";
 import { GameService } from "./services/game-service";
+import { ensureDbSchema, runDataMigrations } from "../lib/db-migration";
+import { initializeAdmins } from "../lib/startup-admin";
 
 // Import the type from redis
 type GameStateData = Awaited<ReturnType<typeof getGameState>>;
@@ -251,6 +253,26 @@ redis
     console.error("   2. Start Redis: docker run -d -p 6379:6379 redis");
     console.error("   3. Verify connection: redis-cli ping");
   });
+
+// Initialize database schema and admin users on startup
+(async () => {
+  try {
+    console.log("🔧 Checking database schema...");
+    await ensureDbSchema();
+    console.log("✅ Database schema: OK");
+    
+    console.log("📊 Running data migrations...");
+    await runDataMigrations();
+    console.log("✅ Data migrations: Complete");
+    
+    console.log("👤 Initializing admin users...");
+    await initializeAdmins();
+    console.log("✅ Admin initialization: Complete");
+  } catch (error) {
+    console.error("❌ Startup initialization error:", error);
+    // Don't exit - server can still run for non-admin users
+  }
+})();
 
 console.log("\n📝 Quick Reference:");
 console.log("   • Health check: http://localhost:3002/health");
