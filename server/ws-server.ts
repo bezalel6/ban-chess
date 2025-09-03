@@ -728,8 +728,13 @@ async function broadcastGameState(gameId: string) {
     return;
   }
 
-  // Create game instance from FEN
-  const game = new BanChess(gameState.fen);
+  // Get the action history from Redis
+  const storedActions = await getActionHistory(gameId);
+  
+  // Reconstruct game from action history to include full history with SAN
+  const game = storedActions.length > 0 
+    ? reconstructGameFromBCN(storedActions)
+    : new BanChess(gameState.fen);
 
   // Get game state using new clean APIs (moved up to avoid duplicate declaration)
   const fen = game.fen();
@@ -789,9 +794,6 @@ async function broadcastGameState(gameId: string) {
   const isInCheck = game.inCheck();
 
   const timeManager = timeManagers.get(gameId);
-
-  // Get the last action from Redis for incremental updates
-  const storedActions = await getActionHistory(gameId);
 
   // Get the last move from the game's history which includes SAN notation
   let lastMove: HistoryEntry | undefined = undefined;
