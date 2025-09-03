@@ -1,9 +1,9 @@
 // Load environment variables from .env.local
-import * as dotenv from 'dotenv';
-import * as path from 'path';
+import * as dotenv from "dotenv";
+import * as path from "path";
 
 // Load .env.local file for environment variables
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
 import { WebSocketServer, WebSocket } from "ws";
 import { BanChess } from "ban-chess.ts";
@@ -36,17 +36,21 @@ import {
   getRecentGameEvents as _getRecentGameEvents,
 } from "./redis";
 import { saveCompletedGame } from "./services/game-persistence";
-import { getGameSource, reconstructGameFromBCN } from "./services/game-retrieval";
+import {
+  getGameSource,
+  reconstructGameFromBCN,
+} from "./services/game-retrieval";
 
 // Import the type from redis
 type GameStateData = Awaited<ReturnType<typeof getGameState>>;
 
+const SAVE_PRACTICE_GAMES = true;
 /**
  * Centralized handler for all game-ending scenarios
  * Handles saving game state and persisting to database
  */
 async function handleGameEnd(
-  gameId: string, 
+  gameId: string,
   result: string,
   gameState: NonNullable<GameStateData>
 ): Promise<void> {
@@ -63,14 +67,20 @@ async function handleGameEnd(
   }
 
   // Persist to database (skip local games where same player plays both sides)
-  if (gameState.whitePlayerId && 
-      gameState.blackPlayerId && 
-      gameState.whitePlayerId !== gameState.blackPlayerId) {
+  if (
+    (gameState.whitePlayerId &&
+      gameState.blackPlayerId &&
+      gameState.whitePlayerId !== gameState.blackPlayerId) ||
+    SAVE_PRACTICE_GAMES
+  ) {
     try {
       await saveCompletedGame(gameId);
       console.log(`[GameEnd] Game ${gameId} saved to database`);
     } catch (error) {
-      console.error(`[GameEnd] Failed to save game ${gameId} to database:`, error);
+      console.error(
+        `[GameEnd] Failed to save game ${gameId} to database:`,
+        error
+      );
     }
   } else {
     console.log(`[GameEnd] Skipping database save for local game ${gameId}`);
@@ -78,34 +88,45 @@ async function handleGameEnd(
 
   // Clean up Redis data immediately after successful database save
   // No need to keep completed games in Redis wasting memory
-  if (gameState.whitePlayerId && 
-      gameState.blackPlayerId && 
-      gameState.whitePlayerId !== gameState.blackPlayerId) {
+  if (
+    gameState.whitePlayerId &&
+    gameState.blackPlayerId &&
+    gameState.whitePlayerId !== gameState.blackPlayerId
+  ) {
     // For online games that were saved to database, clean Redis immediately
     try {
       const pipeline = redis.pipeline();
       pipeline.del(KEYS.GAME_STATE(gameId));
       pipeline.del(KEYS.GAME_ACTIONS(gameId));
       pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
-      
+
       // Remove player-game associations if they exist
       if (gameState.whitePlayerId) {
-        const whiteGameId = await redis.get(KEYS.PLAYER_GAME(gameState.whitePlayerId));
+        const whiteGameId = await redis.get(
+          KEYS.PLAYER_GAME(gameState.whitePlayerId)
+        );
         if (whiteGameId === gameId) {
           pipeline.del(KEYS.PLAYER_GAME(gameState.whitePlayerId));
         }
       }
       if (gameState.blackPlayerId) {
-        const blackGameId = await redis.get(KEYS.PLAYER_GAME(gameState.blackPlayerId));
+        const blackGameId = await redis.get(
+          KEYS.PLAYER_GAME(gameState.blackPlayerId)
+        );
         if (blackGameId === gameId) {
           pipeline.del(KEYS.PLAYER_GAME(gameState.blackPlayerId));
         }
       }
-      
+
       await pipeline.exec();
-      console.log(`[GameEnd] Cleaned up Redis data for game ${gameId} immediately after database save`);
+      console.log(
+        `[GameEnd] Cleaned up Redis data for game ${gameId} immediately after database save`
+      );
     } catch (error) {
-      console.error(`[GameEnd] Failed to clean up Redis data for game ${gameId}:`, error);
+      console.error(
+        `[GameEnd] Failed to clean up Redis data for game ${gameId}:`,
+        error
+      );
     }
   } else {
     // For local/solo games, keep in Redis for a short time then clean up
@@ -117,9 +138,14 @@ async function handleGameEnd(
         pipeline.del(KEYS.GAME_ACTIONS(gameId));
         pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
         await pipeline.exec();
-        console.log(`[GameEnd] Cleaned up local game ${gameId} from Redis after 1 minute`);
+        console.log(
+          `[GameEnd] Cleaned up local game ${gameId} from Redis after 1 minute`
+        );
       } catch (error) {
-        console.error(`[GameEnd] Failed to clean up local game ${gameId}:`, error);
+        console.error(
+          `[GameEnd] Failed to clean up local game ${gameId}:`,
+          error
+        );
       }
     }, 60 * 1000); // 1 minute for local games
   }
@@ -146,8 +172,8 @@ const sentMessageIds = new Map<WebSocket, Set<string>>(); // Track sent message 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
   : process.env.NODE_ENV === "production"
-    ? ["https://chess.rndev.site"]
-    : ["http://localhost:3000", "http://localhost:3001"];
+  ? ["https://chess.rndev.site"]
+  : ["http://localhost:3000", "http://localhost:3001"];
 
 const wss = new WebSocketServer({
   port: 3001,
@@ -168,7 +194,7 @@ const wss = new WebSocketServer({
 
       if (!isAllowed) {
         console.log(
-          `[WebSocket] Blocked connection from unauthorized origin: ${origin}`,
+          `[WebSocket] Blocked connection from unauthorized origin: ${origin}`
         );
         cb(false, 403, "Forbidden: Invalid origin");
         return;
@@ -197,18 +223,23 @@ console.log("=".repeat(60));
 console.log(`📍 Port: 3001`);
 console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
 console.log(`🔗 Allowed origins: ${allowedOrigins.join(", ")}`);
-console.log(`📦 Redis URL: ${process.env.REDIS_URL || "redis://localhost:6379"}`);
+console.log(
+  `📦 Redis URL: ${process.env.REDIS_URL || "redis://localhost:6379"}`
+);
 
 // Check Redis connection on startup
-redis.ping().then(() => {
-  console.log("✅ Redis connection: OK");
-}).catch((err) => {
-  console.error("❌ Redis connection FAILED:", err.message);
-  console.error("🔍 Troubleshooting:");
-  console.error("   1. Check if Redis is running: docker ps");
-  console.error("   2. Start Redis: docker run -d -p 6379:6379 redis");
-  console.error("   3. Verify connection: redis-cli ping");
-});
+redis
+  .ping()
+  .then(() => {
+    console.log("✅ Redis connection: OK");
+  })
+  .catch((err) => {
+    console.error("❌ Redis connection FAILED:", err.message);
+    console.error("🔍 Troubleshooting:");
+    console.error("   1. Check if Redis is running: docker ps");
+    console.error("   2. Start Redis: docker run -d -p 6379:6379 redis");
+    console.error("   3. Verify connection: redis-cli ping");
+  });
 
 console.log("\n📝 Quick Reference:");
 console.log("   • Health check: http://localhost:3002/health");
@@ -216,10 +247,10 @@ console.log("   • WebSocket URL: ws://localhost:3001");
 console.log("   • Graceful shutdown: Ctrl+C");
 console.log("=".repeat(60) + "\n");
 console.log(
-  `[WebSocket] NEXTAUTH_SECRET loaded: ${!!process.env.NEXTAUTH_SECRET}`,
+  `[WebSocket] NEXTAUTH_SECRET loaded: ${!!process.env.NEXTAUTH_SECRET}`
 );
 console.log(
-  `[WebSocket] NEXT_PUBLIC_WEBSOCKET_URL: ${process.env.NEXT_PUBLIC_WEBSOCKET_URL}`,
+  `[WebSocket] NEXT_PUBLIC_WEBSOCKET_URL: ${process.env.NEXT_PUBLIC_WEBSOCKET_URL}`
 );
 
 // Subscribe to Redis pub/sub channels for cross-server communication
@@ -236,14 +267,14 @@ async function setupRedisPubSub() {
         // Notify players in queue about position updates
         const { userId, position } = data;
         const player = Array.from(authenticatedPlayers.values()).find(
-          (p) => p.userId === userId,
+          (p) => p.userId === userId
         );
         if (player && player.ws.readyState === WebSocket.OPEN) {
           player.ws.send(
             JSON.stringify({
               type: "queued",
               position,
-            } as SimpleServerMsg),
+            } as SimpleServerMsg)
           );
         }
       } else if (channel === KEYS.CHANNELS.USER_UPDATE) {
@@ -253,7 +284,7 @@ async function setupRedisPubSub() {
         if (type === "username-change") {
           // Update the in-memory player data
           const player = Array.from(authenticatedPlayers.values()).find(
-            (p) => p.userId === userId,
+            (p) => p.userId === userId
           );
 
           if (player) {
@@ -269,7 +300,7 @@ async function setupRedisPubSub() {
                   timestamp,
                   message:
                     "Your username has been updated. Please sign out and back in to refresh your session.",
-                } as SimpleServerMsg),
+                } as SimpleServerMsg)
               );
             }
           }
@@ -281,7 +312,7 @@ async function setupRedisPubSub() {
             if (gameState) {
               // Find all connected players in this game
               const gamePlayers = Array.from(
-                authenticatedPlayers.values(),
+                authenticatedPlayers.values()
               ).filter((p) => {
                 return (
                   p.userId === gameState.whitePlayerId ||
@@ -301,7 +332,7 @@ async function setupRedisPubSub() {
                       oldUsername,
                       newUsername,
                       playerId: userId,
-                    } as SimpleServerMsg),
+                    } as SimpleServerMsg)
                   );
                 }
               });
@@ -309,7 +340,7 @@ async function setupRedisPubSub() {
           }
 
           console.log(
-            `[WebSocket] Username changed: ${oldUsername} → ${newUsername}`,
+            `[WebSocket] Username changed: ${oldUsername} → ${newUsername}`
           );
         }
       } else if (channel.startsWith("channel:game:")) {
@@ -320,7 +351,7 @@ async function setupRedisPubSub() {
     } catch (err) {
       console.error(
         `[Redis] Error handling message on channel ${channel}:`,
-        err,
+        err
       );
     }
   });
@@ -340,7 +371,7 @@ async function handleGameChannelMessage(gameId: string, data: SimpleServerMsg) {
         p.userId === gameState.whitePlayerId ||
         p.userId === gameState.blackPlayerId
       );
-    },
+    }
   );
 
   // Broadcast to connected players
@@ -367,7 +398,7 @@ async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
 
   if (gameState.whitePlayerId) {
     const whiteSession = await redis.get(
-      KEYS.PLAYER_SESSION(gameState.whitePlayerId),
+      KEYS.PLAYER_SESSION(gameState.whitePlayerId)
     );
     if (whiteSession) {
       const session = JSON.parse(whiteSession);
@@ -380,7 +411,7 @@ async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
 
   if (gameState.blackPlayerId) {
     const blackSession = await redis.get(
-      KEYS.PLAYER_SESSION(gameState.blackPlayerId),
+      KEYS.PLAYER_SESSION(gameState.blackPlayerId)
     );
     if (blackSession) {
       const session = JSON.parse(blackSession);
@@ -402,7 +433,9 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
   if (!gameState) return;
 
   console.log(
-    `[handleTimeout] Player ${winner === "white" ? "black" : "white"} ran out of time in game ${gameId}`,
+    `[handleTimeout] Player ${
+      winner === "white" ? "black" : "white"
+    } ran out of time in game ${gameId}`
   );
 
   // Stop the time manager
@@ -423,7 +456,11 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
 
   // Update game state in Redis with final PGN
   gameState.pgn = game.pgn(); // Store final PGN
-  await handleGameEnd(gameId, `${winner === "white" ? "White" : "Black"} wins on time!`, gameState);
+  await handleGameEnd(
+    gameId,
+    `${winner === "white" ? "White" : "Black"} wins on time!`,
+    gameState
+  );
 
   // Send timeout message via pub/sub for all servers
   const timeoutMsg: SimpleServerMsg = {
@@ -434,7 +471,7 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
 
   await redisPub.publish(
     KEYS.CHANNELS.GAME_STATE(gameId),
-    JSON.stringify(timeoutMsg),
+    JSON.stringify(timeoutMsg)
   );
 
   // Also send state update
@@ -447,7 +484,7 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     result: gameState.result,
     history: game.history().map((entry) => ({
       ...entry,
-      turnNumber: Math.floor(entry.ply / 4) + 1,  // Calculate turn number from ply
+      turnNumber: Math.floor(entry.ply / 4) + 1, // Calculate turn number from ply
       bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
     })),
     timeControl: gameState.timeControl,
@@ -456,9 +493,9 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
 
   await redisPub.publish(
     KEYS.CHANNELS.GAME_STATE(gameId),
-    JSON.stringify(stateMsg),
+    JSON.stringify(stateMsg)
   );
-  
+
   // Note: We don't clean up Redis data anymore - it's persisted to database
 }
 
@@ -478,7 +515,7 @@ async function broadcastClockUpdate(gameId: string) {
   // Publish to Redis for all servers
   await redisPub.publish(
     KEYS.CHANNELS.GAME_STATE(gameId),
-    JSON.stringify(clockMsg),
+    JSON.stringify(clockMsg)
   );
 }
 
@@ -491,7 +528,7 @@ async function restoreTimeManager(
     result?: string;
     startTime: number;
     fen: string;
-  },
+  }
 ) {
   // Only restore if game has time control and is not over
   // Check both gameOver flag and result field to ensure game is truly active
@@ -502,7 +539,9 @@ async function restoreTimeManager(
     timeManagers.has(gameId)
   ) {
     console.log(
-      `[restoreTimeManager] Not restoring timer for game ${gameId}: gameOver=${gameState.gameOver}, result=${gameState.result}, hasTimeManager=${timeManagers.has(gameId)}`,
+      `[restoreTimeManager] Not restoring timer for game ${gameId}: gameOver=${
+        gameState.gameOver
+      }, result=${gameState.result}, hasTimeManager=${timeManagers.has(gameId)}`
     );
     return;
   }
@@ -511,7 +550,7 @@ async function restoreTimeManager(
   const timeManager = new TimeManager(
     gameState.timeControl,
     (winner) => handleTimeout(gameId, winner),
-    () => broadcastClockUpdate(gameId),
+    () => broadcastClockUpdate(gameId)
   );
 
   // TODO: In production you'd need to track actual time spent per player
@@ -526,7 +565,7 @@ async function restoreTimeManager(
   timeManagers.set(gameId, timeManager);
 
   console.log(
-    `[restoreTimeManager] Restored timer for game ${gameId}, current player: ${currentPlayer}`,
+    `[restoreTimeManager] Restored timer for game ${gameId}, current player: ${currentPlayer}`
   );
 }
 
@@ -534,12 +573,12 @@ async function restoreTimeManager(
 async function sendFullGameState(gameId: string, ws: WebSocket) {
   // First try Redis for active games, then database for completed games
   const gameSource = await getGameSource(gameId);
-  
+
   // Use unified data whether from Redis or database
   if (gameSource) {
     // Reconstruct game from BCN (the source of truth)
     const game = reconstructGameFromBCN(gameSource.bcn);
-    
+
     // Get current game state from BCN
     const fen = game.fen();
     const fenParts = fen.split(" ");
@@ -548,11 +587,11 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     const activePlayer = game.getActivePlayer();
     const actionType = game.getActionType();
     const legalActions = game.getLegalActions();
-    
+
     // For active games, also check the stored gameOver field in Redis
     // This ensures games marked as over in Redis are properly shown as over
     let isGameOver = game.gameOver();
-    if (gameSource.type === 'active') {
+    if (gameSource.type === "active") {
       const redisGameState = await getGameState(gameId);
       if (redisGameState?.gameOver) {
         isGameOver = true;
@@ -561,42 +600,55 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
       // For completed games from database, they're always over
       isGameOver = true;
     }
-    
+
     // Serialize legal actions
     const simpleLegalActions = legalActions
       .map((action) => BanChess.serializeAction(action))
       .filter((action): action is string => action !== null);
-    
+
     // Convert history
     const history = game.history().map((entry) => ({
       ...entry,
       turnNumber: Math.floor(entry.ply / 4) + 1,
       bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
     }));
-    
+
     // Get or fetch player info (for completed games, we might need to fetch from DB)
     let players;
-    if (gameSource.type === 'active') {
+    if (gameSource.type === "active") {
       const activeGameState = await getGameState(gameId);
       if (activeGameState) {
         players = await getPlayerInfo(activeGameState);
       } else {
         // Fallback if Redis state is missing
         players = {
-          white: { id: gameSource.whitePlayerId, username: gameSource.whitePlayerId },
-          black: { id: gameSource.blackPlayerId, username: gameSource.blackPlayerId },
+          white: {
+            id: gameSource.whitePlayerId,
+            username: gameSource.whitePlayerId,
+          },
+          black: {
+            id: gameSource.blackPlayerId,
+            username: gameSource.blackPlayerId,
+          },
         };
       }
     } else {
       players = {
-        white: { id: gameSource.whitePlayerId, username: gameSource.whitePlayerId },
-        black: { id: gameSource.blackPlayerId, username: gameSource.blackPlayerId },
+        white: {
+          id: gameSource.whitePlayerId,
+          username: gameSource.whitePlayerId,
+        },
+        black: {
+          id: gameSource.blackPlayerId,
+          username: gameSource.blackPlayerId,
+        },
       };
     }
-    
+
     // Get time manager if active
-    const timeManager = gameSource.type === 'active' ? timeManagers.get(gameId) : null;
-    
+    const timeManager =
+      gameSource.type === "active" ? timeManagers.get(gameId) : null;
+
     // Build the state message - same structure for active and completed games
     const clocks = timeManager ? timeManager.getClocks() : undefined;
     const fullStateMsg = {
@@ -613,35 +665,39 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
       messageId: `state-full-${++messageIdCounter}`,
       gameOver: isGameOver,
       result: gameSource.result,
-      dataSource: gameSource.type,  // 'active' (Redis) or 'completed' (database)
+      dataSource: gameSource.type, // 'active' (Redis) or 'completed' (database)
       ...(gameSource.timeControl && {
         timeControl: parseTimeControl(gameSource.timeControl),
         clocks,
         startTime: Date.now(), // For completed games, this won't matter
       }),
     } as SimpleServerMsg & { messageId: string };
-    
+
     // Send the unified state
     ws.send(JSON.stringify(fullStateMsg));
     // Only log for debugging if needed
     // console.log(`[sendFullGameState] Sent ${gameSource.type} game state for ${gameId}`);
     return;
   }
-  
+
   // Game not found anywhere
   // console.log(`[sendFullGameState] Game ${gameId} not found in Redis or database`);
-  ws.send(JSON.stringify({
-    type: "error",
-    message: "Game not found"
-  } as SimpleServerMsg));
+  ws.send(
+    JSON.stringify({
+      type: "error",
+      message: "Game not found",
+    } as SimpleServerMsg)
+  );
 }
 
 // Helper function to parse time control string
-function parseTimeControl(timeControlStr: string): { initial: number; increment: number } | undefined {
-  if (!timeControlStr || timeControlStr === 'unlimited') {
+function parseTimeControl(
+  timeControlStr: string
+): { initial: number; increment: number } | undefined {
+  if (!timeControlStr || timeControlStr === "unlimited") {
     return undefined;
   }
-  const [initial, increment] = timeControlStr.split('+').map(Number);
+  const [initial, increment] = timeControlStr.split("+").map(Number);
   if (!isNaN(initial) && !isNaN(increment)) {
     return { initial, increment };
   }
@@ -699,18 +755,20 @@ async function broadcastGameState(gameId: string) {
   const activePlayer = game.getActivePlayer();
   const actionType = game.getActionType();
   const legalActions = game.getLegalActions();
-  
+
   // Check for both immediate checkmate and standard game over conditions
   // IMPORTANT: Also check if there are no legal actions available (which means game over)
-  const isGameOver = checkForImmediateCheckmate(game) || legalActions.length === 0;
+  const isGameOver =
+    checkForImmediateCheckmate(game) || legalActions.length === 0;
   const isCheckmate =
     game.inCheckmate() || (game.inCheck() && legalActions.length === 0);
-  const isStalemate = game.inStalemate() || (!game.inCheck() && legalActions.length === 0);
+  const isStalemate =
+    game.inStalemate() || (!game.inCheck() && legalActions.length === 0);
 
   // Only update game over state if it's not already set (e.g., from resignation)
   if (isGameOver && !gameState.gameOver) {
     console.log(
-      `[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}, Legal actions: ${legalActions.length}`,
+      `[broadcastGameState] GAME OVER in ${gameId}! Checkmate: ${isCheckmate}, Stalemate: ${isStalemate}, Legal actions: ${legalActions.length}`
     );
 
     // Determine the winner based on who is in checkmate
@@ -731,11 +789,13 @@ async function broadcastGameState(gameId: string) {
 
   // Log game state including game over status
   if (gameState.gameOver) {
-    console.log(`[broadcastGameState] Game ${gameId} is OVER: ${gameState.result}`);
+    console.log(
+      `[broadcastGameState] Game ${gameId} is OVER: ${gameState.result}`
+    );
   }
   console.log(`[broadcastGameState] FEN: ${fen}`);
   console.log(
-    `[broadcastGameState] Ply: ${ply}, Active player: ${activePlayer}, Action type: ${actionType}, Legal actions count: ${legalActions.length}`,
+    `[broadcastGameState] Ply: ${ply}, Active player: ${activePlayer}, Action type: ${actionType}, Legal actions count: ${legalActions.length}`
   );
 
   // Serialize legal actions using BanChess format
@@ -797,7 +857,7 @@ async function broadcastGameState(gameId: string) {
         storedActions.length > 0
           ? storedActions[storedActions.length - 1]
           : undefined,
-      moveNumber: Math.floor(ply / 4) + 1,  // Each full move is 4 plies
+      moveNumber: Math.floor(ply / 4) + 1, // Each full move is 4 plies
     },
     messageId: `state-${++messageIdCounter}`,
     // Include game over state if the game is over (either by position or resignation/timeout)
@@ -816,9 +876,11 @@ async function broadcastGameState(gameId: string) {
   const contentForHash = { ...stateMsg };
   delete (contentForHash as { messageId?: string }).messageId;
   const stateHash = JSON.stringify(contentForHash);
-  
+
   if (lastBroadcastStates.get(gameId) === stateHash) {
-    console.log(`[broadcastGameState] Skipping duplicate state content for game ${gameId}`);
+    console.log(
+      `[broadcastGameState] Skipping duplicate state content for game ${gameId}`
+    );
     return;
   }
   lastBroadcastStates.set(gameId, stateHash);
@@ -826,7 +888,7 @@ async function broadcastGameState(gameId: string) {
   // For single-server deployment, send directly to connected players
   // For multi-server deployment, we'd use Redis pub/sub instead
   // TODO: Make this configurable based on deployment mode
-  
+
   // Direct send to connected players on this server (avoiding Redis pub/sub duplicates)
   const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
     (p) => {
@@ -834,7 +896,7 @@ async function broadcastGameState(gameId: string) {
         p.userId === gameState.whitePlayerId ||
         p.userId === gameState.blackPlayerId
       );
-    },
+    }
   );
 
   connectedPlayers.forEach((player) => {
@@ -842,18 +904,18 @@ async function broadcastGameState(gameId: string) {
       if (!sentMessageIds.has(player.ws)) {
         sentMessageIds.set(player.ws, new Set());
       }
-      
+
       // Use a state key that includes ply to allow new states but prevent duplicates
       const stateKey = `state-${gameId}-${ply}`;
       if (!sentMessageIds.get(player.ws)!.has(stateKey)) {
         sentMessageIds.get(player.ws)!.add(stateKey);
         player.ws.send(JSON.stringify(stateMsg));
         console.log(
-          `[broadcastGameState] SENT state to ${player.username} for game ${gameId}, ply ${ply}, messageId: ${stateMsg.messageId}`,
+          `[broadcastGameState] SENT state to ${player.username} for game ${gameId}, ply ${ply}, messageId: ${stateMsg.messageId}`
         );
       } else {
         console.log(
-          `[broadcastGameState] SKIPPED duplicate state to ${player.username} for game ${gameId}, ply ${ply}`,
+          `[broadcastGameState] SKIPPED duplicate state to ${player.username} for game ${gameId}, ply ${ply}`
         );
       }
     }
@@ -867,11 +929,11 @@ async function matchPlayers() {
   if (!players) return;
 
   const [player1, player2] = players;
-  
+
   // Check if either player already has an active game (prevent double matching)
   const player1GameId = await redis.get(KEYS.PLAYER_GAME(player1.userId));
   const player2GameId = await redis.get(KEYS.PLAYER_GAME(player2.userId));
-  
+
   if (player1GameId || player2GameId) {
     console.log(
       `[matchPlayers] Skipping match - players already in games. P1: ${player1GameId}, P2: ${player2GameId}`
@@ -905,7 +967,7 @@ async function matchPlayers() {
   const timeManager = new TimeManager(
     timeControl,
     (winner) => handleTimeout(gameId, winner),
-    () => broadcastClockUpdate(gameId),
+    () => broadcastClockUpdate(gameId)
   );
   // Use BanChess to determine who starts (should be Black at ply 1)
   const activePlayer = game.getActivePlayer();
@@ -918,10 +980,10 @@ async function matchPlayers() {
 
   // Send match notifications
   const player1Connected = Array.from(authenticatedPlayers.values()).find(
-    (p) => p.userId === player1.userId,
+    (p) => p.userId === player1.userId
   );
   const player2Connected = Array.from(authenticatedPlayers.values()).find(
-    (p) => p.userId === player2.userId,
+    (p) => p.userId === player2.userId
   );
 
   if (player1Connected && player1Connected.ws.readyState === WebSocket.OPEN) {
@@ -932,7 +994,7 @@ async function matchPlayers() {
         color: "white",
         opponent: player2.username,
         timeControl,
-      } as SimpleServerMsg),
+      } as SimpleServerMsg)
     );
   }
 
@@ -944,12 +1006,12 @@ async function matchPlayers() {
         color: "black",
         opponent: player1.username,
         timeControl,
-      } as SimpleServerMsg),
+      } as SimpleServerMsg)
     );
   }
 
   console.log(
-    `Matched ${player1.username} vs ${player2.username} in game ${gameId} with time control ${timeControl.initial}+${timeControl.increment}`,
+    `Matched ${player1.username} vs ${player2.username} in game ${gameId} with time control ${timeControl.initial}+${timeControl.increment}`
   );
 
   // Update queue positions for remaining players
@@ -967,7 +1029,7 @@ async function updateQueuePositions() {
       JSON.stringify({
         userId: data.userId,
         position: i + 1,
-      }),
+      })
     );
   }
 }
@@ -989,7 +1051,7 @@ setInterval(() => {
       // Only disconnect if they haven't responded for a full minute
       if (timeSinceLastPong > DISCONNECT_TIMEOUT) {
         console.log(
-          "Client timeout: No response for 60 seconds, disconnecting.",
+          "Client timeout: No response for 60 seconds, disconnecting."
         );
         ws.terminate();
         lastPing.delete(ws);
@@ -1027,7 +1089,13 @@ wss.on("connection", (ws: WebSocket, request) => {
 
   // Get auth info from the request that was validated during handshake
   const reqWithAuth = request as typeof request & {
-    authToken?: { providerId: string; username: string; provider: string; userId: string; isGuest?: boolean };
+    authToken?: {
+      providerId: string;
+      username: string;
+      provider: string;
+      userId: string;
+      isGuest?: boolean;
+    };
   };
   const authToken = reqWithAuth.authToken;
   let currentPlayer: Player | null = null;
@@ -1052,7 +1120,11 @@ wss.on("connection", (ws: WebSocket, request) => {
         lastSeen: Date.now(),
       });
 
-      console.log(`Player authenticated via ${authToken.isGuest ? 'guest' : 'session'} token: ${authToken.username}`);
+      console.log(
+        `Player authenticated via ${
+          authToken.isGuest ? "guest" : "session"
+        } token: ${authToken.username}`
+      );
 
       // Send authentication confirmation (only once)
       if (!currentPlayer.authMessageSent) {
@@ -1062,16 +1134,18 @@ wss.on("connection", (ws: WebSocket, request) => {
           username: authToken.username,
           messageId: `auth-${++messageIdCounter}`,
         } as SimpleServerMsg & { messageId: string };
-        
+
         // Track this message as sent
         if (!sentMessageIds.has(ws)) {
           sentMessageIds.set(ws, new Set());
         }
         sentMessageIds.get(ws)!.add(authMsg.messageId);
-        
+
         ws.send(JSON.stringify(authMsg));
         currentPlayer.authMessageSent = true;
-        console.log(`[Auth] Sent authentication confirmation with ID: ${authMsg.messageId}`);
+        console.log(
+          `[Auth] Sent authentication confirmation with ID: ${authMsg.messageId}`
+        );
       }
 
       // Check if player was in a game (reconnection)
@@ -1083,11 +1157,9 @@ wss.on("connection", (ws: WebSocket, request) => {
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
 
           const color: "white" | "black" =
-            gameState.whitePlayerId === userId
-              ? "white"
-              : "black";
+            gameState.whitePlayerId === userId ? "white" : "black";
           console.log(
-            `${authToken.username} reconnected to game ${gameId} as ${color}`,
+            `${authToken.username} reconnected to game ${gameId} as ${color}`
           );
           // Restore time manager if needed
           await restoreTimeManager(gameId, gameState);
@@ -1124,7 +1196,7 @@ wss.on("connection", (ws: WebSocket, request) => {
           // Check if already authenticated (might happen with token auth)
           if (currentPlayer && currentPlayer.userId === userId) {
             console.log(
-              `Player ${username} already authenticated, skipping duplicate`,
+              `Player ${username} already authenticated, skipping duplicate`
             );
             // Don't send another auth message if we already sent one
             if (!currentPlayer.authMessageSent) {
@@ -1134,15 +1206,17 @@ wss.on("connection", (ws: WebSocket, request) => {
                 username,
                 messageId: `auth-${++messageIdCounter}`,
               } as SimpleServerMsg & { messageId: string };
-              
+
               if (!sentMessageIds.has(ws)) {
                 sentMessageIds.set(ws, new Set());
               }
               sentMessageIds.get(ws)!.add(authMsg.messageId);
-              
+
               ws.send(JSON.stringify(authMsg));
               currentPlayer.authMessageSent = true;
-              console.log(`[Auth] Sent auth confirmation with ID: ${authMsg.messageId}`);
+              console.log(
+                `[Auth] Sent auth confirmation with ID: ${authMsg.messageId}`
+              );
             }
 
             // Check if they're already in a game and send current state without re-joining
@@ -1151,11 +1225,14 @@ wss.on("connection", (ws: WebSocket, request) => {
               const gameState = await getGameState(gameId);
               if (gameState) {
                 await sendFullGameState(gameId, ws);
-                const playerColor = gameState.whitePlayerId === userId ? "white" : "black";
+                const playerColor =
+                  gameState.whitePlayerId === userId ? "white" : "black";
                 console.log(
-                  `[sendFullGameState] Sent full state with history for game ${gameId}`,
+                  `[sendFullGameState] Sent full state with history for game ${gameId}`
                 );
-                console.log(`${username} reconnected to game ${gameId} as ${playerColor}`);
+                console.log(
+                  `${username} reconnected to game ${gameId} as ${playerColor}`
+                );
               }
             }
             break;
@@ -1163,11 +1240,11 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           // Handle duplicate connections gracefully
           const existingPlayer = Array.from(authenticatedPlayers.values()).find(
-            (p) => p.userId === userId,
+            (p) => p.userId === userId
           );
           if (existingPlayer && existingPlayer.ws !== ws) {
             console.log(
-              `User ${username} establishing new connection, closing old one.`,
+              `User ${username} establishing new connection, closing old one.`
             );
             existingPlayer.ws.close(1000, "New connection established");
             authenticatedPlayers.delete(existingPlayer.ws);
@@ -1195,15 +1272,17 @@ wss.on("connection", (ws: WebSocket, request) => {
               username,
               messageId: `auth-${++messageIdCounter}`,
             } as SimpleServerMsg & { messageId: string };
-            
+
             if (!sentMessageIds.has(ws)) {
               sentMessageIds.set(ws, new Set());
             }
             sentMessageIds.get(ws)!.add(authMsg.messageId);
-            
+
             ws.send(JSON.stringify(authMsg));
             currentPlayer.authMessageSent = true;
-            console.log(`[Auth] Sent authentication confirmation with ID: ${authMsg.messageId}`);
+            console.log(
+              `[Auth] Sent authentication confirmation with ID: ${authMsg.messageId}`
+            );
           }
 
           // Check if player was in a game (reconnection)
@@ -1225,14 +1304,16 @@ wss.on("connection", (ws: WebSocket, request) => {
                   gameId,
                   color,
                   players: await getPlayerInfo(gameState),
-                } as SimpleServerMsg),
+                } as SimpleServerMsg)
               );
 
               // Restore time manager if needed
               await restoreTimeManager(gameId, gameState);
               // Send full state with history for reconnection
               await sendFullGameState(gameId, ws);
-              console.log(`${username} reconnected to game ${gameId} as ${color}`);
+              console.log(
+                `${username} reconnected to game ${gameId} as ${color}`
+              );
             }
           }
           break;
@@ -1244,13 +1325,16 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Not authenticated",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
 
           const gameId = uuidv4();
-          const timeControl = msg.timeControl || { initial: 900, increment: 10 };
+          const timeControl = msg.timeControl || {
+            initial: 900,
+            increment: 10,
+          };
 
           // Create new game
           const game = new BanChess();
@@ -1270,7 +1354,7 @@ wss.on("connection", (ws: WebSocket, request) => {
             const timeManager = new TimeManager(
               timeControl,
               (winner) => handleTimeout(gameId, winner),
-              () => broadcastClockUpdate(gameId),
+              () => broadcastClockUpdate(gameId)
             );
             // Use BanChess to determine who starts (should be Black at ply 1)
             const activePlayer = game.getActivePlayer();
@@ -1290,22 +1374,26 @@ wss.on("connection", (ws: WebSocket, request) => {
             timeControl,
             messageId: `game-created-${++messageIdCounter}`,
           } as SimpleServerMsg & { messageId: string };
-          
+
           if (!sentMessageIds.has(ws)) {
             sentMessageIds.set(ws, new Set());
           }
-          
+
           // Check if we've already sent this type of message for this game
           const msgKey = `game-created-${gameId}`;
           if (!sentMessageIds.get(ws)!.has(msgKey)) {
             sentMessageIds.get(ws)!.add(msgKey);
             ws.send(JSON.stringify(gameCreatedMsg));
-            console.log(`[Game] Sent game-created with ID: ${gameCreatedMsg.messageId}`);
+            console.log(
+              `[Game] Sent game-created with ID: ${gameCreatedMsg.messageId}`
+            );
           } else {
-            console.log(`[Game] Skipping duplicate game-created for game ${gameId}`);
+            console.log(
+              `[Game] Skipping duplicate game-created for game ${gameId}`
+            );
           }
           console.log(
-            `Solo game ${gameId} created for ${currentPlayer.username} with time control ${timeControl.initial}+${timeControl.increment}`,
+            `Solo game ${gameId} created for ${currentPlayer.username} with time control ${timeControl.initial}+${timeControl.increment}`
           );
           break;
         }
@@ -1316,52 +1404,79 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Not authenticated",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
 
           const { gameId } = msg;
-          const gameState = await getGameState(gameId);
+          // Check both Redis and database for the game
+          const gameSource = await getGameSource(gameId);
 
-          if (!gameState) {
+          if (!gameSource) {
+            console.log(`[join-game] Game ${gameId} not found in Redis or database`);
             ws.send(
               JSON.stringify({
                 type: "error",
                 message: "Game not found",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
+          
+          console.log(`[join-game] Found game ${gameId} in ${gameSource.type} storage`);
 
-          await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
-          await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+          // Only set player-game association and subscribe for active games
+          if (gameSource.type === 'active') {
+            await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
+            await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+          }
 
-          // Always send joined message first
+          // Always send joined message first (even for completed games for backward compatibility)
           ws.send(
             JSON.stringify({
               type: "joined",
               gameId,
-            } as SimpleServerMsg),
+            } as SimpleServerMsg)
           );
 
-          // Check if we already sent the state during authentication/reconnection
-          // to avoid duplicate messages
-          const playerGameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
-          if (playerGameId !== gameId) {
-            // Player is joining a different game, send full state
+          // For completed games from database, always send state
+          // For active games, check if we need to send state
+          if (gameSource.type === 'completed') {
+            // Always send state for completed games
             await sendFullGameState(gameId, ws);
-            console.log(`Player ${currentPlayer.username} joined game ${gameId}, sent full state`);
+            console.log(
+              `Player ${currentPlayer.username} joined completed game ${gameId} from database`
+            );
           } else {
-            // Player already in this game (reconnection handled it), send state anyway for solo games
-            // Since solo games don't have reconnection logic
-            const gameState = await getGameState(gameId);
-            if (gameState && gameState.whitePlayerId === gameState.blackPlayerId) {
-              // It's a solo game, send the state
+            // Active game - check if we already sent the state during authentication/reconnection
+            const playerGameId = await redis.get(
+              KEYS.PLAYER_GAME(currentPlayer.userId)
+            );
+            if (playerGameId !== gameId) {
+              // Player is joining a different game, send full state
               await sendFullGameState(gameId, ws);
-              console.log(`Player ${currentPlayer.username} joined solo game ${gameId}, sent state`);
+              console.log(
+                `Player ${currentPlayer.username} joined game ${gameId}, sent full state`
+              );
             } else {
-              console.log(`Player ${currentPlayer.username} already in game ${gameId}, skipping duplicate state`);
+              // Player already in this game (reconnection handled it), send state anyway for solo games
+              // Since solo games don't have reconnection logic
+              const gameState = await getGameState(gameId);
+              if (
+                gameState &&
+                gameState.whitePlayerId === gameState.blackPlayerId
+              ) {
+                // It's a solo game, send the state
+                await sendFullGameState(gameId, ws);
+                console.log(
+                  `Player ${currentPlayer.username} joined solo game ${gameId}, sent state`
+                );
+              } else {
+                console.log(
+                  `Player ${currentPlayer.username} already in game ${gameId}, skipping duplicate state`
+                );
+              }
             }
           }
           break;
@@ -1373,7 +1488,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Not authenticated",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1386,18 +1501,21 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Game not found",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
 
           // NEW CHECK: Ensure the player is part of the game
-          if (currentPlayer.userId !== gameState.whitePlayerId && currentPlayer.userId !== gameState.blackPlayerId) {
+          if (
+            currentPlayer.userId !== gameState.whitePlayerId &&
+            currentPlayer.userId !== gameState.blackPlayerId
+          ) {
             ws.send(
               JSON.stringify({
                 type: "error",
                 message: "You are a spectator and cannot make moves.",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1440,13 +1558,13 @@ wss.on("connection", (ws: WebSocket, request) => {
               `Invalid action in game ${gameId}:`,
               action,
               "Error:",
-              result.error,
+              result.error
             );
             ws.send(
               JSON.stringify({
                 type: "error",
                 message: result.error || "Invalid action",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
           }
           break;
@@ -1458,17 +1576,17 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Not authenticated",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
 
           const position = await addToQueue(
             currentPlayer.userId,
-            currentPlayer.username,
+            currentPlayer.username
           );
           console.log(
-            `${currentPlayer.username} joined queue (position ${position})`,
+            `${currentPlayer.username} joined queue (position ${position})`
           );
 
           // Update player session status
@@ -1511,7 +1629,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Not authenticated",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1524,7 +1642,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Game not found",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1535,7 +1653,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Cannot give time when playing both sides",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1551,7 +1669,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "You are not a player in this game",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1562,7 +1680,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Game has already ended",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1573,7 +1691,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "This game has no time control",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1620,7 +1738,7 @@ wss.on("connection", (ws: WebSocket, request) => {
                     type: "game-event",
                     gameId,
                     event,
-                  } as SimpleServerMsg),
+                  } as SimpleServerMsg)
                 );
               }
             });
@@ -1629,14 +1747,14 @@ wss.on("connection", (ws: WebSocket, request) => {
             broadcastClockUpdate(gameId);
 
             console.log(
-              `[give-time] ${giverColor} gave ${timeToGive} seconds to ${recipientColor} in game ${gameId}`,
+              `[give-time] ${giverColor} gave ${timeToGive} seconds to ${recipientColor} in game ${gameId}`
             );
           } else {
             ws.send(
               JSON.stringify({
                 type: "error",
                 message: "Time manager not found for this game",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
           }
           break;
@@ -1648,7 +1766,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Not authenticated",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1661,7 +1779,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "Game not found",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1675,7 +1793,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               JSON.stringify({
                 type: "error",
                 message: "You are not in this game",
-              } as SimpleServerMsg),
+              } as SimpleServerMsg)
             );
             return;
           }
@@ -1685,7 +1803,11 @@ wss.on("connection", (ws: WebSocket, request) => {
           const loser = isWhite ? "white" : "black";
 
           // Handle resignation
-          await handleGameEnd(gameId, `${winner === "white" ? "White" : "Black"} wins by resignation`, gameState);
+          await handleGameEnd(
+            gameId,
+            `${winner === "white" ? "White" : "Black"} wins by resignation`,
+            gameState
+          );
 
           // Create and store resignation event
           const event: GameEvent = {
@@ -1697,15 +1819,13 @@ wss.on("connection", (ws: WebSocket, request) => {
           await addGameEvent(gameId, event);
 
           // Broadcast game over state
-          console.log(
-            `[resign] Broadcasting resignation for game ${gameId}`,
-          );
+          console.log(`[resign] Broadcasting resignation for game ${gameId}`);
           await broadcastGameState(gameId);
 
           console.log(
-            `[resign] ${currentPlayer.username} (${loser}) resigned in game ${gameId}`,
+            `[resign] ${currentPlayer.username} (${loser}) resigned in game ${gameId}`
           );
-          
+
           // Note: We don't clean up Redis data anymore - it's persisted to database
           break;
         }
@@ -1716,7 +1836,7 @@ wss.on("connection", (ws: WebSocket, request) => {
         JSON.stringify({
           type: "error",
           message: "Server error",
-        } as SimpleServerMsg),
+        } as SimpleServerMsg)
       );
     }
   });
@@ -1732,7 +1852,7 @@ wss.on("connection", (ws: WebSocket, request) => {
       const gameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
       if (gameId) {
         console.log(
-          `Player ${currentPlayer.username} disconnected from game ${gameId}`,
+          `Player ${currentPlayer.username} disconnected from game ${gameId}`
         );
         // Note: We don't remove the game or player from game, allowing reconnection
       }
@@ -1757,7 +1877,7 @@ const healthServer = createServer((req, res) => {
         service: "websocket-server",
         connections: wss.clients.size,
         activeManagers: timeManagers.size,
-      }),
+      })
     );
   } else {
     res.writeHead(404);

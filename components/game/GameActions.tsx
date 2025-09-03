@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SimpleGameState } from "@/lib/game-types";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { Flag } from "lucide-react";
 
 interface GameActionsProps {
   gameState: SimpleGameState;
@@ -51,14 +52,15 @@ export default function GameActions({
         Game Actions
       </h3>
       
-      <div className="space-y-2">
-        {/* Resign Button */}
+      <div className="flex gap-2">
+        {/* Resign Icon Button */}
         {onResign && (
           <button
             onClick={onResign}
-            className="w-full px-3 py-2 bg-red-500/10 text-red-500 border border-red-500/30 rounded-md hover:bg-red-500/20 transition-colors font-medium text-sm"
+            className="p-2 text-gray-400 hover:text-white hover:bg-red-500/20 rounded-md transition-colors group"
+            title="Resign"
           >
-            Resign
+            <Flag className="w-5 h-5 group-hover:text-red-400" />
           </button>
         )}
 
@@ -67,7 +69,7 @@ export default function GameActions({
           <button
             onClick={handleOfferDraw}
             disabled={drawOffered}
-            className={`w-full px-3 py-2 rounded-md transition-colors font-medium text-sm ${
+            className={`flex-1 px-3 py-2 rounded-md transition-colors font-medium text-sm ${
               drawOffered
                 ? 'bg-gray-500/10 text-gray-500 border border-gray-500/30 cursor-not-allowed'
                 : 'bg-blue-500/10 text-blue-500 border border-blue-500/30 hover:bg-blue-500/20'
@@ -82,7 +84,7 @@ export default function GameActions({
           <button
             onClick={handleRequestTakeback}
             disabled={takebackRequested}
-            className={`w-full px-3 py-2 rounded-md transition-colors font-medium text-sm ${
+            className={`flex-1 px-3 py-2 rounded-md transition-colors font-medium text-sm ${
               takebackRequested
                 ? 'bg-gray-500/10 text-gray-500 border border-gray-500/30 cursor-not-allowed'
                 : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 hover:bg-yellow-500/20'
