@@ -20,7 +20,7 @@ export default function NavigationBar({
   onReturnToLive,
 }: NavigationBarProps) {
   const currentIndex = currentMoveIndex ?? totalMoves - 1;
-  const canGoBack = currentIndex > 0;
+  const canGoBack = currentIndex >= 0; // Can go back from move 0 to starting position (-1)
   const canGoForward = currentIndex < totalMoves - 1;
   const isAtLive = currentIndex === totalMoves - 1;
 
@@ -28,21 +28,21 @@ export default function NavigationBar({
     <div className="flex items-center justify-center gap-1 px-3 py-2 bg-background-secondary rounded-lg border border-border">
       {/* First move */}
       <button
-        onClick={() => onNavigate(0)}
-        disabled={!canGoBack}
+        onClick={() => onNavigate(-1)} // Navigate to starting position
+        disabled={currentIndex < 0} // Disabled if already at starting position
         className={`p-1.5 rounded transition-colors ${
-          canGoBack
+          currentIndex >= 0
             ? 'hover:bg-background-tertiary text-foreground'
             : 'text-foreground-muted opacity-50 cursor-not-allowed'
         }`}
-        title="First move"
+        title="Starting position"
       >
         <ChevronFirst className="w-5 h-5" />
       </button>
 
       {/* Previous move */}
       <button
-        onClick={() => onNavigate(Math.max(0, currentIndex - 1))}
+        onClick={() => onNavigate(currentIndex - 1)}
         disabled={!canGoBack}
         className={`p-1.5 rounded transition-colors ${
           canGoBack
@@ -67,7 +67,7 @@ export default function NavigationBar({
           </button>
         ) : (
           <span className="text-sm text-foreground-muted">
-            {currentIndex + 1} / {totalMoves}
+            {currentIndex < 0 ? 'Start' : `${currentIndex + 1} / ${totalMoves}`}
           </span>
         )}
       </div>

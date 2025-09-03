@@ -100,7 +100,8 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
   const handleNavigate = useCallback((moveIndex: number) => {
     if (!gameData || !gameData.bcn) return;
     
-    const bcnSlice = gameData.bcn.slice(0, moveIndex + 1);
+    // Handle negative index (starting position)
+    const bcnSlice = moveIndex >= 0 ? gameData.bcn.slice(0, moveIndex + 1) : [];
     const navGame = bcnSlice.length > 0 
       ? BanChess.replayFromActions(bcnSlice)
       : new BanChess();
