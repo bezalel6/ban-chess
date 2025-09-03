@@ -107,6 +107,27 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
   // Count total sound effects across all Lichess themes
   const totalLichessSounds = lichessThemes.reduce((total, theme) => 
     total + (soundLibrary.themes[theme]?.length || 0), 0);
+  
+  // Helper function to extract theme from sound path
+  const getThemeFromSoundPath = (soundPath: string | null): string | null => {
+    if (!soundPath) return null;
+    
+    // Check if it's an external URL (yoinks)
+    if (soundPath.includes('chesscomfiles.com')) {
+      return 'yoinks';
+    }
+    
+    // Extract theme from local path: /sounds/[theme]/...
+    const match = soundPath.match(/\/sounds\/([^/]+)\//);
+    return match ? match[1] : null;
+  };
+  
+  // Helper function to get theme display color
+  const getThemeColor = (theme: string | null): string => {
+    if (!theme) return 'text-foreground-muted';
+    if (theme === 'yoinks') return 'text-[rgb(93,153,72)]';
+    return 'text-lichess-orange-500/70';
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -215,16 +236,16 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
 
               {/* Sound Grid - with direct assignment buttons */}
               <div className="bg-background rounded-lg p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 max-h-[400px] overflow-y-auto pr-2 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 max-h-[400px] overflow-y-auto pr-2 pt-2 auto-rows-fr">
                   {soundLibrary.themes[activeTheme]?.map((sound) => {
                     const isPlaying = isPlayingSound === sound.file;
                     
                     return (
-                      <div key={sound.file} className="relative group">
+                      <div key={sound.file} className="relative group h-full">
                         <button
                           onClick={() => playSound(sound.file)}
                           disabled={!soundEnabled}
-                          className={`w-full px-4 py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 min-h-[44px] ${
+                          className={`w-full h-full px-3 py-2 rounded-lg text-xs transition-all flex flex-col items-center justify-center gap-1 min-h-[60px] ${
                             isPlaying 
                               ? 'animate-pulse bg-lichess-orange-500/30' 
                               : 'bg-background-secondary hover:bg-lichess-orange-500/10'
@@ -232,9 +253,9 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
                           title={`Click to play: ${sound.displayName}`}
                         >
                           {isPlaying && (
-                            <Play className="h-4 w-4 text-lichess-orange-500 flex-shrink-0" />
+                            <Play className="h-3 w-3 text-lichess-orange-500 flex-shrink-0" />
                           )}
-                          <span className="text-center break-words leading-tight">{sound.displayName}</span>
+                          <span className="text-center break-words leading-tight text-xs">{sound.displayName}</span>
                         </button>
                         
                         {/* Assign Button - visible on hover */}
@@ -293,7 +314,7 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
                     key={eventType}
                     onClick={() => handleEventClick(eventType)}
                     disabled={!soundEnabled}
-                    className={`w-full p-3 rounded-lg transition-all ${
+                    className={`w-full p-3 rounded-lg transition-all min-h-[100px] ${
                       isAssignmentTarget
                         ? 'bg-lichess-orange-500/10 hover:bg-lichess-orange-500/20 ring-1 ring-lichess-orange-500/50 cursor-pointer'
                         : 'bg-background hover:bg-lichess-orange-500/10'
@@ -307,9 +328,19 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
                     <EventIcon className="h-5 w-5 mb-1 mx-auto text-foreground-muted" />
                     <p className="text-xs font-medium">{eventMetadata[eventType].name}</p>
                     {currentSound && isHydrated && (
-                      <p className="text-[10px] text-foreground-muted mt-1 truncate">
-                        {currentSound.split('/').pop()?.replace('.mp3', '')}
-                      </p>
+                      <div className="mt-1 space-y-0.5">
+                        <p className="text-[10px] text-foreground-muted truncate">
+                          {currentSound.split('/').pop()?.replace('.mp3', '')}
+                        </p>
+                        {(() => {
+                          const theme = getThemeFromSoundPath(currentSound);
+                          return theme ? (
+                            <p className={`text-[9px] font-medium ${getThemeColor(theme)}`}>
+                              {theme === 'yoinks' ? 'Yoinks' : theme.charAt(0).toUpperCase() + theme.slice(1)}
+                            </p>
+                          ) : null;
+                        })()}
+                      </div>
                     )}
                     {isAssignmentTarget && (
                       <div className="mt-1 flex items-center justify-center">
