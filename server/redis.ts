@@ -2,7 +2,7 @@ import Redis from "ioredis";
 import type { TimeControl, GameEvent } from "../lib/game-types";
 
 // Type definitions for Redis data structures
-interface GameStateData {
+export interface GameStateData {
   fen: string;
   pgn?: string; // Store PGN for full game reconstruction
   whitePlayerId?: string;
