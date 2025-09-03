@@ -13,6 +13,7 @@ import type {
   HistoryEntry,
   TimeControl,
   GameEvent,
+  PlayerClock,
 } from "../lib/game-types";
 import { v4 as uuidv4 } from "uuid";
 import { TimeManager } from "./time-manager";
@@ -58,7 +59,7 @@ async function handleGameEnd(
 
   // Capture final clock values before stopping the timer
   const timeManager = timeManagers.get(gameId);
-  let finalClocks = undefined;
+  let finalClocks: { white: PlayerClock; black: PlayerClock } | undefined = undefined;
   if (timeManager) {
     finalClocks = timeManager.getClocks();
   }

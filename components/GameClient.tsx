@@ -308,7 +308,7 @@ export default function GameClient({ gameId }: GameClientProps) {
           </div>
         )}
         <div
-          className={`grid grid-cols-[14rem_auto_18rem] gap-3 items-center max-h-[calc(100vh-1rem)] ${
+          className={`grid grid-cols-[14rem_auto_16rem] gap-4 items-center max-h-[calc(100vh-1rem)] ${
             debugMode ? "border-4 border-blue-500 relative" : ""
           }`}
         >
