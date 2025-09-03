@@ -180,8 +180,8 @@ export default function Header() {
   return (
     <header className="border-b border-border bg-background sticky top-0 z-50">
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
+        <div className="relative flex h-16 items-center">
+          {/* Logo - Left side */}
           <div className="flex items-center space-x-4">
             <Link
               href="/"
@@ -201,8 +201,8 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Main Navigation - Desktop */}
-          <nav className="hidden md:flex items-center space-x-2">
+          {/* Main Navigation - Desktop - Absolutely centered */}
+          <nav className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center space-x-2">
             <Link
               href="/play/local"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
@@ -217,8 +217,8 @@ export default function Header() {
             </Link>
           </nav>
 
-          {/* User Actions */}
-          <div className="flex items-center space-x-3">
+          {/* User Actions - Right side */}
+          <div className="flex items-center space-x-3 ml-auto">
             <SearchButton />
             <VolumeControl />
             <HeadsetMode />
