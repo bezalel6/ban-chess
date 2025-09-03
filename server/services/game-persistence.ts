@@ -45,6 +45,20 @@ export async function saveCompletedGame(gameId: string): Promise<void> {
       return;
     }
 
+    // Reconstruct the game to get the final position with ban state
+    const { BanChess } = await import('ban-chess.ts');
+    const finalGame = BanChess.replayFromActions(bcn);
+    const finalPosition = finalGame.fen(); // This includes the ban state in the 7th field
+    const moveCount = bcn.filter(action => action.startsWith('m:')).length;
+    
+    // Extract result reason from the result string
+    let resultReason = 'unknown';
+    if (result.includes('checkmate')) resultReason = 'checkmate';
+    else if (result.includes('resignation')) resultReason = 'resignation';
+    else if (result.includes('timeout')) resultReason = 'timeout';
+    else if (result.includes('stalemate')) resultReason = 'stalemate';
+    else if (result.includes('draw')) resultReason = 'draw';
+
     // Save to database WITH THE ORIGINAL GAME ID
     const savedGame = await prisma.game.create({
       data: {
@@ -52,9 +66,12 @@ export async function saveCompletedGame(gameId: string): Promise<void> {
         whitePlayerId: gameState.whitePlayerId,
         blackPlayerId: gameState.blackPlayerId,
         bcn,
-        moveTimes, // Keep in milliseconds
+        moveTimes: moveTimes.map(t => Math.round(t)), // Ensure integers (milliseconds)
+        finalPosition,
         result,
+        resultReason,
         timeControl,
+        moveCount,
       },
     });
 

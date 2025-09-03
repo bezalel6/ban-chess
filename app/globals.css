@@ -380,6 +380,31 @@ a {
     width: 12.5% !important;
     height: 12.5% !important;
   }
+
+  /* Mini board styles for game history */
+  .mini-board-container {
+    @apply relative rounded overflow-hidden bg-background-tertiary;
+    aspect-ratio: 1/1;
+  }
+
+  .mini-board-container .cg-wrap {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .mini-board-container svg.cg-shapes,
+  .mini-board-container svg.cg-custom-svgs {
+    display: none;
+  }
+
+  /* Ensure mini board pieces don't overflow */
+  .mini-board-container .cg-wrap .cg-board {
+    position: absolute !important;
+    width: 100% !important;
+    height: 100% !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
 }
 
 /* Loading Bar Animation */

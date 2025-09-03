@@ -94,11 +94,14 @@ model Game {
   
   // Core game data
   bcn           String[]  // Array of BCN strings: ["b:e2e4", "m:d2d4", "b:e7e5", ...]
-  moveTimes     Float[]   // Time per action in seconds [2.3, 5.1, 1.8, ...]
+  moveTimes     Int[]     // Time per action in milliseconds [2300, 5100, 1800, ...]
+  finalPosition String?   // Final BanChess FEN with ban state (7th field) for thumbnail display
   
   // Basic metadata
   result        String    // "1-0", "0-1", "1/2-1/2"
+  resultReason  String?   // "checkmate", "resignation", "timeout", "stalemate", etc.
   timeControl   String    // "300+3" format
+  moveCount     Int?      // Total number of moves for quick statistics
   
   // When the completed game was saved
   createdAt     DateTime  @default(now())
