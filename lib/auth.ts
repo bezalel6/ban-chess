@@ -20,8 +20,8 @@ const productionCookies = {
       sameSite: 'lax' as const,
       path: '/',
       secure: true,
-      // Remove domain to let the browser handle it automatically
-      // This avoids subdomain issues
+      // Set domain to share session across subdomains (chess.rndev.site and ws-chess.rndev.site)
+      domain: '.rndev.site'
     }
   },
   callbackUrl: {
@@ -30,7 +30,7 @@ const productionCookies = {
       sameSite: 'lax' as const,
       path: '/',
       secure: true,
-      // Remove domain to let the browser handle it automatically
+      // No domain for callback URL - only needed on main domain
     }
   },
   csrfToken: {
@@ -52,7 +52,7 @@ const productionCookies = {
       path: '/',
       secure: true,
       maxAge: 60 * 15, // 15 minutes
-      // Remove domain to let the browser handle it automatically
+      // No domain - only needed during OAuth flow
     }
   },
   state: {
@@ -63,7 +63,7 @@ const productionCookies = {
       path: '/',
       secure: true,
       maxAge: 60 * 15, // 15 minutes
-      // Remove domain to let the browser handle it automatically
+      // No domain - only needed during OAuth flow
     }
   },
   nonce: {
@@ -73,7 +73,7 @@ const productionCookies = {
       sameSite: 'lax' as const,
       path: '/',
       secure: true,
-      // Remove domain to let the browser handle it automatically
+      // No domain - only needed during OAuth flow
     }
   }
 };
@@ -149,6 +149,8 @@ console.log(`[NextAuth Config] Environment: ${process.env.NODE_ENV}`);
 console.log(`[NextAuth Config] NEXTAUTH_URL: ${process.env.NEXTAUTH_URL || 'NOT SET'}`);
 console.log(`[NextAuth Config] Secret configured: ${!!process.env.NEXTAUTH_SECRET}`);
 console.log(`[NextAuth Config] Using ${isProduction ? 'production' : 'development'} cookie configuration`);
+console.log(`[NextAuth Config] Session cookie domain: ${isProduction ? '.rndev.site' : 'none (localhost)'}`);
+console.log(`[NextAuth Config] WebSocket expected at: ${process.env.NEXT_PUBLIC_WS_URL || 'NOT SET'}`);
 
 // Production requires NEXTAUTH_SECRET to be set
 if (isProduction && !process.env.NEXTAUTH_SECRET) {
