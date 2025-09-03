@@ -76,11 +76,13 @@ async function handleGameEnd(
     console.log(`[GameEnd] Skipping database save for local game ${gameId}`);
   }
 
-  // Clean up Redis data after a delay (to allow final state updates to propagate)
-  // Keep game in Redis for 5 minutes after completion for smooth transition
-  setTimeout(async () => {
+  // Clean up Redis data immediately after successful database save
+  // No need to keep completed games in Redis wasting memory
+  if (gameState.whitePlayerId && 
+      gameState.blackPlayerId && 
+      gameState.whitePlayerId !== gameState.blackPlayerId) {
+    // For online games that were saved to database, clean Redis immediately
     try {
-      // Delete game state and related data from Redis
       const pipeline = redis.pipeline();
       pipeline.del(KEYS.GAME_STATE(gameId));
       pipeline.del(KEYS.GAME_ACTION_HISTORY(gameId));
@@ -101,11 +103,26 @@ async function handleGameEnd(
       }
       
       await pipeline.exec();
-      console.log(`[GameEnd] Cleaned up Redis data for game ${gameId} after 5 minute delay`);
+      console.log(`[GameEnd] Cleaned up Redis data for game ${gameId} immediately after database save`);
     } catch (error) {
       console.error(`[GameEnd] Failed to clean up Redis data for game ${gameId}:`, error);
     }
-  }, 5 * 60 * 1000); // 5 minutes delay
+  } else {
+    // For local/solo games, keep in Redis for a short time then clean up
+    // These aren't saved to database but we don't want them lingering forever
+    setTimeout(async () => {
+      try {
+        const pipeline = redis.pipeline();
+        pipeline.del(KEYS.GAME_STATE(gameId));
+        pipeline.del(KEYS.GAME_ACTION_HISTORY(gameId));
+        pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
+        await pipeline.exec();
+        console.log(`[GameEnd] Cleaned up local game ${gameId} from Redis after 1 minute`);
+      } catch (error) {
+        console.error(`[GameEnd] Failed to clean up local game ${gameId}:`, error);
+      }
+    }, 60 * 1000); // 1 minute for local games
+  }
 }
 
 interface Player {
