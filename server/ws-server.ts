@@ -30,7 +30,6 @@ import {
   savePlayerSession,
   removePlayerSession,
   shutdown as redisShutdown,
-  addActionToHistory,
   getActionHistory,
   addGameEvent,
   getRecentGameEvents as _getRecentGameEvents,
@@ -40,6 +39,7 @@ import {
   getGameSource,
   reconstructGameFromBCN,
 } from "./services/game-retrieval";
+import { GameService } from "./services/game-service";
 
 // Import the type from redis
 type GameStateData = Awaited<ReturnType<typeof getGameState>>;
@@ -1528,38 +1528,30 @@ wss.on("connection", (ws: WebSocket, request) => {
             return;
           }
 
-          // Create game instance from saved state
-          const game = new BanChess(gameState.fen);
-
-          // BanChess handles ALL validation
-          // Action comes serialized from client (e.g., "b:d2d4" or "m:e2e4")
-          const result = game.playSerializedAction(action);
+          console.log(`Action in game ${gameId}:`, action);
+          
+          // Deserialize the action string to Action object
+          const deserializedAction = BanChess.deserializeAction(action);
+          
+          // Use GameService to apply the action (handles validation, history, and move times)
+          const result = await GameService.applyAction(gameId, deserializedAction);
 
           if (result.success) {
-            console.log(`Action in game ${gameId}:`, action);
-
-            // Action is already serialized from client (e.g., "b:d2d4" or "m:e2e4")
-            // Just store it directly
-            await addActionToHistory(gameId, action as string);
-
-            // Update game state in Redis with PGN for complete game reconstruction
-            gameState.fen = game.fen();
-            gameState.pgn = game.pgn(); // Store PGN for full history
-            gameState.lastMoveTime = Date.now();
-            gameState.moveCount = (gameState.moveCount || 0) + 1;
-            await saveGameState(gameId, gameState);
-
             // Handle clock switching after successful move/ban
             const timeManager = timeManagers.get(gameId);
-            if (timeManager && !game.gameOver()) {
-              // Use ban-chess.ts v3.0.0 API to get the next active player
-              const nextPlayer = game.getActivePlayer();
-              timeManager.switchPlayer(nextPlayer);
+            if (timeManager && !result.gameOver) {
+              // Get the updated game state to determine next player
+              const updatedGameState = await getGameState(gameId);
+              if (updatedGameState) {
+                const game = new BanChess(updatedGameState.fen);
+                const nextPlayer = game.getActivePlayer();
+                timeManager.switchPlayer(nextPlayer);
+              }
             }
 
             await broadcastGameState(gameId);
 
-            // Note: Timer cleanup and persistence is handled by broadcastGameState -> handleGameEnd
+            // Note: Timer cleanup and persistence is handled by GameService.applyAction -> handleGameEnd
             // when game.gameOver() is detected
           } else {
             console.log(
