@@ -3,13 +3,16 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { createRedisClient } from '../server/redis';
+import { redis } from '../server/redis';
 import { saveCompletedGame } from '../server/services/game-persistence';
 
 const prisma = new PrismaClient();
 
 async function saveAllCompletedGames() {
-  const redis = await createRedisClient();
+  // Connect to Redis if not already connected
+  if (redis.status === 'wait') {
+    await redis.connect();
+  }
   
   try {
     console.log('🔍 Searching for completed games in Redis...');
