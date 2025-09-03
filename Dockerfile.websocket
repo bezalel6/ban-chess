@@ -6,10 +6,15 @@ WORKDIR /app
 
 # Copy ONLY package files first (most stable layer)
 COPY package*.json ./
+# Copy Prisma schema for client generation
+COPY prisma ./prisma
 
 # Install production dependencies
 # This layer caches until package.json changes
 RUN npm ci --only=production --legacy-peer-deps
+
+# Generate Prisma client
+RUN npx prisma generate
 
 # ===== Builder Stage =====
 FROM node:20-alpine AS builder
@@ -46,6 +51,8 @@ RUN npm install -g tsx
 # Copy dependencies from deps stage
 COPY --from=deps --chown=wsuser:nodejs /app/node_modules ./node_modules
 COPY --from=deps --chown=wsuser:nodejs /app/package*.json ./
+# Copy Prisma schema to production (needed for runtime)
+COPY --from=deps --chown=wsuser:nodejs /app/prisma ./prisma
 
 # Copy application code from builder stage
 COPY --from=builder --chown=wsuser:nodejs /app/tsconfig.json ./

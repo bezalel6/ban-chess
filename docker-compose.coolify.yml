@@ -36,6 +36,7 @@ services:
       - "3001:3001"  # Expose to host for Cloudflare tunnel
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}  # Required for Prisma client
       - REDIS_URL=${REDIS_URL}  # Use external Redis URL from Coolify
       - ALLOWED_ORIGINS=https://chess.rndev.site
       - NEXTAUTH_URL=https://chess.rndev.site
