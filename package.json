@@ -46,6 +46,7 @@
     "@types/ioredis": "^4.28.10",
     "bad-words": "^4.0.0",
     "ban-chess.ts": "^3.0.0",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
     "howler": "^2.2.4",
     "ioredis": "^5.7.0",

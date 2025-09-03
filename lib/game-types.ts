@@ -89,6 +89,7 @@ export interface SimpleGameState {
   // Server-provided state from new ban-chess.ts APIs:
   activePlayer?: "white" | "black";  // Who acts now
   ply?: number;  // Current ply number
+  inCheck?: boolean;  // Is the active player in check
   // These fields are ONLY for display/metadata, NOT game logic:
   gameOver?: boolean;  // For UI display only
   result?: string;     // For UI display only
