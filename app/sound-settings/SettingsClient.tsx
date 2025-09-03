@@ -100,6 +100,12 @@ export default function SettingsClient() {
   const lichessThemes = themeNames.filter(theme => 
     theme !== 'custom' && theme !== 'user' // Exclude any non-Lichess themes if they exist
   );
+  
+  // Count total sound effects across all Lichess themes
+  const totalSoundEffects = soundLibrary 
+    ? lichessThemes.reduce((total, theme) => 
+        total + (soundLibrary.themes[theme]?.length || 0), 0)
+    : 0;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -180,7 +186,7 @@ export default function SettingsClient() {
                 <div className="border border-border/50 rounded-lg p-3 bg-background/50">
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs text-foreground-muted font-medium">
-                      Sound Themes from Lichess.org
+                      All {totalSoundEffects} sound effects in these themes are from Lichess.org
                     </p>
                     <span className="text-[10px] text-foreground-muted/70 bg-background-secondary px-2 py-0.5 rounded">
                       Open Source
