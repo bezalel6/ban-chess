@@ -194,7 +194,7 @@ const ChessBoard = memo(function ChessBoard({
         color: movableColor,
         dests: canMove || canBan ? dests : new Map(),
         showDests: true,
-        rookCastle: false, // Disable castling during ban phase
+        rookCastle: true, // Disable castling during ban phase
         events: {
           after: handleAfterMove,
         },

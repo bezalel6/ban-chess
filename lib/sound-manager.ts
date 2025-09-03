@@ -203,7 +203,14 @@ class SoundManager {
       }
 
       if (savedVolume !== null) {
-        this.setVolume(parseFloat(savedVolume));
+        // Don't call setVolume as it saves preferences again
+        this.volume = parseFloat(savedVolume);
+        // Update volume for existing sounds
+        if (!this.isServer) {
+          this.sounds.forEach((sound) => {
+            sound.volume(this.volume);
+          });
+        }
       }
 
       if (savedTheme !== null) {
@@ -213,10 +220,31 @@ class SoundManager {
       if (savedEventMap !== null) {
         try {
           const map = JSON.parse(savedEventMap);
-          // Merge saved preferences with defaults
-          this.eventSoundMap = { ...defaultEventSoundMap, ...map };
+          // Saved preferences completely replace defaults
+          this.eventSoundMap = map;
+          
+          // Preload any custom sounds that aren't in defaults
+          if (!this.isServer) {
+            Object.values(map).forEach((soundFile) => {
+              if (soundFile && typeof soundFile === 'string' && !this.sounds.has(soundFile)) {
+                this.sounds.set(
+                  soundFile,
+                  new Howl({
+                    src: [soundFile],
+                    volume: this.volume,
+                    preload: true,
+                    onloaderror: () => {
+                      console.warn(`Failed to load saved sound: ${soundFile}`);
+                    },
+                  })
+                );
+              }
+            });
+          }
         } catch (e) {
           console.error("Failed to parse sound event map:", e);
+          // Fall back to defaults only on parse error
+          this.eventSoundMap = { ...defaultEventSoundMap };
         }
       }
     }
@@ -461,7 +489,9 @@ class SoundManager {
     return this.currentTheme;
   }
 
-  // Change sound theme for all sounds
+  // Reset all sounds to a theme's defaults
+  // WARNING: This overwrites all custom sound assignments!
+  // Only use this for "Reset to Defaults" functionality
   changeSoundTheme(themeName: SoundTheme) {
     const themes = getSoundThemes();
     const theme = themes[themeName];
