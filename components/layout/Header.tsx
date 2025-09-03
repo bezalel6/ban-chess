@@ -9,6 +9,7 @@ import MobileMenu from "./MobileMenu";
 import Image from "next/image";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import VolumeControl from "./VolumeControl";
+import HeadsetMode from "./HeadsetMode";
 
 function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -98,7 +99,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
                 >
                   <span className="flex items-center">
                     <Shield className="h-4 w-4 mr-2" />
-                    Ban Difficulty
+                    Ban Harshness
                   </span>
                   <ChevronRight className={`h-4 w-4 transition-transform ${showDifficultySubmenu ? 'rotate-90' : ''}`} />
                 </button>
@@ -220,6 +221,7 @@ export default function Header() {
           <div className="flex items-center space-x-3">
             <SearchButton />
             <VolumeControl />
+            <HeadsetMode />
             {user ? (
               <UserMenu user={user} />
             ) : (

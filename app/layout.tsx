@@ -56,12 +56,9 @@ export default function RootLayout({
                 <ConnectionStatusOverlay />
                 <WebSocketStatusWidget />
                 <Header />
-
                 {/* Main content */}
-                <main className="w-full">
-                  {children}
-                </main>
-                
+                <main className="w-full">{children}</main>
+
                 {/* Toast notifications */}
                 <ToastContainer />
               </UserRoleProvider>
