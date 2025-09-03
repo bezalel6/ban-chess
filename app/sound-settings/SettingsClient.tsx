@@ -1,8 +1,35 @@
 "use client";
 
 import { Music, Wand2, RotateCcw, MousePointer, X, Volume2 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Masonry } from "masonic";
+import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+
+type SoundItem = { file: string; name: string; displayName: string };
+
+interface MasonryProps {
+  items: SoundItem[];
+  columnGutter: number;
+  columnWidth: number;
+  overscanBy: number;
+  render: (props: { data: SoundItem; index: number }) => React.ReactElement;
+}
+
+// Masonic must be loaded client-side only due to browser dependencies
+const Masonry = dynamic(
+  () => import("masonic").then((mod) => mod.Masonry) as unknown as Promise<React.ComponentType<MasonryProps>>,
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-[400px] text-gray-400">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lichess-orange-500 mx-auto mb-2"></div>
+          Loading sounds...
+        </div>
+      </div>
+    )
+  }
+) as React.ComponentType<MasonryProps>;
+
 import soundManager, { eventTypes, eventMetadata, type EventType } from "@/lib/sound-manager";
 
 interface SoundLibrary {
@@ -238,7 +265,8 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
               {/* Brick Wall Grid - No Scrolling, Tight Packed */}
               <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-3 border border-gray-600">
                 <div style={{ height: '400px' }}>
-                  <Masonry
+                  {isHydrated && (
+                    <Masonry
                     items={soundLibrary.themes[activeTheme] || []}
                     columnGutter={4}
                     columnWidth={120}
@@ -328,6 +356,7 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
                       );
                     }}
                   />
+                  )}
                 </div>
               </div>
 
