@@ -797,11 +797,9 @@ async function broadcastGameState(gameId: string) {
 
   // Get the last move from the game's history which includes SAN notation
   let lastMove: HistoryEntry | undefined = undefined;
-  console.log(`[broadcastGameState] storedActions.length: ${storedActions.length}`);
   if (storedActions.length > 0) {
     // Get the full history from the game which includes SAN from ban-chess.ts 3.0.1
     const fullHistory = game.history();
-    console.log(`[broadcastGameState] fullHistory.length: ${fullHistory.length}`);
     if (fullHistory.length > 0) {
       // Get the last entry which has the proper SAN notation
       const lastEntry = fullHistory[fullHistory.length - 1];
@@ -810,9 +808,6 @@ async function broadcastGameState(gameId: string) {
         turnNumber: Math.floor(lastEntry.ply / 4) + 1,
         bannedMove: lastEntry.bannedMove === null ? undefined : lastEntry.bannedMove,
       };
-      
-      // Log the SAN if available for debugging
-      console.log(`[broadcastGameState] Last move SAN: ${lastMove.san || 'NO SAN'}, action: ${lastMove.actionType}`);
     }
   }
 
