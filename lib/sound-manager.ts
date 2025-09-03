@@ -255,30 +255,30 @@ class SoundManager {
   private soundDebounceMs = 100; // Prevent duplicate sounds within 100ms
 
   constructor() {
-    console.log(`[SoundManager] Constructing SoundManager...`);
+    // console.log(`[SoundManager] Constructing SoundManager...`);
     this.sounds = new Map();
     this.eventSoundMap = { ...defaultEventSoundMap };
-    console.log(`[SoundManager] Default event sound map:`, this.eventSoundMap);
+    // console.log(`[SoundManager] Default event sound map:`, this.eventSoundMap);
     this.initializeSounds();
     this.loadPreferences();
-    console.log(`[SoundManager] SoundManager constructed. Enabled: ${this.enabled}, Volume: ${this.volume}, Theme: ${this.currentTheme}`);
+    // console.log(`[SoundManager] SoundManager constructed. Enabled: ${this.enabled}, Volume: ${this.volume}, Theme: ${this.currentTheme}`);
   }
 
   private initializeSounds() {
-    console.log(`[SoundManager] Initializing sounds...`);
+    // console.log(`[SoundManager] Initializing sounds...`);
     // Only preload the default sounds initially to avoid loading hundreds of files
     // Other sounds will be loaded on-demand when selected
     const defaultSounds = new Set(Object.values(defaultEventSoundMap).filter(Boolean));
     
     defaultSounds.forEach((soundFile) => {
       if (soundFile) {
-        console.log(`[SoundManager] Loading sound: ${soundFile}`);
+        // console.log(`[SoundManager] Loading sound: ${soundFile}`);
         const howl = new Howl({
           src: [soundFile],
           volume: this.volume,
           preload: true,
           onload: () => {
-            console.log(`[SoundManager] Successfully loaded: ${soundFile}`);
+            // console.log(`[SoundManager] Successfully loaded: ${soundFile}`);
           },
           onloaderror: (id, error) => {
             console.error(`[SoundManager] Failed to load: ${soundFile}`, error);
@@ -290,7 +290,7 @@ class SoundManager {
         this.sounds.set(soundFile, howl);
       }
     });
-    console.log(`[SoundManager] Initialized ${this.sounds.size} sounds`);
+    // console.log(`[SoundManager] Initialized ${this.sounds.size} sounds`);
   }
 
   private loadPreferences() {
@@ -335,10 +335,10 @@ class SoundManager {
 
   // Play sound for a specific event type
   playEvent(eventType: EventType, context?: { result?: string; playerRole?: "white" | "black" | null }) {
-    console.log(`[SoundManager] playEvent called: ${eventType}, enabled: ${this.enabled}`);
+    // console.log(`[SoundManager] playEvent called: ${eventType}, enabled: ${this.enabled}`);
     
     if (!this.enabled) {
-      console.log(`[SoundManager] Sound disabled, skipping ${eventType}`);
+      // console.log(`[SoundManager] Sound disabled, skipping ${eventType}`);
       return;
     }
 
@@ -347,14 +347,14 @@ class SoundManager {
     if (this.lastPlayedSound && 
         this.lastPlayedSound.eventType === eventType && 
         (now - this.lastPlayedSound.timestamp) < this.soundDebounceMs) {
-      console.log(`[SoundManager] Debouncing duplicate ${eventType} sound`);
+      // console.log(`[SoundManager] Debouncing duplicate ${eventType} sound`);
       return;
     }
     this.lastPlayedSound = { eventType, timestamp: now };
 
     // Special handling for game-end sounds
     if (eventType === "game-end" && context?.result) {
-      console.log(`[SoundManager] Playing game-end sound for result: ${context.result}, role: ${context.playerRole}`);
+      // console.log(`[SoundManager] Playing game-end sound for result: ${context.result}, role: ${context.playerRole}`);
       this.playGameEndSoundSmart(context.result, context.playerRole || null);
       return;
     }

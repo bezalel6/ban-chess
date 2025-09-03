@@ -623,12 +623,13 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
     
     // Send the unified state
     ws.send(JSON.stringify(fullStateMsg));
-    console.log(`[sendFullGameState] Sent ${gameSource.type} game state for ${gameId}`);
+    // Only log for debugging if needed
+    // console.log(`[sendFullGameState] Sent ${gameSource.type} game state for ${gameId}`);
     return;
   }
   
   // Game not found anywhere
-  console.log(`[sendFullGameState] Game ${gameId} not found in Redis or database`);
+  // console.log(`[sendFullGameState] Game ${gameId} not found in Redis or database`);
   ws.send(JSON.stringify({
     type: "error",
     message: "Game not found"
@@ -1132,10 +1133,11 @@ wss.on("connection", (ws: WebSocket, request) => {
               const gameState = await getGameState(gameId);
               if (gameState) {
                 await sendFullGameState(gameId, ws);
+                const playerColor = gameState.whitePlayerId === userId ? "white" : "black";
                 console.log(
                   `[sendFullGameState] Sent full state with history for game ${gameId}`,
                 );
-                console.log(`Player ${username} reconnected to game ${gameId}`);
+                console.log(`${username} reconnected to game ${gameId} as ${playerColor}`);
               }
             }
             break;
@@ -1212,7 +1214,7 @@ wss.on("connection", (ws: WebSocket, request) => {
               await restoreTimeManager(gameId, gameState);
               // Send full state with history for reconnection
               await sendFullGameState(gameId, ws);
-              console.log(`Player ${username} reconnected to game ${gameId}`);
+              console.log(`${username} reconnected to game ${gameId} as ${color}`);
             }
           }
           break;
@@ -1317,10 +1319,17 @@ wss.on("connection", (ws: WebSocket, request) => {
           await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
 
-          // Always send full state when joining a game
-          // The client will use this to initialize or verify its state
-          await sendFullGameState(gameId, ws);
-          console.log(`Player ${currentPlayer.username} joined game ${gameId}, sent full state`);
+          // Check if we already sent the state during authentication/reconnection
+          // to avoid duplicate messages
+          const playerGameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
+          if (playerGameId !== gameId) {
+            // Player is joining a different game, send full state
+            await sendFullGameState(gameId, ws);
+            console.log(`Player ${currentPlayer.username} joined game ${gameId}, sent full state`);
+          } else {
+            // Player already in this game (reconnection handled it), skip duplicate send
+            console.log(`Player ${currentPlayer.username} already in game ${gameId}, skipping duplicate state`);
+          }
           break;
         }
 

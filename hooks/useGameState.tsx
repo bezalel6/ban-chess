@@ -150,8 +150,8 @@ export function useGameState() {
       }
     }
 
-    // Only log non-clock-update messages to reduce console spam
-    if (msg.type !== "clock-update") {
+    // Only log non-clock-update and non-state messages to reduce console spam
+    if (msg.type !== "clock-update" && msg.type !== "state") {
       console.log(`[GameState] Processing message: ${msg.type}, ID: ${msg.messageId || 'no-id'}`);
     }
 
@@ -173,13 +173,14 @@ export function useGameState() {
               const newGame = new BanChess(msg.fen);
               setGame(newGame);
               
-              console.log("[GameState] BanChess instance updated:", {
-                fen: newGame.fen(),
-                ply: newGame.getPly(),
-                activePlayer: newGame.getActivePlayer(),
-                actionType: newGame.getActionType(),
-                legalActionsCount: newGame.getLegalActions().length,
-              });
+              // Only log for debugging if needed
+              // console.log("[GameState] BanChess instance updated:", {
+              //   fen: newGame.fen(),
+              //   ply: newGame.getPly(),
+              //   activePlayer: newGame.getActivePlayer(),
+              //   actionType: newGame.getActionType(),
+              //   legalActionsCount: newGame.getLegalActions().length,
+              // });
             } catch (e) {
               console.error("[GameState] Failed to create BanChess instance:", e);
               setError({ type: "game", message: "Failed to parse game state" });
@@ -318,13 +319,18 @@ export function useGameState() {
             previousFen.current = msg.fen;
 
             if (msg.gameOver) {
-              console.log("[GameState] Game Over:", msg.result);
-              const userRole = getUserRole(gameState, user?.userId);
-              soundManager.playEvent("game-end", {
-                result: msg.result,
-                playerRole: userRole.role,
-              });
-              showNotification("Game Over!", "info");
+              // Only play game-end sound if this is the first time we're learning about game over
+              // Don't play it when loading a completed game from database
+              const wasAlreadyOver = gameState?.gameOver === true;
+              if (!wasAlreadyOver && msg.dataSource !== 'completed') {
+                console.log("[GameState] Game Over:", msg.result);
+                const userRole = getUserRole(gameState, user?.userId);
+                soundManager.playEvent("game-end", {
+                  result: msg.result,
+                  playerRole: userRole.role,
+                });
+                showNotification("Game Over!", "info");
+              }
             }
           }
           break;
@@ -335,8 +341,11 @@ export function useGameState() {
           // Clear history for new game
           moveHistory.current = [];
           // Server will send a full state message next
-          soundManager.playEvent("game-start");
-          showNotification(`Joined game ${msg.gameId}`, "success");
+          // Don't play game-start sound for completed games
+          if (!gameState?.gameOver) {
+            soundManager.playEvent("game-start");
+            showNotification(`Joined game ${msg.gameId}`, "success");
+          }
           break;
 
         case "game-created":
