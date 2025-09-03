@@ -1861,29 +1861,94 @@ healthServer.listen(3002, () => {
   console.log("[WebSocket] Health check endpoint available on port 3002");
 });
 
-// Graceful shutdown
+// Track if we're already shutting down to prevent multiple shutdowns
+let isShuttingDown = false;
+
+// Graceful shutdown with timeout
 const shutdown = async (signal: string) => {
+  if (isShuttingDown) {
+    console.log(`[WebSocket] Already shutting down, ignoring ${signal}`);
+    return;
+  }
+  
+  isShuttingDown = true;
   console.log(`\n[WebSocket] Received ${signal}, shutting down gracefully...`);
 
-  // Close all WebSocket connections
-  wss.clients.forEach((ws) => {
-    ws.close(1000, "Server shutting down");
-  });
+  // Set a timeout to force exit if graceful shutdown takes too long
+  const forceExitTimeout = setTimeout(() => {
+    console.error("[WebSocket] Graceful shutdown timeout exceeded, forcing exit...");
+    process.exit(1);
+  }, 10000); // 10 second timeout
 
-  // Destroy all time managers
-  timeManagers.forEach((tm) => tm.destroy());
-  timeManagers.clear();
+  try {
+    // Close all WebSocket connections
+    console.log("[WebSocket] Closing WebSocket connections...");
+    const closePromises = Array.from(wss.clients).map((ws) => {
+      return new Promise<void>((resolve) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close(1000, "Server shutting down");
+          ws.on('close', () => resolve());
+          // Timeout for individual connection close
+          setTimeout(() => resolve(), 1000);
+        } else {
+          resolve();
+        }
+      });
+    });
+    
+    await Promise.all(closePromises);
+    console.log("[WebSocket] All connections closed");
 
-  // Close WebSocket server
-  wss.close(() => {
-    console.log("[WebSocket] Server closed");
-  });
+    // Destroy all time managers
+    console.log("[WebSocket] Destroying time managers...");
+    timeManagers.forEach((tm) => tm.destroy());
+    timeManagers.clear();
 
-  // Shutdown Redis connections
-  await redisShutdown();
+    // Close WebSocket server
+    await new Promise<void>((resolve) => {
+      wss.close(() => {
+        console.log("[WebSocket] Server closed");
+        resolve();
+      });
+      // Timeout for server close
+      setTimeout(() => resolve(), 2000);
+    });
 
-  process.exit(0);
+    // Close health check server
+    await new Promise<void>((resolve) => {
+      healthServer.close(() => {
+        console.log("[WebSocket] Health check server closed");
+        resolve();
+      });
+      setTimeout(() => resolve(), 1000);
+    });
+
+    // Shutdown Redis connections
+    console.log("[WebSocket] Shutting down Redis...");
+    await redisShutdown();
+
+    clearTimeout(forceExitTimeout);
+    console.log("[WebSocket] Graceful shutdown complete");
+    process.exit(0);
+  } catch (err) {
+    console.error("[WebSocket] Error during shutdown:", err);
+    clearTimeout(forceExitTimeout);
+    process.exit(1);
+  }
 };
 
+// Register shutdown handlers
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGHUP", () => shutdown("SIGHUP"));
+
+// Prevent unhandled promise rejections from crashing the server
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[WebSocket] Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+// Prevent uncaught exceptions from crashing the server without cleanup
+process.on("uncaughtException", (error) => {
+  console.error("[WebSocket] Uncaught Exception:", error);
+  shutdown("UNCAUGHT_EXCEPTION");
+});

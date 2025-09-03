@@ -486,9 +486,38 @@ export async function getRecentGameEvents(
   return events.map((e) => JSON.parse(e) as GameEvent);
 }
 
-// Graceful shutdown
+// Graceful shutdown with timeout
 export async function shutdown(): Promise<void> {
   console.log("[Redis] Closing connections...");
-  await Promise.all([redis.quit(), redisPub.quit(), redisSub.quit()]);
-  console.log("[Redis] All connections closed");
+  
+  // Create promises with timeouts for each connection
+  const closeWithTimeout = (client: Redis, name: string) => {
+    return Promise.race([
+      client.quit().then(() => {
+        console.log(`[Redis] ${name} connection closed gracefully`);
+      }),
+      new Promise<void>((resolve) => {
+        setTimeout(() => {
+          console.log(`[Redis] ${name} connection close timeout, disconnecting...`);
+          client.disconnect();
+          resolve();
+        }, 3000); // 3 second timeout per connection
+      })
+    ]);
+  };
+  
+  try {
+    await Promise.all([
+      closeWithTimeout(redis, "Main"),
+      closeWithTimeout(redisPub, "Publisher"),
+      closeWithTimeout(redisSub, "Subscriber")
+    ]);
+    console.log("[Redis] All connections closed");
+  } catch (err) {
+    console.error("[Redis] Error during shutdown:", err);
+    // Force disconnect all clients
+    redis.disconnect();
+    redisPub.disconnect();
+    redisSub.disconnect();
+  }
 }
