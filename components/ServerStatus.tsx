@@ -22,7 +22,8 @@ export default function ServerStatus() {
     const checkStatus = async () => {
       try {
         // Check WebSocket health endpoint
-        const wsHealthRes = await fetch("http://localhost:3002/health");
+        const healthUrl = process.env.NEXT_PUBLIC_WS_HEALTH_URL || "http://localhost:3002/health";
+        const wsHealthRes = await fetch(healthUrl);
         const wsHealth = await wsHealthRes.json();
         
         // Check main API health (which includes database)
