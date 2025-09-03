@@ -29,6 +29,8 @@
     "test:game": "playwright test e2e/game.spec.ts",
     "test:a11y": "playwright test e2e/accessibility.spec.ts",
     "test:chromium": "playwright test --project=chromium",
+    "find-zombies": "powershell -ExecutionPolicy Bypass -File scripts/find-zombies.ps1",
+    "kill-zombies": "powershell -ExecutionPolicy Bypass -File scripts/kill-zombies-simple.ps1",
     "test:firefox": "playwright test --project=firefox",
     "test:webkit": "playwright test --project=webkit",
     "test:mobile": "playwright test --project=\"Mobile Chrome\" --project=\"Mobile Safari\"",
