@@ -67,6 +67,41 @@ export default function MoveList(props: MoveListProps) {
     }
   }, [selectedIndex]);
 
+  // Play sound when navigating to a historical move
+  const playNavigationSound = useCallback((moveIndex: number) => {
+    if (!history || history.length === 0 || moveIndex < 0 || moveIndex >= history.length) {
+      return;
+    }
+    
+    // Check if this is a HistoryEntry array
+    if (typeof history[0] === 'object') {
+      const entries = history as HistoryEntry[];
+      const entry = entries[moveIndex];
+      
+      if (entry.actionType === 'ban') {
+        // Play ban sound
+        soundManager.playEvent('ban');
+      } else if (entry.actionType === 'move' && entry.san) {
+        // Analyze the SAN to determine move type
+        const san = entry.san;
+        const isCapture = san.includes('x');
+        const isCheck = san.includes('+');
+        const isCheckmate = san.includes('#');
+        const isCastle = san === 'O-O' || san === 'O-O-O';
+        const isPromotion = san.includes('=');
+        
+        // Play appropriate move sound (treat all navigation as non-opponent moves)
+        soundManager.playMoveSound({
+          check: isCheck || isCheckmate,
+          capture: isCapture,
+          castle: isCastle,
+          promotion: isPromotion,
+          isOpponent: false, // Navigation sounds are always "our" perspective
+        });
+      }
+    }
+  }, [history]);
+
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -122,7 +157,7 @@ export default function MoveList(props: MoveListProps) {
         playNavigationSound(newIndex);
       }
     },
-    [history, selectedIndex, onMoveSelect]
+    [history, selectedIndex, onMoveSelect, playNavigationSound]
   );
 
   // Set up keyboard event listener
@@ -138,40 +173,6 @@ export default function MoveList(props: MoveListProps) {
     playNavigationSound(index);
   };
 
-  // Play sound when navigating to a historical move
-  const playNavigationSound = useCallback((moveIndex: number) => {
-    if (!history || history.length === 0 || moveIndex < 0 || moveIndex >= history.length) {
-      return;
-    }
-    
-    // Check if this is a HistoryEntry array
-    if (typeof history[0] === 'object') {
-      const entries = history as HistoryEntry[];
-      const entry = entries[moveIndex];
-      
-      if (entry.actionType === 'ban') {
-        // Play ban sound
-        soundManager.playEvent('ban');
-      } else if (entry.actionType === 'move' && entry.san) {
-        // Analyze the SAN to determine move type
-        const san = entry.san;
-        const isCapture = san.includes('x');
-        const isCheck = san.includes('+');
-        const isCheckmate = san.includes('#');
-        const isCastle = san === 'O-O' || san === 'O-O-O';
-        const isPromotion = san.includes('=');
-        
-        // Play appropriate move sound (treat all navigation as non-opponent moves)
-        soundManager.playMoveSound({
-          check: isCheck || isCheckmate,
-          capture: isCapture,
-          castle: isCastle,
-          promotion: isPromotion,
-          isOpponent: false, // Navigation sounds are always "our" perspective
-        });
-      }
-    }
-  }, [history]);
   // When history updates and we're at the end, auto-follow
   useEffect(() => {
     // If we were at the last move before update, stay at the last move

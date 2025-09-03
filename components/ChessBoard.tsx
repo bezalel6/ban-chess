@@ -173,9 +173,8 @@ const ChessBoard = memo(function ChessBoard({
           // Different feedback based on difficulty level
           // Use sound manager events instead of direct audio
           if (banDifficulty === 'hard') {
-            // Hard mode: Play explosion sound (not for the faint of heart!)
-            // Note: The 'ban' event type uses the explosion sound by default
-            soundManager.playEvent('ban');
+            // Hard mode: Play aggressive futuristic explosion sound (not for the faint of heart!)
+            soundManager.playEvent('ban-attempt-hard');
           } else if (banDifficulty === 'medium') {
             // Medium mode: Play a subtle error/buzz sound
             soundManager.playEvent('ban-attempt-medium');

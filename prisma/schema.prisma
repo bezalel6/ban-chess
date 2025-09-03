@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,34 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==================== NextAuth Models ====================
-// These models are required for NextAuth.js with Prisma adapter
-
 model User {
   id            String    @id @default(cuid())
   email         String?   @unique
   emailVerified DateTime?
   name          String?
   image         String?
-  
-  // Custom fields for our chess application
-  username      String    @unique  // Always required - generated on creation
+  username      String    @unique
   isGuest       Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
-  // Relations
-  accounts      Account[]
-  sessions      Session[]
-  
-  // Game relations (prepared for future)
-  gamesAsWhite  Game[]    @relation("WhitePlayer")
-  gamesAsBlack  Game[]    @relation("BlackPlayer")
-  
-  // User preferences and stats
   preferences   Json?     @default("{}")
   stats         Json?     @default("{}")
-  
+  accounts      Account[]
+  gamesAsBlack  Game[]    @relation("BlackPlayer")
+  gamesAsWhite  Game[]    @relation("WhitePlayer")
+  sessions      Session[]
+
   @@index([email])
   @@index([username])
 }
@@ -48,15 +34,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -67,8 +52,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -81,44 +65,32 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ==================== Game Models ====================
-
 model Game {
-  id            String    @id @default(cuid())
-  
-  // Players
+  id            String   @id @default(cuid())
   whitePlayerId String
   blackPlayerId String
-  whitePlayer   User      @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
-  blackPlayer   User      @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
-  
-  // Core game data
-  bcn           String[]  // Array of BCN strings: ["b:e2e4", "m:d2d4", "b:e7e5", ...]
-  moveTimes     Int[]     // Time per action in milliseconds [2300, 5100, 1800, ...]
-  finalPosition String?   // Final BanChess FEN with ban state (7th field) for thumbnail display
-  
-  // Basic metadata
-  result        String    // "1-0", "0-1", "1/2-1/2"
-  resultReason  String?   // "checkmate", "resignation", "timeout", "stalemate", etc.
-  timeControl   String    // "300+3" format
-  moveCount     Int?      // Total number of moves for quick statistics
-  
-  // When the completed game was saved
-  createdAt     DateTime  @default(now())
-  
+  bcn           String[]
+  moveTimes     Int[]
+  finalPosition String?
+  result        String
+  resultReason  String?
+  timeControl   String
+  moveCount     Int?
+  createdAt     DateTime @default(now())
+  blackPlayer   User     @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
+  whitePlayer   User     @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+
   @@index([whitePlayerId])
   @@index([blackPlayerId])
 }
 
-// ==================== Player Presence (for online status) ====================
-
 model PlayerPresence {
   id            String   @id @default(cuid())
   userId        String   @unique
-  status        String   // "online", "offline", "in_game"
+  status        String
   lastHeartbeat DateTime @default(now())
   gameId        String?
-  
+
   @@index([status])
   @@index([lastHeartbeat])
 }

@@ -1,0 +1,58 @@
+
+> 2ban-2chess@0.1.0 dev:ws
+> portio --mine 3001 && tsx server/ws-server.ts
+
+Checking port 3001...
+[2K[1A[2K[GKilling process 185976...
+[2K[1A[2K[G✓ Successfully killed process 185976 on port 3001
+[Redis] Connecting to: redis://localhost:6379
+[dotenv@17.2.1] injecting env (7) from .env.local -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+============================================================
+🎮 BanChess WebSocket Server Starting...
+============================================================
+📍 Port: 3001
+🌍 Environment: development
+🔗 Allowed origins: http://localhost:3000, http://localhost:3001
+📦 Redis URL: redis://localhost:6379
+
+📝 Quick Reference:
+   • Health check: http://localhost:3002/health
+   • WebSocket URL: ws://localhost:3001
+   • Graceful shutdown: Ctrl+C
+============================================================
+
+[WebSocket] NEXTAUTH_SECRET loaded: true
+[WebSocket] NEXT_PUBLIC_WEBSOCKET_URL: ws://localhost:3001
+[WebSocket] Health check endpoint available on port 3002
+[Redis] ✅ Connected to Redis server
+[Redis] ✅ Subscriber connected
+[Redis] ✅ Redis client ready
+✅ Redis connection: OK
+[Auth] Successfully validated session cookie for user: RNDev
+Player authenticated via session token: RNDev
+[Auth] Sent authentication confirmation with ID: auth-1
+RNDev reconnected to game ed255de3-ee8b-4300-9323-9b84f8836fc4 as white
+[restoreTimeManager] Not restoring timer for game ed255de3-ee8b-4300-9323-9b84f8836fc4: gameOver=true, result=White wins by checkmate!, hasTimeManager=false
+Received message: join-game
+[join-game] Game ed255de3-ee8b-4300-9323-9b84f8836fc4: storage=active, gameOver=true
+Player RNDev viewing completed game ed255de3-ee8b-4300-9323-9b84f8836fc4
+Player RNDev disconnected from game ed255de3-ee8b-4300-9323-9b84f8836fc4
+[Auth] Successfully validated session cookie for user: RNDev
+Player authenticated via session token: RNDev
+[Auth] Sent authentication confirmation with ID: auth-4
+RNDev reconnected to game ed255de3-ee8b-4300-9323-9b84f8836fc4 as white
+[restoreTimeManager] Not restoring timer for game ed255de3-ee8b-4300-9323-9b84f8836fc4: gameOver=true, result=White wins by checkmate!, hasTimeManager=false
+Received message: join-game
+[join-game] Game ed255de3-ee8b-4300-9323-9b84f8836fc4: storage=active, gameOver=true
+Player RNDev viewing completed game ed255de3-ee8b-4300-9323-9b84f8836fc4
+Player RNDev disconnected from game ed255de3-ee8b-4300-9323-9b84f8836fc4
+[Auth] Successfully validated session cookie for user: RNDev
+Player authenticated via session token: RNDev
+[Auth] Sent authentication confirmation with ID: auth-7
+RNDev reconnected to game ed255de3-ee8b-4300-9323-9b84f8836fc4 as white
+[restoreTimeManager] Not restoring timer for game ed255de3-ee8b-4300-9323-9b84f8836fc4: gameOver=true, result=White wins by checkmate!, hasTimeManager=false
+Received message: join-game
+[join-game] Game ed255de3-ee8b-4300-9323-9b84f8836fc4: storage=active, gameOver=true
+Player RNDev viewing completed game ed255de3-ee8b-4300-9323-9b84f8836fc4
+[Redis] Running cleanup task...

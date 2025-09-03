@@ -22,6 +22,7 @@ export const eventTypes = [
   "ban",
   "ban-attempt-easy",
   "ban-attempt-medium",
+  "ban-attempt-hard",
   "move",
   "opponent-move",
   "capture",
@@ -45,6 +46,7 @@ export const eventMetadata: Record<
   ban: { name: "Ban", icon: Ban },
   "ban-attempt-easy": { name: "Ban Attempt (Easy)", icon: Ban },
   "ban-attempt-medium": { name: "Ban Attempt (Medium)", icon: AlertTriangle },
+  "ban-attempt-hard": { name: "Ban Attempt (Hard)", icon: Ban },
   move: { name: "Move", icon: Move },
   "opponent-move": { name: "Opponent Move", icon: Users },
   capture: { name: "Capture", icon: Swords },
@@ -131,6 +133,7 @@ const defaultEventSoundMap: Record<EventType, string | null> = {
   ban: "/sounds/standard/Explosion.mp3",
   "ban-attempt-easy": null, // No sound for easy mode
   "ban-attempt-medium": "/sounds/standard/Error.mp3",
+  "ban-attempt-hard": "/sounds/futuristic/Explosion.mp3", // The aggressive explosion for hard mode
   move: "/sounds/standard/Move.mp3",
   "opponent-move": "/sounds/standard/Move.mp3",
   capture: "/sounds/standard/Capture.mp3",
@@ -544,6 +547,7 @@ class SoundManager {
       ban: this.findAvailableSound(themePath, soundFiles["Explosion"]),
       "ban-attempt-easy": null, // No sound for easy mode
       "ban-attempt-medium": this.findAvailableSound(themePath, soundFiles["Error"]),
+      "ban-attempt-hard": "/sounds/futuristic/Explosion.mp3", // Always use futuristic explosion for hard mode
       move: this.findAvailableSound(themePath, soundFiles["Move"]),
       "opponent-move": this.findAvailableSound(themePath, soundFiles["Move"]),
       capture: this.findAvailableSound(themePath, soundFiles["Capture"]),
