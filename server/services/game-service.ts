@@ -199,7 +199,7 @@ export class GameService {
       try {
         const pipeline = redis.pipeline();
         pipeline.del(KEYS.GAME_STATE(gameId));
-        pipeline.del(KEYS.GAME_ACTION_HISTORY(gameId));
+        pipeline.del(KEYS.GAME_ACTIONS(gameId));
         pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
         
         // Remove player-game associations
@@ -228,7 +228,7 @@ export class GameService {
         try {
           const pipeline = redis.pipeline();
           pipeline.del(KEYS.GAME_STATE(gameId));
-          pipeline.del(KEYS.GAME_ACTION_HISTORY(gameId));
+          pipeline.del(KEYS.GAME_ACTIONS(gameId));
           pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
           await pipeline.exec();
           console.log(`[GameService] Cleaned up local game ${gameId} from Redis`);
