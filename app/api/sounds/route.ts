@@ -96,11 +96,12 @@ function loadSoundLibrary() {
     readSoundsRecursive(themePath);
     
     if (sounds.length > 0) {
+      // Sort sounds alphabetically by display name
       themes[theme] = sounds.sort((a, b) => a.displayName.localeCompare(b.displayName));
     }
   }
 
-  // Add yoinks theme with external CDN sounds
+  // Add yoinks theme with external CDN sounds - sorted alphabetically
   themes['yoinks'] = YOINKS_SOUNDS.map(sound => ({
     file: sound.url,
     name: sound.name,
@@ -110,7 +111,7 @@ function loadSoundLibrary() {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
-  }));
+  })).sort((a, b) => a.displayName.localeCompare(b.displayName));
 
   // Cache the result
   soundLibraryCache = { themes };

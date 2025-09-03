@@ -99,6 +99,7 @@ export async function loadSoundLibrary(): Promise<SoundLibrary> {
       await readSoundsRecursive(themePath);
       
       if (sounds.length > 0) {
+        // Sort sounds alphabetically by display name
         themes[theme] = sounds.sort((a, b) => a.displayName.localeCompare(b.displayName));
       }
     }
@@ -106,7 +107,7 @@ export async function loadSoundLibrary(): Promise<SoundLibrary> {
     console.error("Error reading sound files:", error);
   }
 
-  // Add yoinks theme with external CDN sounds
+  // Add yoinks theme with external CDN sounds - sorted alphabetically
   themes['yoinks'] = YOINKS_SOUNDS.map(sound => ({
     file: sound.url,
     name: sound.name,
@@ -116,7 +117,7 @@ export async function loadSoundLibrary(): Promise<SoundLibrary> {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
-  }));
+  })).sort((a, b) => a.displayName.localeCompare(b.displayName));
 
   const library = { themes };
   
