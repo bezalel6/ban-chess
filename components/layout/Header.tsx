@@ -185,8 +185,8 @@ export default function Header() {
 
   return (
     <header className="border-b border-border bg-background sticky top-0 z-50">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-4">
             <Link
@@ -196,11 +196,11 @@ export default function Header() {
               <Image
                 src="/logo.png"
                 alt="BanChess Logo"
-                width={48}
-                height={48}
+                width={40}
+                height={40}
                 className="object-contain"
               />
-              <span className="text-2xl font-bold">
+              <span className="text-xl font-bold">
                 <span className="text-lichess-orange-500">Ban</span>
                 <span className="text-foreground">Chess</span>
               </span>

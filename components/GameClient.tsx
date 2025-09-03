@@ -298,7 +298,7 @@ export default function GameClient({ gameId }: GameClientProps) {
     <>
       {/* Desktop Layout - Three column layout with centered board */}
       <div
-        className={`flex justify-center items-center p-2 ${
+        className={`flex justify-center items-center min-h-[calc(100vh-10rem)] p-4 ${
           debugMode ? "border-4 border-red-500 relative" : ""
         }`}
       >
@@ -308,7 +308,7 @@ export default function GameClient({ gameId }: GameClientProps) {
           </div>
         )}
         <div
-          className={`grid grid-cols-[14rem_auto_16rem] gap-4 items-center max-h-[calc(100vh-1rem)] ${
+          className={`flex gap-6 items-center justify-center w-full max-w-[1400px] ${
             debugMode ? "border-4 border-blue-500 relative" : ""
           }`}
         >
@@ -318,9 +318,9 @@ export default function GameClient({ gameId }: GameClientProps) {
             </div>
           )}
 
-          {/* Left Panel - Fixed width, aligned with board */}
+          {/* Left Panel - Status */}
           <div
-            className={`h-fit ${
+            className={`w-56 flex-shrink-0 ${
               debugMode ? "border-4 border-green-500 relative" : ""
             }`}
           >
@@ -334,7 +334,7 @@ export default function GameClient({ gameId }: GameClientProps) {
 
           {/* Center - Board */}
           <div
-            className={`flex flex-col items-center gap-2 ${
+            className={`flex flex-col items-center justify-center ${
               debugMode ? "border-4 border-yellow-500 relative" : ""
             }`}
           >
@@ -356,9 +356,9 @@ export default function GameClient({ gameId }: GameClientProps) {
             />
           </div>
 
-          {/* Right Panel - Fixed width, vertically centered */}
+          {/* Right Panel - Sidebar - Made wider for move list */}
           <div
-            className={`flex items-center justify-center ${
+            className={`w-80 flex-shrink-0 ${
               debugMode ? "border-4 border-purple-500 relative" : ""
             }`}
           >

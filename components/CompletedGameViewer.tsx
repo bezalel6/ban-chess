@@ -5,19 +5,36 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { BanChess } from "ban-chess.ts";
 import type { SimpleGameState, PlayerClock } from "@/lib/game-types";
-import { formatDistanceToNow } from "date-fns";
-import MoveList from "./game/MoveList";
-import NavigationBar from "./game/NavigationBar";
-import PlayerInfo from "./game/PlayerInfo";
+import GameSidebar from "./game/GameSidebar";
+import GameStatusPanel from "./game/GameStatusPanel";
 import { calculateClocksAtMove } from "@/lib/clock-calculator";
 
-const ChessBoard = dynamic(() => import("./ChessBoard"), {
+const ResizableBoard = dynamic(() => import("@/components/game/ResizableBoard"), {
   ssr: false,
-  loading: () => (
-    <div className="aspect-square w-full bg-background-tertiary rounded-lg flex items-center justify-center">
-      <div className="loading-spinner" />
-    </div>
-  ),
+  loading: () => {
+    const DEFAULT_SIZE = 600;
+    const savedSize = typeof window !== "undefined" 
+      ? localStorage.getItem("boardSize") 
+      : null;
+    const boardSize = savedSize ? parseInt(savedSize, 10) : DEFAULT_SIZE;
+    
+    return (
+      <div className="chess-board-wrapper">
+        <div 
+          className="chess-board-container flex items-center justify-center"
+          style={{ 
+            width: `${boardSize}px`, 
+            height: `${boardSize}px`,
+            background: 'var(--background-tertiary)',
+            borderRadius: '1rem',
+            padding: '16px'
+          }}
+        >
+          <div className="loading-spinner" />
+        </div>
+      </div>
+    );
+  },
 });
 
 interface GameData {
@@ -49,7 +66,8 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null);
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [gameState, setGameState] = useState<SimpleGameState | null>(null);
-  const [historicalClocks, setHistoricalClocks] = useState<{ white: PlayerClock; black: PlayerClock } | null>(null);
+  const [_historicalClocks, setHistoricalClocks] = useState<{ white: PlayerClock; black: PlayerClock } | null>(null);
+  const [isViewingHistory, setIsViewingHistory] = useState(false);
 
   useEffect(() => {
     loadGame();
@@ -80,7 +98,23 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
         setNavigationGame(game);
         setCurrentMoveIndex(data.bcn.length - 1);
         
-        // Set initial game state
+        // Get the FULL game history - this should never change during navigation
+        const fullGame = BanChess.replayFromActions(data.bcn);
+        const fullHistory = fullGame.history();
+        
+        // Calculate initial clocks at final position - make them static (no lastUpdate)
+        let initialClocks = null;
+        if (data.timeControl !== "unlimited") {
+          const clocks = calculateClocksAtMove(data.bcn, data.moveTimes, data.timeControl, data.bcn.length - 1);
+          // Remove lastUpdate to prevent ticking
+          initialClocks = clocks ? {
+            white: { remaining: clocks.white.remaining, lastUpdate: 0 },
+            black: { remaining: clocks.black.remaining, lastUpdate: 0 }
+          } : null;
+          setHistoricalClocks(initialClocks);
+        }
+        
+        // Set initial game state with FULL history and clocks
         setGameState({
           gameId: gameId,
           fen: game.fen(),
@@ -93,57 +127,90 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
           gameOver: game.gameOver(),
           result: data.result,
           actionHistory: data.bcn,
+          history: fullHistory, // FULL move history that won't change
+          clocks: initialClocks, // Add clocks for PlayerInfo
+          moveTimes: data.moveTimes, // Add move times
+          timeControl: data.timeControl, // Add time control
         });
-        
-        // Calculate initial clocks at final position
-        if (data.timeControl !== "unlimited") {
-          const clocks = calculateClocksAtMove(data.bcn, data.moveTimes, data.timeControl, data.bcn.length - 1);
-          setHistoricalClocks(clocks);
-        }
       }
     } catch (err) {
       console.error("Error loading game:", err);
-      setError("Failed to load game. Please try again.");
+      setError("Failed to load game");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleNavigate = useCallback((moveIndex: number) => {
-    if (!gameData || !gameData.bcn) return;
+  const handleNavigate = useCallback((targetIndex: number) => {
+    if (!gameData || !gameData.bcn || targetIndex < -1 || targetIndex >= gameData.bcn.length) {
+      return;
+    }
+
+    // Set viewing history state
+    setIsViewingHistory(targetIndex < gameData.bcn.length - 1);
     
-    // Handle negative index (starting position)
-    const bcnSlice = moveIndex >= 0 ? gameData.bcn.slice(0, moveIndex + 1) : [];
-    const navGame = bcnSlice.length > 0 
-      ? BanChess.replayFromActions(bcnSlice)
-      : new BanChess();
+    let game: BanChess;
     
-    setNavigationGame(navGame);
-    setCurrentMoveIndex(moveIndex);
+    if (targetIndex === -1) {
+      // Starting position
+      game = new BanChess();
+    } else {
+      // Replay to the target move
+      const actionsToReplay = gameData.bcn.slice(0, targetIndex + 1);
+      game = BanChess.replayFromActions(actionsToReplay);
+    }
     
-    // Update game state with navigated position
+    setNavigationGame(game);
+    setCurrentMoveIndex(targetIndex);
+    
+    // Update clocks for this position - make them static (no lastUpdate)
+    let clocksAtPosition = null;
+    if (gameData.timeControl !== "unlimited") {
+      const clocks = calculateClocksAtMove(gameData.bcn, gameData.moveTimes, gameData.timeControl, targetIndex);
+      // Remove lastUpdate to prevent ticking
+      clocksAtPosition = clocks ? {
+        white: { remaining: clocks.white.remaining, lastUpdate: 0 },
+        black: { remaining: clocks.black.remaining, lastUpdate: 0 }
+      } : null;
+      setHistoricalClocks(clocksAtPosition);
+    }
+    
+    // Update game state but KEEP THE FULL HISTORY - don't change it!
     setGameState(prev => prev ? {
       ...prev,
-      fen: navGame.fen(),
-      activePlayer: navGame.getActivePlayer() as "white" | "black",
-      actionType: navGame.getActionType() as "ban" | "move",
-      inCheck: navGame.inCheck(),
+      fen: game.fen(),
+      activePlayer: game.getActivePlayer() as "white" | "black",
+      inCheck: game.inCheck(),
+      gameOver: targetIndex === gameData.bcn.length - 1 ? game.gameOver() : false,
+      // DON'T update history - keep the full game history for the move list
+      clocks: clocksAtPosition, // Update clocks for PlayerInfo
     } : null);
-    
-    // Calculate clocks at this position
-    if (gameData && gameData.timeControl !== "unlimited") {
-      const clocks = calculateClocksAtMove(gameData.bcn, gameData.moveTimes, gameData.timeControl, moveIndex);
-      setHistoricalClocks(clocks);
-    }
   }, [gameData]);
 
-  const handleFlipBoard = useCallback(() => {
+  const handleFlipBoard = () => {
     setBoardOrientation(prev => prev === "white" ? "black" : "white");
-  }, []);
+  };
+
+  const handleNewGame = () => {
+    router.push("/play/local");
+  };
+
+
+  const handleMoveSelect = (moveIndex: number) => {
+    // MoveList gives us move index, but we need to navigate by action index (BCN)
+    // In ban-chess, each move corresponds to 2 actions (ban + move)
+    // So action index = moveIndex * 2 + 1 (the +1 gets us to the move action, not the ban)
+    const actionIndex = moveIndex * 2 + 1;
+    
+    // Make sure we don't go out of bounds
+    if (gameData && actionIndex < gameData.bcn.length) {
+      handleNavigate(actionIndex);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <div className="text-gray-500">
           <div className="loading-spinner mb-4"></div>
           Loading game...
@@ -152,9 +219,9 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
     );
   }
 
-  if (error) {
+  if (error || !gameData) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen">
+      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)]">
         <div className="text-red-500 mb-4">{error}</div>
         <button
           onClick={() => router.push("/")}
@@ -166,151 +233,59 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
     );
   }
 
-  if (!gameData || !gameState) {
-    return null;
-  }
 
-  const totalMoves = gameData.bcn.filter(action => action.startsWith("m:")).length;
-
+  // Use the same layout as GameClient
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="container-custom py-8">
-        {/* Game Header */}
-        <div className="bg-background-secondary rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xl font-bold">
-              <button
-                onClick={() => router.push(`/profile/${gameData.whitePlayer.username}`)}
-                className="hover:text-lichess-orange-500 transition-colors"
-              >
-                {gameData.whitePlayer.username}
-              </button>
-              {" vs "}
-              <button
-                onClick={() => router.push(`/profile/${gameData.blackPlayer.username}`)}
-                className="hover:text-lichess-orange-500 transition-colors"
-              >
-                {gameData.blackPlayer.username}
-              </button>
-            </div>
-            <div className="text-sm text-gray-400">
-              Played {formatDistanceToNow(new Date(gameData.createdAt), { addSuffix: true })}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4 text-sm text-gray-400">
-            <span>Result: <span className="font-semibold text-white">{gameData.result}</span></span>
-            {gameData.resultReason && (
-              <span>({gameData.resultReason})</span>
-            )}
-            <span>• {totalMoves} moves</span>
-            <span>• {formatTimeControl(gameData.timeControl)}</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
-          {/* Chess Board with Player Info */}
-          <div className="flex flex-col gap-4">
-            {/* Top Player (based on board orientation) */}
-            {gameData.timeControl !== "unlimited" && historicalClocks && (
-              <div className="bg-background-secondary rounded-lg p-3">
-                <PlayerInfo
-                  username={boardOrientation === "white" ? gameData.blackPlayer.username : gameData.whitePlayer.username}
-                  isTurn={false}
-                  clock={boardOrientation === "white" ? historicalClocks.black : historicalClocks.white}
-                  isClockActive={false}
-                  isOnline={true}
-                />
-              </div>
-            )}
-            
-            <div className="aspect-square max-w-full">
-              <ChessBoard
-                gameState={gameState}
-                game={navigationGame}
-                dests={new Map()}
-                onMove={() => {}}
-                onBan={() => {}}
-                orientation={boardOrientation}
-              />
-            </div>
-            
-            {/* Bottom Player (based on board orientation) */}
-            {gameData.timeControl !== "unlimited" && historicalClocks && (
-              <div className="bg-background-secondary rounded-lg p-3">
-                <PlayerInfo
-                  username={boardOrientation === "white" ? gameData.whitePlayer.username : gameData.blackPlayer.username}
-                  isTurn={false}
-                  clock={boardOrientation === "white" ? historicalClocks.white : historicalClocks.black}
-                  isClockActive={false}
-                  isOnline={true}
-                />
-              </div>
-            )}
-            
-            {/* Navigation Bar */}
-            <NavigationBar
-              currentMoveIndex={currentMoveIndex}
-              totalMoves={gameData.bcn.length}
-              isViewingHistory={true}
-              onNavigate={handleNavigate}
-              onFlipBoard={handleFlipBoard}
-            />
-          </div>
-
-          {/* Move List */}
-          <div className="bg-background-secondary rounded-lg p-4 h-fit max-h-[600px] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Moves</h3>
-            <MoveList
-              actions={gameData.bcn}
-              moveTimes={gameData.moveTimes}
-              currentIndex={currentMoveIndex ?? undefined}
-              onNavigate={handleNavigate}
-            />
-          </div>
-        </div>
+    <div className="flex justify-center items-center min-h-[calc(100vh-10rem)] p-4">
+      <div className="flex gap-6 items-center justify-center w-full max-w-[1400px]">
         
-        {/* Navigation Buttons */}
-        <div className="mt-6 flex gap-4">
-          <button
-            onClick={() => router.push("/")}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-          >
-            Return Home
-          </button>
-          <button
-            onClick={() => router.push(`/profile/${gameData.whitePlayer.username}`)}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-          >
-            {gameData.whitePlayer.username}&apos;s Profile
-          </button>
-          <button
-            onClick={() => router.push(`/profile/${gameData.blackPlayer.username}`)}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-          >
-            {gameData.blackPlayer.username}&apos;s Profile
-          </button>
+        {/* Left Panel - Status (matches GameClient) */}
+        <div className="w-56 flex-shrink-0">
+          <GameStatusPanel 
+            gameState={{
+              ...gameState!,
+              result: gameData.result,
+              gameOver: true
+            }} 
+            onNewGame={handleNewGame}
+          />
+        </div>
+
+        {/* Center - Board (matches GameClient) */}
+        <div className="flex flex-col items-center justify-center">
+          <ResizableBoard
+            gameState={navigationGame && gameState ? { 
+              ...gameState, 
+              fen: navigationGame.fen(), 
+              inCheck: navigationGame.inCheck() 
+            } : gameState}
+            game={navigationGame}
+            dests={new Map()} // No moves allowed in completed games
+            activePlayer={navigationGame?.getActivePlayer() as "white" | "black"}
+            actionType={navigationGame?.getActionType() as "move" | "ban"}
+            onMove={() => {}} // No-op
+            onBan={() => {}} // No-op
+            refreshKey={0}
+            orientation={boardOrientation}
+          />
+        </div>
+
+        {/* Right Panel - Sidebar (matches GameClient) - Made wider for move list */}
+        <div className="w-80 flex-shrink-0">
+          <GameSidebar
+            gameState={gameState!} // gameState already has history, clocks, etc.
+            onGiveTime={() => {}} // No-op
+            onResign={() => {}} // No-op
+            onMoveSelect={handleMoveSelect}
+            // Convert action index to move index for MoveList display
+            currentMoveIndex={currentMoveIndex !== null ? Math.floor(currentMoveIndex / 2) : undefined}
+            isLocalGame={false}
+            onFlipBoard={handleFlipBoard}
+            isViewingHistory={isViewingHistory}
+            // Don't pass onReturnToLive - no "Live" button for completed games
+          />
         </div>
       </div>
     </div>
   );
-}
-
-function formatTimeControl(timeControl: string): string {
-  if (timeControl === "unlimited") return "Unlimited";
-  
-  const match = timeControl.match(/(\d+)\+(\d+)/);
-  if (!match) return timeControl;
-  
-  const [, initial, increment] = match;
-  const minutes = Math.floor(parseInt(initial) / 60);
-  const incrementSec = parseInt(increment);
-  
-  if (minutes > 0 && incrementSec > 0) {
-    return `${minutes}+${incrementSec}`;
-  } else if (minutes > 0) {
-    return `${minutes} min`;
-  } else {
-    return `${initial} sec`;
-  }
 }
