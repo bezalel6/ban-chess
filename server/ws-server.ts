@@ -1337,6 +1337,14 @@ wss.on("connection", (ws: WebSocket, request) => {
           await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
 
+          // Always send joined message first
+          ws.send(
+            JSON.stringify({
+              type: "joined",
+              gameId,
+            } as SimpleServerMsg),
+          );
+
           // Check if we already sent the state during authentication/reconnection
           // to avoid duplicate messages
           const playerGameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
@@ -1345,8 +1353,16 @@ wss.on("connection", (ws: WebSocket, request) => {
             await sendFullGameState(gameId, ws);
             console.log(`Player ${currentPlayer.username} joined game ${gameId}, sent full state`);
           } else {
-            // Player already in this game (reconnection handled it), skip duplicate send
-            console.log(`Player ${currentPlayer.username} already in game ${gameId}, skipping duplicate state`);
+            // Player already in this game (reconnection handled it), send state anyway for solo games
+            // Since solo games don't have reconnection logic
+            const gameState = await getGameState(gameId);
+            if (gameState && gameState.whitePlayerId === gameState.blackPlayerId) {
+              // It's a solo game, send the state
+              await sendFullGameState(gameId, ws);
+              console.log(`Player ${currentPlayer.username} joined solo game ${gameId}, sent state`);
+            } else {
+              console.log(`Player ${currentPlayer.username} already in game ${gameId}, skipping duplicate state`);
+            }
           }
           break;
         }
