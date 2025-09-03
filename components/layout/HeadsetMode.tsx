@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Headphones, X, HelpCircle } from "lucide-react";
+import { Headphones } from "lucide-react";
 
 type Mode = "tone" | "noise" | "wav";
 
@@ -170,64 +170,33 @@ export default function HeadsetMode() {
 
       {/* Dropdown */}
       <div className={`
-        absolute top-full right-0 mt-2 p-4 bg-background-secondary border border-border rounded-lg shadow-lg z-50 
-        w-80 sm:w-96
+        absolute top-full right-0 mt-2 p-3 bg-background-secondary border border-border rounded-lg shadow-lg z-50 
+        w-72
         transition-all duration-200 transform-gpu
         ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-95 pointer-events-none'}
       `}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-base flex items-center gap-2">
-            <Headphones className="h-4 w-4 text-lichess-orange-500" />
-            Headset Mode
-          </h3>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-1 hover:bg-background rounded transition-colors"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4 text-foreground-muted" />
-          </button>
-        </div>
-
-        {/* Explanation */}
-        <div className="bg-background/50 border border-border/50 rounded-lg p-3 mb-4">
-          <div className="flex items-start gap-2">
-            <HelpCircle className="h-4 w-4 text-lichess-orange-500 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-foreground-muted leading-relaxed">
-              Keeps wireless headphones active while playing by emitting an inaudible signal. 
-              This prevents them from going to sleep during quiet moments, ensuring game sounds 
-              play immediately when they occur.
-            </p>
-          </div>
-        </div>
-
-        {/* Enable/Disable Toggle */}
-        <div className="flex items-center justify-between mb-4 p-3 bg-background rounded-lg">
-          <span className="text-sm font-medium">
-            Status: <span className={enabled ? "text-green-500" : "text-foreground-muted"}>
-              {enabled ? "Active" : "Inactive"}
-            </span>
-          </span>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-sm">Headset Mode</h3>
           <button
             onClick={enabled ? handleDisable : handleEnable}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium text-white transition-colors ${
-              enabled
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-lichess-orange-500 hover:bg-lichess-orange-600"
+            className={`px-3 py-1 rounded text-xs font-medium text-white transition-colors ${
+              enabled ? "bg-red-500 hover:bg-red-600" : "bg-lichess-orange-500 hover:bg-lichess-orange-600"
             }`}
           >
             {enabled ? "Disable" : "Enable"}
           </button>
         </div>
 
+        {/* Quick explanation */}
+        <p className="text-[10px] text-foreground-muted mb-3">
+          Keeps wireless headphones awake during quiet moments
+        </p>
+
         {/* Settings */}
-        <div className="space-y-3">
-          {/* Playback Mode */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label htmlFor="headset-mode" className="text-sm font-medium">
-              Signal Type
-            </label>
+            <label htmlFor="headset-mode" className="text-xs">Signal</label>
             <select
               id="headset-mode"
               value={mode}
@@ -241,35 +210,30 @@ export default function HeadsetMode() {
                   setMode(newMode);
                 }
               }}
-              className="px-3 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-lichess-orange-500/50"
+              className="px-2 py-1 text-xs bg-background border border-border rounded"
             >
-              <option value="tone">High-Frequency Tone (19kHz)</option>
-              <option value="noise">White Noise (Ultra-quiet)</option>
-              <option value="wav">Near-Silence WAV Loop</option>
+              <option value="tone">19kHz Tone</option>
+              <option value="noise">White Noise</option>
+              <option value="wav">WAV Loop</option>
             </select>
           </div>
 
-          {/* Tab Aware Option */}
           <div className="flex items-center justify-between">
-            <label htmlFor="tab-aware" className="text-sm font-medium">
-              Pause when tab inactive
-            </label>
+            <label htmlFor="tab-aware" className="text-xs">Pause when tab inactive</label>
             <input
               id="tab-aware"
               type="checkbox"
               checked={tabAware}
               onChange={(e) => setTabAware(e.target.checked)}
-              className="w-4 h-4 text-lichess-orange-500 bg-background border-border rounded focus:ring-lichess-orange-500/50"
+              className="w-4 h-4"
             />
           </div>
         </div>
 
-        {/* Mode descriptions */}
-        <div className="mt-4 pt-3 border-t border-border">
-          <p className="text-[10px] text-foreground-muted">
-            {mode === "tone" && "Emits a 19kHz tone - inaudible to most adults"}
-            {mode === "noise" && "Plays extremely quiet white noise"}
-            {mode === "wav" && "Loops a near-silent WAV file for compatibility"}
+        {/* Battery Warning */}
+        <div className="mt-3 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded">
+          <p className="text-[10px] text-yellow-400">
+            ⚠️ This will drain your headphones&apos; battery faster than normal. Obviously.
           </p>
         </div>
       </div>

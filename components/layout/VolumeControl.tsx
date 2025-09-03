@@ -82,15 +82,7 @@ export default function VolumeControl() {
     }
   };
 
-  // Handle mouse enter
-  const handleMouseEnter = () => {
-    setIsOpen(true);
-  };
-
-  // Handle mouse leave - don't auto-close on hover out
-  const handleMouseLeave = () => {
-    // Removed auto-close on mouse leave - dropdown stays open until clicked outside
-  };
+  // Remove hover behavior - only open on click
 
   // Handle keyboard accessibility
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -143,8 +135,6 @@ export default function VolumeControl() {
     <div 
       ref={controlRef}
       className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       {/* Volume Control Button - using sliders icon to differentiate from mute button */}
       <button
@@ -161,7 +151,7 @@ export default function VolumeControl() {
         <SlidersHorizontal className="h-4 w-4" />
       </button>
 
-      {/* Volume Slider - appears on hover */}
+      {/* Volume Slider Dropdown */}
       <div className={`
         absolute top-full right-0 mt-2 p-4 bg-background-secondary border border-border rounded-lg shadow-lg z-50 
         w-64 sm:w-72
