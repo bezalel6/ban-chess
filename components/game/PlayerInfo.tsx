@@ -11,11 +11,10 @@ interface PlayerInfoProps {
   isClockActive?: boolean;
   canGiveTime?: boolean;
   onGiveTime?: () => void;
-  rating?: number;
   isOnline?: boolean;
 }
 
-export default function PlayerInfo({ username, isTurn, clock, isClockActive = false, canGiveTime = false, onGiveTime, rating, isOnline = true }: PlayerInfoProps) {
+export default function PlayerInfo({ username, isTurn, clock, isClockActive = false, canGiveTime = false, onGiveTime, isOnline = true }: PlayerInfoProps) {
   const { formattedTime, isLowTime, isCritical } = useGameTimer({
     clock,
     isActive: isClockActive,
@@ -44,18 +43,23 @@ export default function PlayerInfo({ username, isTurn, clock, isClockActive = fa
 
   return (
     <div className="py-2">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        {/* Clock on the left edge */}
+        {clock && (
+          <div className={getClockClassName()}>
+            {formattedTime}
+          </div>
+        )}
+        
+        {/* Username and status in the middle */}
+        <div className="flex items-center gap-2 flex-1">
           <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
           <span className={`font-medium text-base ${isTurn ? 'text-white' : 'text-gray-300'}`}>
             {username}
           </span>
-          {rating && (
-            <span className="text-sm text-gray-400">
-              {rating}
-            </span>
-          )}
         </div>
+        
+        {/* Give time button on the right edge */}
         {canGiveTime && onGiveTime && (
           <button
             onClick={() => onGiveTime()}
@@ -66,9 +70,6 @@ export default function PlayerInfo({ username, isTurn, clock, isClockActive = fa
             <Plus className="w-4 h-4 text-white" />
           </button>
         )}
-      </div>
-      <div className={getClockClassName()}>
-        {clock ? formattedTime : '5:00'}
       </div>
       {isTurn && (
         <div className="w-full h-0.5 bg-green-500 mt-1 rounded-full"></div>

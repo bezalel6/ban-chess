@@ -184,10 +184,12 @@ export class GameService {
     result: string,
     gameState: NonNullable<GameStateData>
   ): Promise<void> {
-    // Save to database (skip local games where same player plays both sides)
-    if (gameState.whitePlayerId && 
-        gameState.blackPlayerId && 
-        gameState.whitePlayerId !== gameState.blackPlayerId) {
+    // Save to database (temporarily allow local games for testing)
+    // TODO: Uncomment this check to skip local games where same player plays both sides
+    // if (gameState.whitePlayerId && 
+    //     gameState.blackPlayerId && 
+    //     gameState.whitePlayerId !== gameState.blackPlayerId) {
+    if (gameState.whitePlayerId && gameState.blackPlayerId) {
       try {
         await saveCompletedGame(gameId);
         console.log(`[GameService] Game ${gameId} saved to database with result: ${result}`);

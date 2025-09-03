@@ -39,7 +39,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     // No need to add auth params to URL - cookies will handle authentication
     const url = config.websocket.url;
-    console.log("[WebSocketProvider] Connecting with session cookies to:", url);
+    // Only log on initial connection, not reconnects
+    if (!authSentRef.current) {
+      console.log("[WebSocketProvider] Connecting with session cookies to:", url);
+    }
     return url;
   }, [user]);
 
@@ -74,7 +77,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Connection is authenticated automatically via cookies during handshake
     if (readyState === ReadyState.OPEN && user) {
-      console.log("[WebSocketProvider] Connection established with cookie authentication");
+      if (!authSentRef.current) {
+        console.log("[WebSocketProvider] Connection established with cookie authentication");
+        authSentRef.current = true;
+      }
       // No need to send authentication message - server validates cookies automatically
     }
 

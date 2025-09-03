@@ -34,16 +34,19 @@ export const eventTypes = [
 export type EventType = (typeof eventTypes)[number];
 
 // Event metadata including display names and icons
-export const eventMetadata: Record<EventType, { name: string; icon: LucideIcon }> = {
+export const eventMetadata: Record<
+  EventType,
+  { name: string; icon: LucideIcon }
+> = {
   "game-invite": { name: "Game Invite", icon: Mail },
   "game-start": { name: "Game Start", icon: Play },
-  "ban": { name: "Ban", icon: Ban },
-  "move": { name: "Move", icon: Move },
+  ban: { name: "Ban", icon: Ban },
+  move: { name: "Move", icon: Move },
   "opponent-move": { name: "Opponent Move", icon: Users },
-  "capture": { name: "Capture", icon: Swords },
-  "castle": { name: "Castle", icon: Castle },
-  "check": { name: "Check", icon: AlertTriangle },
-  "promote": { name: "Promote", icon: Crown },
+  capture: { name: "Capture", icon: Swords },
+  castle: { name: "Castle", icon: Castle },
+  check: { name: "Check", icon: AlertTriangle },
+  promote: { name: "Promote", icon: Crown },
   "draw-offer": { name: "Draw Offer", icon: Handshake },
   "time-warning": { name: "Time Warning", icon: Clock },
   "game-end": { name: "Game End", icon: Trophy },
@@ -54,13 +57,18 @@ export type SoundTheme = string;
 
 // Interface for sound library from API
 interface SoundLibrary {
-  themes: Record<string, Array<{ file: string; name: string; displayName: string }>>;
+  themes: Record<
+    string,
+    Array<{ file: string; name: string; displayName: string }>
+  >;
 }
 
 // Available sounds will be loaded dynamically from the API
-let availableSounds: Array<{ file: string | null; name: string; theme: string }> = [
-  { file: null, name: "No Sound", theme: "none" }
-];
+let availableSounds: Array<{
+  file: string | null;
+  name: string;
+  theme: string;
+}> = [{ file: null, name: "No Sound", theme: "none" }];
 
 // Sound themes will be loaded dynamically from the API
 let soundThemes: Record<string, { name: string }> = {};
@@ -68,28 +76,28 @@ let soundThemes: Record<string, { name: string }> = {};
 // Function to load available sounds from the API
 async function loadAvailableSounds(): Promise<void> {
   if (typeof window === "undefined") return; // Skip on server
-  
+
   try {
     const response = await fetch("/api/sounds");
     const data: SoundLibrary = await response.json();
-    
+
     // Reset available sounds
     availableSounds = [{ file: null, name: "No Sound", theme: "none" }];
     soundThemes = {};
-    
+
     // Build sound themes and available sounds from API data
     Object.entries(data.themes).forEach(([themeName, sounds]) => {
       // Add theme
-      soundThemes[themeName] = { 
-        name: themeName.charAt(0).toUpperCase() + themeName.slice(1) 
+      soundThemes[themeName] = {
+        name: themeName.charAt(0).toUpperCase() + themeName.slice(1),
       };
-      
+
       // Add sounds from this theme
-      sounds.forEach(sound => {
+      sounds.forEach((sound) => {
         availableSounds.push({
           file: sound.file,
           name: sound.displayName,
-          theme: soundThemes[themeName].name
+          theme: soundThemes[themeName].name,
         });
       });
     });
@@ -99,7 +107,11 @@ async function loadAvailableSounds(): Promise<void> {
 }
 
 // Export function to get available sounds (loaded dynamically)
-export function getAvailableSounds(): Array<{ file: string | null; name: string; theme: string }> {
+export function getAvailableSounds(): Array<{
+  file: string | null;
+  name: string;
+  theme: string;
+}> {
   return availableSounds;
 }
 
@@ -112,13 +124,13 @@ export function getSoundThemes(): Record<string, { name: string }> {
 const defaultEventSoundMap: Record<EventType, string | null> = {
   "game-invite": "/sounds/standard/NewChallenge.mp3",
   "game-start": "/sounds/standard/Confirmation.mp3",
-  "ban": "/sounds/standard/Explosion.mp3",
-  "move": "/sounds/standard/Move.mp3",
+  ban: "/sounds/standard/Explosion.mp3",
+  move: "/sounds/standard/Move.mp3",
   "opponent-move": "/sounds/standard/Move.mp3",
-  "capture": "/sounds/standard/Capture.mp3",
-  "castle": "/sounds/lisp/Castles.mp3",
-  "check": "/sounds/standard/Check.mp3",
-  "promote": "/sounds/standard/Checkmate.mp3",
+  capture: "/sounds/standard/Capture.mp3",
+  castle: "/sounds/lisp/Castles.mp3",
+  check: "/sounds/standard/Check.mp3",
+  promote: "/sounds/standard/Checkmate.mp3",
   "draw-offer": "/sounds/standard/GenericNotify.mp3",
   "time-warning": "/sounds/standard/LowTime.mp3",
   "game-end": "/sounds/standard/Victory.mp3",
@@ -130,17 +142,18 @@ class SoundManager {
   private volume: number = 0.5;
   private eventSoundMap: Record<EventType, string | null>;
   private currentTheme: SoundTheme = "standard";
-  private lastPlayedSound: { eventType: string; timestamp: number } | null = null;
+  private lastPlayedSound: { eventType: string; timestamp: number } | null =
+    null;
   private soundDebounceMs = 100; // Prevent duplicate sounds within 100ms
   private isServer: boolean;
 
   constructor() {
     // Check if we're running on the server
     this.isServer = typeof window === "undefined";
-    
+
     this.sounds = new Map();
     this.eventSoundMap = { ...defaultEventSoundMap };
-    
+
     // Only initialize sounds and load preferences on the client
     if (!this.isServer) {
       this.initializeSounds();
@@ -153,8 +166,10 @@ class SoundManager {
   private initializeSounds() {
     // Only preload the default sounds initially to avoid loading hundreds of files
     // Other sounds will be loaded on-demand when selected
-    const defaultSounds = new Set(Object.values(defaultEventSoundMap).filter(Boolean));
-    
+    const defaultSounds = new Set(
+      Object.values(defaultEventSoundMap).filter(Boolean)
+    );
+
     defaultSounds.forEach((soundFile) => {
       if (soundFile) {
         const howl = new Howl({
@@ -217,19 +232,24 @@ class SoundManager {
   }
 
   // Play sound for a specific event type
-  playEvent(eventType: EventType, context?: { result?: string; playerRole?: "white" | "black" | null }) {
+  playEvent(
+    eventType: EventType,
+    context?: { result?: string; playerRole?: "white" | "black" | null }
+  ) {
     // Skip on server
     if (this.isServer) return;
-    
+
     if (!this.enabled) {
       return;
     }
 
     // Debounce to prevent rapid duplicate sounds
     const now = Date.now();
-    if (this.lastPlayedSound && 
-        this.lastPlayedSound.eventType === eventType && 
-        (now - this.lastPlayedSound.timestamp) < this.soundDebounceMs) {
+    if (
+      this.lastPlayedSound &&
+      this.lastPlayedSound.eventType === eventType &&
+      now - this.lastPlayedSound.timestamp < this.soundDebounceMs
+    ) {
       return;
     }
     this.lastPlayedSound = { eventType, timestamp: now };
@@ -241,7 +261,7 @@ class SoundManager {
     }
 
     const soundFile = this.eventSoundMap[eventType];
-    
+
     if (!soundFile) {
       return; // No sound mapped for this event
     }
@@ -252,7 +272,10 @@ class SoundManager {
       try {
         sound.play();
       } catch (error) {
-        console.error(`[SoundManager] Failed to play sound ${soundFile}:`, error);
+        console.error(
+          `[SoundManager] Failed to play sound ${soundFile}:`,
+          error
+        );
       }
     } else {
       // Load and play on-demand if not cached
@@ -262,7 +285,7 @@ class SoundManager {
         autoplay: true,
         onloaderror: () => {
           console.error(`[SoundManager] Failed to load sound: ${soundFile}`);
-        }
+        },
       });
       this.sounds.set(soundFile, newSound);
     }
@@ -271,12 +294,12 @@ class SoundManager {
   // Set which sound file to use for a specific event
   setEventSound(eventType: EventType, soundFile: string | null) {
     this.eventSoundMap[eventType] = soundFile;
-    
+
     // Skip loading on server
     if (this.isServer) {
       return;
     }
-    
+
     // If it's a new sound file we haven't loaded yet, load it
     if (soundFile && !this.sounds.has(soundFile)) {
       this.sounds.set(
@@ -285,10 +308,10 @@ class SoundManager {
           src: [soundFile],
           volume: this.volume,
           preload: true,
-        }),
+        })
       );
     }
-    
+
     this.savePreferences();
   }
 
@@ -311,11 +334,10 @@ class SoundManager {
   }) {
     // Skip on server
     if (this.isServer) return;
-    
+
     if (!this.enabled) {
       return;
     }
-
     // Priority order for sounds - play the most specific event
     if (moveDetails.check) {
       this.playEvent("check");
@@ -360,7 +382,10 @@ class SoundManager {
   }
 
   // Smart game end sound that analyzes result string and player role
-  playGameEndSoundSmart(resultString: string, userRole: "white" | "black" | null) {
+  playGameEndSoundSmart(
+    resultString: string,
+    userRole: "white" | "black" | null
+  ) {
     if (this.isServer || !this.enabled) return;
 
     // If spectator or role unknown, just play a generic game end sound
@@ -371,12 +396,16 @@ class SoundManager {
 
     let soundResult: "victory" | "defeat" | "draw";
 
-    if (resultString.toLowerCase().includes("draw") || resultString.toLowerCase().includes("stalemate")) {
+    if (
+      resultString.toLowerCase().includes("draw") ||
+      resultString.toLowerCase().includes("stalemate")
+    ) {
       soundResult = "draw";
     } else {
       // Determine if the user won based on the result string
-      const userWon = (userRole === "white" && resultString.includes("White wins")) ||
-                     (userRole === "black" && resultString.includes("Black wins"));
+      const userWon =
+        (userRole === "white" && resultString.includes("White wins")) ||
+        (userRole === "black" && resultString.includes("Black wins"));
       soundResult = userWon ? "victory" : "defeat";
     }
 
@@ -414,7 +443,7 @@ class SoundManager {
 
   preloadAll() {
     if (this.isServer) return;
-    
+
     this.sounds.forEach((sound) => {
       if (sound.state() === "unloaded") {
         sound.load();
@@ -439,45 +468,56 @@ class SoundManager {
     if (!theme) return;
 
     this.currentTheme = themeName;
-    
+
     // Skip loading on server
     if (this.isServer) {
       this.savePreferences();
       return;
     }
-    
+
     const themePath = `/sounds/${themeName}`;
 
     // Map of sound files to try for each event
     const soundFiles = {
-      "NewChallenge": ["NewChallenge", "GenericNotify"],
-      "Confirmation": ["Confirmation", "GenericNotify"],
-      "Explosion": ["Explosion", "Error"],
-      "Move": ["Move"],
-      "Capture": ["Capture"],
-      "Castles": ["Castles", "Move"],
-      "Check": ["Check"],
-      "Checkmate": ["Checkmate", "Victory"],
-      "GenericNotify": ["GenericNotify", "NewPM"],
-      "LowTime": ["LowTime", "GenericNotify"],
-      "Victory": ["Victory"],
-      "Defeat": ["Defeat"],
-      "Draw": ["Draw"],
-      "Error": ["Error", "OutOfBound"],
+      NewChallenge: ["NewChallenge", "GenericNotify"],
+      Confirmation: ["Confirmation", "GenericNotify"],
+      Explosion: ["Explosion", "Error"],
+      Move: ["Move"],
+      Capture: ["Capture"],
+      Castles: ["Castles", "Move"],
+      Check: ["Check"],
+      Checkmate: ["Checkmate", "Victory"],
+      GenericNotify: ["GenericNotify", "NewPM"],
+      LowTime: ["LowTime", "GenericNotify"],
+      Victory: ["Victory"],
+      Defeat: ["Defeat"],
+      Draw: ["Draw"],
+      Error: ["Error", "OutOfBound"],
     };
 
     // Update default mappings to use new theme
     const newEventSoundMap: Record<EventType, string | null> = {
-      "game-invite": this.findAvailableSound(themePath, soundFiles["NewChallenge"]),
-      "game-start": this.findAvailableSound(themePath, soundFiles["Confirmation"]),
-      "ban": this.findAvailableSound(themePath, soundFiles["Explosion"]),
-      "move": this.findAvailableSound(themePath, soundFiles["Move"]),
+      "game-invite": this.findAvailableSound(
+        themePath,
+        soundFiles["NewChallenge"]
+      ),
+      "game-start": this.findAvailableSound(
+        themePath,
+        soundFiles["Confirmation"]
+      ),
+      ban: this.findAvailableSound(themePath, soundFiles["Explosion"]),
+      move: this.findAvailableSound(themePath, soundFiles["Move"]),
       "opponent-move": this.findAvailableSound(themePath, soundFiles["Move"]),
-      "capture": this.findAvailableSound(themePath, soundFiles["Capture"]),
-      "castle": this.findAvailableSound(themePath, soundFiles["Castles"]) || "/sounds/lisp/Castles.mp3",
-      "check": this.findAvailableSound(themePath, soundFiles["Check"]),
-      "promote": this.findAvailableSound(themePath, soundFiles["Checkmate"]),
-      "draw-offer": this.findAvailableSound(themePath, soundFiles["GenericNotify"]),
+      capture: this.findAvailableSound(themePath, soundFiles["Capture"]),
+      castle:
+        this.findAvailableSound(themePath, soundFiles["Castles"]) ||
+        "/sounds/lisp/Castles.mp3",
+      check: this.findAvailableSound(themePath, soundFiles["Check"]),
+      promote: this.findAvailableSound(themePath, soundFiles["Checkmate"]),
+      "draw-offer": this.findAvailableSound(
+        themePath,
+        soundFiles["GenericNotify"]
+      ),
       "time-warning": this.findAvailableSound(themePath, soundFiles["LowTime"]),
       "game-end": this.findAvailableSound(themePath, soundFiles["Victory"]),
     };
@@ -493,8 +533,8 @@ class SoundManager {
             preload: true,
             onloaderror: () => {
               console.warn(`Failed to load sound: ${soundFile}`);
-            }
-          }),
+            },
+          })
         );
       }
       this.eventSoundMap[eventType as EventType] = soundFile;
@@ -504,7 +544,10 @@ class SoundManager {
   }
 
   // Helper to find the first available sound from a list of alternatives
-  private findAvailableSound(themePath: string, alternatives: string[]): string | null {
+  private findAvailableSound(
+    themePath: string,
+    alternatives: string[]
+  ): string | null {
     for (const soundName of alternatives) {
       const soundFile = `${themePath}/${soundName}.mp3`;
       // For now, we'll assume the file exists and let it fail gracefully if not

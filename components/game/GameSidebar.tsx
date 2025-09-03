@@ -75,7 +75,6 @@ export default function GameSidebar({
           !gameState.gameOver
         }
         onGiveTime={onGiveTime}
-        rating={topPlayer === "Waiting..." ? undefined : 2051}
         isOnline={topPlayer !== "Waiting..."}
       />
       <div className="my-2 border-t border-border"></div>
@@ -104,7 +103,6 @@ export default function GameSidebar({
           !gameState.gameOver
         }
         onGiveTime={onGiveTime}
-        rating={bottomPlayer === "Waiting..." ? undefined : 2071}
         isOnline={bottomPlayer !== "Waiting..."}
       />
       <div className="my-2 border-t border-border"></div>
