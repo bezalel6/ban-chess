@@ -22,6 +22,13 @@ export async function GET(request: NextRequest) {
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? "✅ SET" : "❌ NOT SET",
     LICHESS_CLIENT_ID: process.env.LICHESS_CLIENT_ID || "❌ NOT SET",
     NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || "❌ NOT SET",
+    // Check for common issues
+    COMMON_ISSUES: {
+      hasTrailingSlash: process.env.NEXTAUTH_URL?.endsWith('/') || false,
+      isHttps: process.env.NEXTAUTH_URL?.startsWith('https://') || false,
+      secretLength: process.env.NEXTAUTH_SECRET?.length || 0,
+      secretIsDefault: process.env.NEXTAUTH_SECRET === "dev-secret-change-in-production",
+    },
     // Check if URL is properly formed
     URL_CHECK: {
       provided: process.env.NEXTAUTH_URL,
@@ -46,6 +53,21 @@ export async function GET(request: NextRequest) {
     CURRENT_HOST: request.headers.get("host") || "unknown",
     CURRENT_ORIGIN: request.headers.get("origin") || "unknown",
     CURRENT_REFERER: request.headers.get("referer") || "unknown",
+    // Cookie configuration check
+    COOKIE_CONFIG: {
+      expectedDomain: ".rndev.site",
+      isProduction: process.env.NODE_ENV === "production",
+      shouldBeSecure: process.env.NODE_ENV === "production",
+      protocol: request.headers.get("x-forwarded-proto") || "unknown",
+      forwardedHost: request.headers.get("x-forwarded-host") || "unknown",
+    },
+    // Request headers that might affect auth
+    REQUEST_HEADERS: {
+      "x-forwarded-proto": request.headers.get("x-forwarded-proto") || "not-set",
+      "x-forwarded-host": request.headers.get("x-forwarded-host") || "not-set", 
+      "x-forwarded-for": request.headers.get("x-forwarded-for") || "not-set",
+      "cookie": request.headers.get("cookie") ? "cookies-present" : "no-cookies",
+    },
   };
 
   return NextResponse.json(debugInfo, {
