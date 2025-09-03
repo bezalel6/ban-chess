@@ -86,6 +86,7 @@ export const KEYS = {
   GAME_PLAYERS: (id: string) => `game:${id}:players`,
   GAME_HISTORY: (id: string) => `game:${id}:history`,
   GAME_TIMERS: (id: string) => `game:${id}:timers`,
+  GAME_MOVE_TIMES: (id: string) => `game:${id}:moveTimes`,  // Store time per action in milliseconds
   PLAYER_SESSION: (userId: string) => `player:${userId}:session`,
   PLAYER_GAME: (userId: string) => `player:${userId}:game`,
   QUEUE: "matchmaking:queue",
@@ -155,7 +156,7 @@ if (!shouldSkipRedis) {
 }
 
 // Helper function to safely execute Redis operations during build time
-async function safeRedisOperation<T>(
+async function _safeRedisOperation<T>(
   operation: () => Promise<T>,
   fallback: T
 ): Promise<T> {
@@ -240,6 +241,27 @@ export async function getActionHistory(gameId: string): Promise<ActionHistory> {
   const key = KEYS.GAME_HISTORY(gameId);
   const history = await redis.lrange(key, 0, -1);
   return history; // Already in BCN format
+}
+
+/**
+ * Track the time taken for an action (in milliseconds)
+ */
+export async function addMoveTime(gameId: string, timeMs: number): Promise<void> {
+  const key = KEYS.GAME_MOVE_TIMES(gameId);
+  
+  const pipeline = redis.pipeline();
+  pipeline.rpush(key, timeMs.toString());
+  pipeline.expire(key, 86400); // 24 hour expiration
+  await pipeline.exec();
+}
+
+/**
+ * Get all move times for a game (in milliseconds)
+ */
+export async function getMoveTimes(gameId: string): Promise<number[]> {
+  const key = KEYS.GAME_MOVE_TIMES(gameId);
+  const times = await redis.lrange(key, 0, -1);
+  return times.map(t => parseInt(t, 10));
 }
 
 /**

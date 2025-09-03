@@ -64,6 +64,32 @@ export default function GameStatusPanel({
           </div>
         </div>
         
+        {/* Data Source Indicator - Shows if game is from Redis or Database */}
+        {gameState.dataSource && (
+          <div className="mb-3">
+            <div className={`rounded-md p-2 ${
+              gameState.dataSource === 'active' 
+                ? 'bg-green-900/20 border border-green-500/30' 
+                : 'bg-purple-900/20 border border-purple-500/30'
+            }`}>
+              <div className={`text-xs uppercase ${
+                gameState.dataSource === 'active' 
+                  ? 'text-green-400' 
+                  : 'text-purple-400'
+              }`}>
+                Data Source
+              </div>
+              <div className={`text-sm font-bold capitalize ${
+                gameState.dataSource === 'active' 
+                  ? 'text-green-500' 
+                  : 'text-purple-500'
+              }`}>
+                {gameState.dataSource === 'active' ? '🟢 Active (Redis)' : '💾 Completed (Database)'}
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Debug Ply Info - shows current game state */}
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2">

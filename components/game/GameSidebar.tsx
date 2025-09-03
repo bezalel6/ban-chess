@@ -1,23 +1,21 @@
 "use client";
 
-import type { SimpleGameState, GameEvent } from "@/lib/game-types";
+import type { SimpleGameState } from "@/lib/game-types";
 import { parseFEN } from "@/lib/game-types";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useGameState } from "@/hooks/useGameState";
 import PlayerInfo from "./PlayerInfo";
 import MoveList from "./MoveList";
-import GameEventLog from "./GameEventLog";
+import GameActions from "./GameActions";
 
 interface GameSidebarProps {
   gameState: SimpleGameState;
-  gameEvents?: GameEvent[];
   onGiveTime?: () => void;
   onResign?: () => void;
 }
 
 export default function GameSidebar({
   gameState,
-  gameEvents = [],
   onGiveTime,
   onResign,
 }: GameSidebarProps) {
@@ -86,9 +84,12 @@ export default function GameSidebar({
         <MoveList history={gameState.history || []} />
       </div>
       <div className="my-2 border-t border-border"></div>
-      {/* Event log section */}
-      <div className="h-[150px] overflow-hidden mb-2">
-        <GameEventLog events={gameEvents} />
+      {/* Game Actions section */}
+      <div className="mb-2">
+        <GameActions 
+          gameState={gameState}
+          onResign={onResign}
+        />
       </div>
       <div className="my-2 border-t border-border"></div>
       <PlayerInfo

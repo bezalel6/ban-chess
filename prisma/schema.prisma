@@ -81,51 +81,30 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ==================== Game Models (Prepared for future) ====================
+// ==================== Game Models ====================
 
 model Game {
   id            String    @id @default(cuid())
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
   
   // Players
-  whitePlayerId String?
-  blackPlayerId String?
-  whitePlayer   User?     @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
-  blackPlayer   User?     @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
+  whitePlayerId String
+  blackPlayerId String
+  whitePlayer   User      @relation("WhitePlayer", fields: [whitePlayerId], references: [id])
+  blackPlayer   User      @relation("BlackPlayer", fields: [blackPlayerId], references: [id])
   
-  // Game state
-  fen           String    @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
-  pgn           String?   @db.Text
-  status        GameStatus @default(ACTIVE)
-  result        String?   // "1-0", "0-1", "1/2-1/2", etc.
+  // Core game data
+  bcn           String[]  // Array of BCN strings: ["b:e2e4", "m:d2d4", "b:e7e5", ...]
+  moveTimes     Float[]   // Time per action in seconds [2.3, 5.1, 1.8, ...]
   
-  // Time control
-  timeControl   Json?     // { initial: number, increment: number }
+  // Basic metadata
+  result        String    // "1-0", "0-1", "1/2-1/2"
+  timeControl   String    // "300+3" format
   
-  // Moves and bans (stored as JSON arrays for now)
-  moves         Json      @default("[]")
-  bans          Json      @default("[]")
-  
-  // Redis sync tracking
-  redisSyncStatus String? 
-  redisSyncAt     DateTime?
-  
-  // Metadata
-  metadata      Json?
-  archived      Boolean   @default(false)
+  // When the completed game was saved
+  createdAt     DateTime  @default(now())
   
   @@index([whitePlayerId])
   @@index([blackPlayerId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-enum GameStatus {
-  ACTIVE
-  COMPLETED
-  ABANDONED
-  ARCHIVED
 }
 
 // ==================== Player Presence (for online status) ====================

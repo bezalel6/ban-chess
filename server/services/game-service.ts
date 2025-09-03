@@ -12,6 +12,7 @@ import {
   getGameState,
   addActionToHistory,
   getActionHistory,
+  addMoveTime,
 } from "../redis";
 
 export interface GameValidationResult {
@@ -76,11 +77,18 @@ export class GameService {
       };
     }
 
+    // Calculate time taken for this action
+    const now = Date.now();
+    const timeTaken = now - (gameState.lastMoveTime || gameState.startTime);
+    
     // Serialize and store the action
     const serializedAction = BanChess.serializeAction(
       action as Parameters<typeof BanChess.serializeAction>[0],
     );
     await addActionToHistory(gameId, serializedAction);
+    
+    // Track the time for this action (in milliseconds)
+    await addMoveTime(gameId, timeTaken);
 
     // Check for game over conditions
     const gameOver = this.checkGameOver(game);
@@ -88,7 +96,7 @@ export class GameService {
     // Update game state in Redis
     gameState.fen = game.fen();
     gameState.pgn = game.pgn();
-    gameState.lastMoveTime = Date.now();
+    gameState.lastMoveTime = now;
     gameState.moveCount = (gameState.moveCount || 0) + 1;
 
     if (gameOver.isOver) {

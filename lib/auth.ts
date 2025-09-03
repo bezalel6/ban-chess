@@ -202,6 +202,7 @@ export const authOptions = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async session({ session, token }: any) {
       if (session.user) {
+        session.user.userId = token.userId as string; // Pass the database user ID
         session.user.username = token.username as string;
         session.user.providerId = token.providerId as string;
         session.user.provider = token.provider as AuthProvider;

@@ -100,7 +100,6 @@ export default function GameClient({ gameId }: GameClientProps) {
     connected,
     sendAction,
     joinGame,
-    gameEvents,
     giveTime,
     resignGame,
   } = useGameState();
@@ -187,8 +186,8 @@ export default function GameClient({ gameId }: GameClientProps) {
           <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
           <GameSidebar
             gameState={gameState}
-            gameEvents={gameEvents}
             onGiveTime={giveTime}
+            onResign={resignGame}
           />
         </div>
         <WebSocketStats />
@@ -278,7 +277,6 @@ export default function GameClient({ gameId }: GameClientProps) {
             )}
             <GameSidebar
               gameState={gameState}
-              gameEvents={gameEvents}
               onGiveTime={giveTime}
               onResign={resignGame}
             />

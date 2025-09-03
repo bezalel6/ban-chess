@@ -21,6 +21,7 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   
   // Cast to our extended user type
   const extendedUser = session?.user as { 
+    userId?: string;
     providerId?: string; 
     username?: string;
     provider?: AuthProviderType;
@@ -29,8 +30,9 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
     image?: string | null;
   } | undefined;
   
-  const user = extendedUser?.providerId && extendedUser?.username && extendedUser?.provider ? {
-    userId: extendedUser.providerId,
+  const user = extendedUser?.username && extendedUser?.provider ? {
+    // Use userId if available, fall back to providerId (matches server logic)
+    userId: extendedUser.userId || extendedUser.providerId || '',
     username: extendedUser.username,
     provider: extendedUser.provider
   } : null;

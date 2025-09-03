@@ -99,6 +99,7 @@ export interface SimpleGameState {
     black: PlayerClock;
   };
   startTime?: number; // Game start timestamp
+  dataSource?: 'active' | 'completed';  // Indicates if game is from Redis (active) or database (completed)
   // REMOVED: legalActions, nextAction, inCheck - these come from BanChess
 }
 
@@ -127,6 +128,7 @@ export type SimpleServerMsg =
       clocks?: { white: PlayerClock; black: PlayerClock };
       startTime?: number;
       events?: GameEvent[];
+      dataSource?: 'active' | 'completed';  // Indicates if game is from Redis (active) or database (completed)
     }
   | {
       type: "joined";

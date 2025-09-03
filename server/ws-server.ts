@@ -33,8 +33,80 @@ import {
   addActionToHistory,
   getActionHistory,
   addGameEvent,
-  getRecentGameEvents,
+  getRecentGameEvents as _getRecentGameEvents,
 } from "./redis";
+import { saveCompletedGame } from "./services/game-persistence";
+import { getGameSource, reconstructGameFromBCN } from "./services/game-retrieval";
+
+// Import the type from redis
+type GameStateData = Awaited<ReturnType<typeof getGameState>>;
+
+/**
+ * Centralized handler for all game-ending scenarios
+ * Handles saving game state and persisting to database
+ */
+async function handleGameEnd(
+  gameId: string, 
+  result: string,
+  gameState: NonNullable<GameStateData>
+): Promise<void> {
+  // Update game state
+  gameState.gameOver = true;
+  gameState.result = result;
+  await saveGameState(gameId, gameState);
+
+  // Stop any active timers
+  const timeManager = timeManagers.get(gameId);
+  if (timeManager) {
+    timeManager.destroy();
+    timeManagers.delete(gameId);
+  }
+
+  // Persist to database (skip local games where same player plays both sides)
+  if (gameState.whitePlayerId && 
+      gameState.blackPlayerId && 
+      gameState.whitePlayerId !== gameState.blackPlayerId) {
+    try {
+      await saveCompletedGame(gameId);
+      console.log(`[GameEnd] Game ${gameId} saved to database`);
+    } catch (error) {
+      console.error(`[GameEnd] Failed to save game ${gameId} to database:`, error);
+    }
+  } else {
+    console.log(`[GameEnd] Skipping database save for local game ${gameId}`);
+  }
+
+  // Clean up Redis data after a delay (to allow final state updates to propagate)
+  // Keep game in Redis for 5 minutes after completion for smooth transition
+  setTimeout(async () => {
+    try {
+      // Delete game state and related data from Redis
+      const pipeline = redis.pipeline();
+      pipeline.del(KEYS.GAME_STATE(gameId));
+      pipeline.del(KEYS.GAME_ACTION_HISTORY(gameId));
+      pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
+      
+      // Remove player-game associations if they exist
+      if (gameState.whitePlayerId) {
+        const whiteGameId = await redis.get(KEYS.PLAYER_GAME(gameState.whitePlayerId));
+        if (whiteGameId === gameId) {
+          pipeline.del(KEYS.PLAYER_GAME(gameState.whitePlayerId));
+        }
+      }
+      if (gameState.blackPlayerId) {
+        const blackGameId = await redis.get(KEYS.PLAYER_GAME(gameState.blackPlayerId));
+        if (blackGameId === gameId) {
+          pipeline.del(KEYS.PLAYER_GAME(gameState.blackPlayerId));
+        }
+      }
+      
+      await pipeline.exec();
+      console.log(`[GameEnd] Cleaned up Redis data for game ${gameId} after 5 minute delay`);
+    } catch (error) {
+      console.error(`[GameEnd] Failed to clean up Redis data for game ${gameId}:`, error);
+    }
+  }, 5 * 60 * 1000); // 5 minutes delay
+}
 
 interface Player {
   userId: string;
@@ -306,51 +378,7 @@ async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
 }
 
 // Clean up all game data when a game ends
-async function cleanupFinishedGame(gameId: string) {
-  console.log(`[cleanupFinishedGame] Cleaning up game ${gameId}`);
-  console.log("At this point, we would be archiving this game for later fetching. Now though, we'll just get rid of it.");
-  
-  // Stop and remove the timer
-  const timeManager = timeManagers.get(gameId);
-  if (timeManager) {
-    timeManager.stop();
-    timeManagers.delete(gameId);
-  }
-  
-  // Remove game state from Redis after a short delay to ensure final state is sent
-  setTimeout(async () => {
-    try {
-      // Get game state before deletion for player cleanup
-      const gameState = await getGameState(gameId);
-      
-      // Delete game state
-      await redis.del(KEYS.GAME_STATE(gameId));
-      
-      // Clean up deduplication cache
-      lastBroadcastStates.delete(gameId);
-      
-      // Delete game events
-      await redis.del(KEYS.GAME_EVENTS(gameId));
-      
-      // Delete action history
-      await redis.del(KEYS.GAME_ACTIONS(gameId));
-      
-      // Remove players from game mapping
-      if (gameState) {
-        if (gameState.whitePlayerId) {
-          await redis.del(KEYS.PLAYER_GAME(gameState.whitePlayerId));
-        }
-        if (gameState.blackPlayerId) {
-          await redis.del(KEYS.PLAYER_GAME(gameState.blackPlayerId));
-        }
-      }
-      
-      console.log(`[cleanupFinishedGame] Successfully cleaned up game ${gameId}`);
-    } catch (err) {
-      console.error(`[cleanupFinishedGame] Error cleaning up game ${gameId}:`, err);
-    }
-  }, 2000); // 2 second delay to ensure clients receive the final state
-}
+// Note: cleanupFinishedGame removed - we now persist game data to database instead of deleting it
 
 async function handleTimeout(gameId: string, winner: "white" | "black") {
   const gameState = await getGameState(gameId);
@@ -377,10 +405,8 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
   }
 
   // Update game state in Redis with final PGN
-  gameState.gameOver = true;
-  gameState.result = `${winner === "white" ? "White" : "Black"} wins on time!`;
   gameState.pgn = game.pgn(); // Store final PGN
-  await saveGameState(gameId, gameState);
+  await handleGameEnd(gameId, `${winner === "white" ? "White" : "Black"} wins on time!`, gameState);
 
   // Send timeout message via pub/sub for all servers
   const timeoutMsg: SimpleServerMsg = {
@@ -416,8 +442,7 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     JSON.stringify(stateMsg),
   );
   
-  // Clean up the finished game
-  await cleanupFinishedGame(gameId);
+  // Note: We don't clean up Redis data anymore - it's persisted to database
 }
 
 async function broadcastClockUpdate(gameId: string) {
@@ -490,117 +515,119 @@ async function restoreTimeManager(
 
 // Send full game state with history - used for new joiners/reconnections
 async function sendFullGameState(gameId: string, ws: WebSocket) {
-  const gameState = await getGameState(gameId);
-  if (!gameState) {
-    console.log(`[sendFullGameState] Game ${gameId} not found in Redis`);
-    return;
-  }
-
-  // Create game instance from FEN
-  const game = new BanChess(gameState.fen);
-
-  // Get game state using new clean APIs (moved up to use for game over check)
-  const fen = game.fen();
-  const ply = game.getPly();
-  const activePlayer = game.getActivePlayer();
-  const actionType = game.getActionType();
-  const legalActions = game.getLegalActions();
-
-  // Check for immediate checkmate when sending state
-  // IMPORTANT: Also check if there are no legal actions available (which means game over)
-  const isGameOver = checkForImmediateCheckmate(game) || legalActions.length === 0;
-  const isCheckmate =
-    game.inCheckmate() || (game.inCheck() && legalActions.length === 0);
-  const isStalemate = game.inStalemate() || (!game.inCheck() && legalActions.length === 0);
-
-  if (isGameOver && !gameState.gameOver) {
-    // Game just ended due to immediate checkmate detection
-    let result: string;
-    if (isCheckmate || (game.inCheck() && game.legalMoves().length === 0)) {
-      const loser = game.turn;
-      result = `${loser === "white" ? "Black" : "White"} wins by checkmate!`;
-    } else if (isStalemate) {
-      result = "Draw by stalemate";
-    } else {
-      result = "Game over";
-    }
-
-    gameState.gameOver = true;
-    gameState.result = result;
-    await saveGameState(gameId, gameState);
-  }
-
-  console.log(`[sendFullGameState] FEN: ${fen}`);
-  console.log(`[sendFullGameState] Ply: ${ply}, Active player: ${activePlayer}, Action type: ${actionType}, Legal actions count: ${legalActions.length}`);
+  // First try Redis for active games, then database for completed games
+  const gameSource = await getGameSource(gameId);
   
-  // Serialize legal actions using BanChess format
-  const simpleLegalActions = legalActions
-    .map((action) => BanChess.serializeAction(action))
-    .filter((action): action is string => action !== null);
-
-  const timeManager = timeManagers.get(gameId);
-  const isInCheck = game.inCheck();
-
-  // Retrieve full action history from Redis and reconstruct game
-  const actionHistory = await getActionHistory(gameId);
-
-  // Reconstruct the full game to get proper history
-  let history: HistoryEntry[] = [];
-  if (actionHistory.length > 0) {
-    const reconstructedGame = BanChess.replayFromActions(actionHistory);
-    // Convert ban-chess.ts HistoryEntry to our HistoryEntry type
-    history = reconstructedGame.history().map((entry) => ({
-      ...entry,
-      turnNumber: Math.floor(entry.ply / 4) + 1,  // Calculate turn number from ply
-      bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
-    }));
-  }
-
-  // Get recent game events
-  const recentEvents = await getRecentGameEvents(gameId, 10);
-
-  // Full state WITH history for new joiners
-  const fullStateMsg = {
-    type: "state",
-    fen: fen,
-    gameId,
-    players: await getPlayerInfo(gameState),
-    legalActions: simpleLegalActions,
-    nextAction: actionType as "ban" | "move",
-    activePlayer,
-    ply,
-    inCheck: isInCheck,
-    history, // Include full history from Redis for new joiners
-    events: recentEvents, // Include recent events
-    messageId: `state-full-${++messageIdCounter}`,
-    ...(gameState.gameOver && {
-      gameOver: true,
-      result: gameState.result,
-    }),
-    ...(gameState.timeControl && {
-      timeControl: gameState.timeControl,
-      clocks: timeManager ? timeManager.getClocks() : undefined,
-      startTime: gameState.startTime,
-    }),
-  } as SimpleServerMsg & { messageId: string };
-
-  if (ws.readyState === WebSocket.OPEN) {
-    if (!sentMessageIds.has(ws)) {
-      sentMessageIds.set(ws, new Set());
+  // Use unified data whether from Redis or database
+  if (gameSource) {
+    // Reconstruct game from BCN (the source of truth)
+    const game = reconstructGameFromBCN(gameSource.bcn);
+    
+    // Get current game state from BCN
+    const fen = game.fen();
+    const fenParts = fen.split(" ");
+    const banState = fenParts[6];
+    const ply = banState ? parseInt(banState.split(":")[0]) : 0;
+    const activePlayer = game.getActivePlayer();
+    const actionType = game.getActionType();
+    const legalActions = game.getLegalActions();
+    
+    // For active games, also check the stored gameOver field in Redis
+    // This ensures games marked as over in Redis are properly shown as over
+    let isGameOver = game.gameOver();
+    if (gameSource.type === 'active') {
+      const redisGameState = await getGameState(gameId);
+      if (redisGameState?.gameOver) {
+        isGameOver = true;
+      }
+    } else {
+      // For completed games from database, they're always over
+      isGameOver = true;
     }
     
-    // Create a unique key for this full state send
-    const stateKey = `full-state-${gameId}-${ply}`;
-    if (!sentMessageIds.get(ws)!.has(stateKey)) {
-      sentMessageIds.get(ws)!.add(stateKey);
-      ws.send(JSON.stringify(fullStateMsg));
-      console.log(
-        `[sendFullGameState] Sent full state with history for game ${gameId}, messageId: ${fullStateMsg.messageId}`,
-      );
+    // Serialize legal actions
+    const simpleLegalActions = legalActions
+      .map((action) => BanChess.serializeAction(action))
+      .filter((action): action is string => action !== null);
+    
+    // Convert history
+    const history = game.history().map((entry) => ({
+      ...entry,
+      turnNumber: Math.floor(entry.ply / 4) + 1,
+      bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
+    }));
+    
+    // Get or fetch player info (for completed games, we might need to fetch from DB)
+    let players;
+    if (gameSource.type === 'active') {
+      const activeGameState = await getGameState(gameId);
+      if (activeGameState) {
+        players = await getPlayerInfo(activeGameState);
+      } else {
+        // Fallback if Redis state is missing
+        players = {
+          white: { id: gameSource.whitePlayerId, username: gameSource.whitePlayerId },
+          black: { id: gameSource.blackPlayerId, username: gameSource.blackPlayerId },
+        };
+      }
     } else {
-      console.log(`[sendFullGameState] Skipping duplicate full state for game ${gameId}, ply ${ply}`);
+      players = {
+        white: { id: gameSource.whitePlayerId, username: gameSource.whitePlayerId },
+        black: { id: gameSource.blackPlayerId, username: gameSource.blackPlayerId },
+      };
     }
+    
+    // Get time manager if active
+    const timeManager = gameSource.type === 'active' ? timeManagers.get(gameId) : null;
+    
+    // Build the state message - same structure for active and completed games
+    const clocks = timeManager ? timeManager.getClocks() : undefined;
+    const fullStateMsg = {
+      type: "state",
+      fen,
+      gameId,
+      players,
+      legalActions: isGameOver ? [] : simpleLegalActions,
+      nextAction: isGameOver ? undefined : (actionType as "ban" | "move"),
+      activePlayer: isGameOver ? undefined : activePlayer,
+      ply,
+      inCheck: game.inCheck(),
+      history,
+      messageId: `state-full-${++messageIdCounter}`,
+      gameOver: isGameOver,
+      result: gameSource.result,
+      dataSource: gameSource.type,  // 'active' (Redis) or 'completed' (database)
+      ...(gameSource.timeControl && {
+        timeControl: parseTimeControl(gameSource.timeControl),
+        clocks,
+        startTime: Date.now(), // For completed games, this won't matter
+      }),
+    } as SimpleServerMsg & { messageId: string };
+    
+    // Send the unified state
+    ws.send(JSON.stringify(fullStateMsg));
+    console.log(`[sendFullGameState] Sent ${gameSource.type} game state for ${gameId}`);
+    return;
   }
+  
+  // Game not found anywhere
+  console.log(`[sendFullGameState] Game ${gameId} not found in Redis or database`);
+  ws.send(JSON.stringify({
+    type: "error",
+    message: "Game not found"
+  } as SimpleServerMsg));
+}
+
+// Helper function to parse time control string
+function parseTimeControl(timeControlStr: string): { initial: number; increment: number } | undefined {
+  if (!timeControlStr || timeControlStr === 'unlimited') {
+    return undefined;
+  }
+  const [initial, increment] = timeControlStr.split('+').map(Number);
+  if (!isNaN(initial) && !isNaN(increment)) {
+    return { initial, increment };
+  }
+  return undefined;
 }
 
 /**
@@ -680,10 +707,8 @@ async function broadcastGameState(gameId: string) {
       result = "Game over";
     }
 
-    gameState.gameOver = true;
-    gameState.result = result;
     gameState.pgn = game.pgn(); // Store final PGN
-    await saveGameState(gameId, gameState);
+    await handleGameEnd(gameId, result, gameState);
   }
 
   // Log game state including game over status
@@ -1348,13 +1373,8 @@ wss.on("connection", (ws: WebSocket, request) => {
 
             await broadcastGameState(gameId);
 
-            // Stop clocks if game is over
-            if (game.gameOver() && timeManager) {
-              timeManager.destroy();
-              timeManagers.delete(gameId);
-              // Clean up the finished game
-              await cleanupFinishedGame(gameId);
-            }
+            // Note: Timer cleanup and persistence is handled by broadcastGameState -> handleGameEnd
+            // when game.gameOver() is detected
           } else {
             console.log(
               `Invalid action in game ${gameId}:`,
@@ -1604,17 +1624,8 @@ wss.on("connection", (ws: WebSocket, request) => {
           const winner = isWhite ? "black" : "white";
           const loser = isWhite ? "white" : "black";
 
-          // Update game state
-          gameState.gameOver = true;
-          gameState.result = `${winner === "white" ? "White" : "Black"} wins by resignation`;
-          await saveGameState(gameId, gameState);
-
-          // Stop the timer
-          const timeManager = timeManagers.get(gameId);
-          if (timeManager) {
-            timeManager.stop();
-            timeManagers.delete(gameId);
-          }
+          // Handle resignation
+          await handleGameEnd(gameId, `${winner === "white" ? "White" : "Black"} wins by resignation`, gameState);
 
           // Create and store resignation event
           const event: GameEvent = {
@@ -1635,8 +1646,7 @@ wss.on("connection", (ws: WebSocket, request) => {
             `[resign] ${currentPlayer.username} (${loser}) resigned in game ${gameId}`,
           );
           
-          // Clean up the finished game
-          await cleanupFinishedGame(gameId);
+          // Note: We don't clean up Redis data anymore - it's persisted to database
           break;
         }
       }
