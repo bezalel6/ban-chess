@@ -95,14 +95,25 @@ export default function SettingsClient() {
     setEventSoundMap(soundManager.getEventSoundMap());
   };
 
-  // Sort themes alphabetically and identify Lichess themes
-  const themeNames = soundLibrary ? Object.keys(soundLibrary.themes).sort() : [];
-  const lichessThemes = themeNames.filter(theme => 
-    theme !== 'custom' && theme !== 'user' // Exclude any non-Lichess themes if they exist
+  // Sort themes alphabetically and categorize them
+  const allThemes = soundLibrary ? Object.keys(soundLibrary.themes).sort() : [];
+  
+  // Separate Lichess themes from other sources
+  const lichessThemes = allThemes.filter(theme => 
+    // These are the known Lichess themes
+    ['standard', 'piano', 'nes', 'sfx', 'futuristic', 'robot', 'music', 'speech'].includes(theme)
   );
   
+  // Other themes (temporary placeholder for demonstration)
+  const otherThemes = allThemes.filter(theme => 
+    !lichessThemes.includes(theme) && theme !== 'custom' && theme !== 'user'
+  );
+  
+  // Add temporary theme for demonstration if not present
+  const demoOtherThemes = otherThemes.length > 0 ? otherThemes : ['eww'];
+  
   // Count total sound effects across all Lichess themes
-  const totalSoundEffects = soundLibrary 
+  const totalLichessSounds = soundLibrary 
     ? lichessThemes.reduce((total, theme) => 
         total + (soundLibrary.themes[theme]?.length || 0), 0)
     : 0;
@@ -181,15 +192,15 @@ export default function SettingsClient() {
               </div>
 
               {/* Theme Tabs - Grouped and Labeled */}
-              <div className="space-y-3 mb-4">
-                {/* Lichess Themes Section */}
-                <div className="border border-border/50 rounded-lg p-3 bg-background/50">
+              <div className="flex gap-3 mb-4">
+                {/* Lichess Themes Section - Primary/Preferred */}
+                <div className="flex-1 border border-lichess-orange-500/30 rounded-lg p-3 bg-lichess-orange-500/5">
                   <div className="flex items-center gap-2 mb-2">
-                    <p className="text-xs text-foreground-muted font-medium">
-                      All {totalSoundEffects} sound effects in these themes are from Lichess.org
+                    <p className="text-xs text-foreground font-medium">
+                      All {totalLichessSounds} sound effects from Lichess.org
                     </p>
-                    <span className="text-[10px] text-foreground-muted/70 bg-background-secondary px-2 py-0.5 rounded">
-                      Open Source
+                    <span className="text-[10px] text-lichess-orange-500 bg-lichess-orange-500/20 px-2 py-0.5 rounded font-medium">
+                      Open Source ❤️
                     </span>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-2">
@@ -200,8 +211,8 @@ export default function SettingsClient() {
                         disabled={!soundEnabled}
                         className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
                           activeTheme === theme
-                            ? 'bg-lichess-orange-500 text-white'
-                            : 'bg-background hover:bg-lichess-orange-500/20'
+                            ? 'bg-lichess-orange-500 text-white shadow-lg'
+                            : 'bg-background hover:bg-lichess-orange-500/20 border border-lichess-orange-500/20'
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         {theme.charAt(0).toUpperCase() + theme.slice(1)}
@@ -209,6 +220,39 @@ export default function SettingsClient() {
                     ))}
                   </div>
                 </div>
+                
+                {/* Other Themes Section - Secondary/Necessary */}
+                {demoOtherThemes.length > 0 && (
+                  <div className="border border-gray-600/20 rounded-lg p-3 bg-gray-900/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <p className="text-xs text-gray-400 font-medium">
+                        Alternative sounds (required for compatibility)
+                      </p>
+                      <span className="text-[10px] text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded">
+                        Necessary
+                      </span>
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {demoOtherThemes.map((theme) => (
+                        <button
+                          key={theme}
+                          onClick={() => setActiveTheme(theme)}
+                          disabled={!soundEnabled || theme === 'eww'} 
+                          className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                            activeTheme === theme
+                              ? 'bg-gray-600 text-white'
+                              : theme === 'eww' 
+                                ? 'bg-gray-800/50 text-gray-500 border border-gray-700/50 cursor-not-allowed'
+                                : 'bg-background hover:bg-gray-700/20 border border-gray-700/30'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={theme === 'eww' ? 'Placeholder for future alternative themes' : ''}
+                        >
+                          {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Sound Grid - with direct assignment buttons */}
