@@ -197,10 +197,10 @@ export default function SettingsClient() {
                 <div className="flex-1 border border-lichess-orange-500/30 rounded-lg p-3 bg-lichess-orange-500/5">
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs text-foreground font-medium">
-                      All {totalLichessSounds} sound effects from Lichess.org
+                      All {totalLichessSounds} sound effects from
                     </p>
-                    <span className="text-[10px] text-lichess-orange-500 bg-lichess-orange-500/20 px-2 py-0.5 rounded font-medium">
-                      Open Source ❤️
+                    <span className="text-xs text-lichess-orange-500 bg-lichess-orange-500/20 px-3 py-0.5 rounded font-bold">
+                      Lichess.org ❤️
                     </span>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-2">
