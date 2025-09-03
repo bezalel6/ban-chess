@@ -11,75 +11,161 @@ interface LichessProfile {
   email?: string;
 }
 
+// Separate cookie configurations for clarity
+const productionCookies = {
+  sessionToken: {
+    name: `__Secure-next-auth.session-token`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: true,
+      domain: '.rndev.site' // Share cookies across subdomains
+    }
+  },
+  callbackUrl: {
+    name: `__Secure-next-auth.callback-url`,
+    options: {
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: true,
+      domain: '.rndev.site'
+    }
+  },
+  csrfToken: {
+    name: `__Host-next-auth.csrf-token`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: true,
+      // Note: __Host- cookies cannot have a domain attribute
+      domain: undefined
+    }
+  },
+  pkceCodeVerifier: {
+    name: `__Secure-next-auth.pkce.code_verifier`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: true,
+      maxAge: 60 * 15, // 15 minutes
+      domain: '.rndev.site'
+    }
+  },
+  state: {
+    name: `__Secure-next-auth.state`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: true,
+      maxAge: 60 * 15, // 15 minutes
+      domain: '.rndev.site'
+    }
+  },
+  nonce: {
+    name: `__Secure-next-auth.nonce`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: true,
+      domain: '.rndev.site'
+    }
+  }
+};
+
+const developmentCookies = {
+  sessionToken: {
+    name: `next-auth.session-token`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: false,
+      domain: undefined // No domain restriction in development
+    }
+  },
+  callbackUrl: {
+    name: `next-auth.callback-url`,
+    options: {
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: false,
+      domain: undefined
+    }
+  },
+  csrfToken: {
+    name: `next-auth.csrf-token`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: false,
+      domain: undefined
+    }
+  },
+  pkceCodeVerifier: {
+    name: `next-auth.pkce.code_verifier`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: false,
+      maxAge: 60 * 15, // 15 minutes
+      domain: undefined
+    }
+  },
+  state: {
+    name: `next-auth.state`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: false,
+      maxAge: 60 * 15, // 15 minutes
+      domain: undefined
+    }
+  },
+  nonce: {
+    name: `next-auth.nonce`,
+    options: {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      path: '/',
+      secure: false,
+      domain: undefined
+    }
+  }
+};
+
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Log configuration for debugging
+console.log(`[NextAuth Config] Environment: ${process.env.NODE_ENV}`);
+console.log(`[NextAuth Config] NEXTAUTH_URL: ${process.env.NEXTAUTH_URL || 'NOT SET'}`);
+console.log(`[NextAuth Config] Secret configured: ${!!process.env.NEXTAUTH_SECRET}`);
+console.log(`[NextAuth Config] Using ${isProduction ? 'production' : 'development'} cookie configuration`);
+
+// Production requires NEXTAUTH_SECRET to be set
+if (isProduction && !process.env.NEXTAUTH_SECRET) {
+  const errorMsg = "NEXTAUTH_SECRET must be set in production! Authentication will fail.";
+  console.error(`⚠️ [NextAuth] ${errorMsg}`);
+  // In production, we should fail fast rather than use a default secret
+  throw new Error(errorMsg);
+}
+
 export const authOptions = {
   adapter: CustomPrismaAdapter(),
   secret: process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production",
   session: {
     strategy: "jwt" as const, // JWT strategy with database adapter for hybrid approach
   },
-  cookies: {
-    sessionToken: {
-      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax' as const,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined // Share cookies across subdomains in production
-      }
-    },
-    callbackUrl: {
-      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.callback-url` : `next-auth.callback-url`,
-      options: {
-        sameSite: 'lax' as const,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
-      }
-    },
-    csrfToken: {
-      name: process.env.NODE_ENV === 'production' ? `__Host-next-auth.csrf-token` : `next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax' as const,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
-      }
-    },
-    pkceCodeVerifier: {
-      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.pkce.code_verifier` : `next-auth.pkce.code_verifier`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax' as const,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 15, // 15 minutes
-        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
-      }
-    },
-    state: {
-      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.state` : `next-auth.state`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax' as const,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 15, // 15 minutes
-        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
-      }
-    },
-    nonce: {
-      name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.nonce` : `next-auth.nonce`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax' as const,
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        domain: process.env.NODE_ENV === 'production' ? '.rndev.site' : undefined
-      }
-    }
-  },
+  cookies: isProduction ? productionCookies : developmentCookies,
+  // Enable debug logging in production if AUTH_DEBUG is set
+  debug: process.env.AUTH_DEBUG === "true",
   providers: [
     // Guest login provider
     CredentialsProvider({
