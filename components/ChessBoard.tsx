@@ -12,6 +12,7 @@ import type { Ban, Move, SimpleGameState, Square } from "@/lib/game-types";
 import { getCurrentBan, parseFEN } from "@/lib/game-types";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { BanChess } from "ban-chess.ts";
+import soundManager from "@/lib/sound-manager";
 
 interface ChessBoardProps {
   gameState: SimpleGameState;
@@ -170,26 +171,18 @@ const ChessBoard = memo(function ChessBoard({
           setBannedMoveAlert(true);
           
           // Different feedback based on difficulty level
+          // Use sound manager events instead of direct audio
           if (banDifficulty === 'hard') {
             // Hard mode: Play explosion sound (not for the faint of heart!)
-            if (typeof window !== 'undefined' && window.Audio) {
-              const audio = new Audio('/sounds/futuristic/Explosion.mp3');
-              audio.volume = 0.3; // Lower volume for explosion sound
-              audio.play().catch(() => {
-                console.log('Banned move attempted:', orig, dest);
-              });
-            }
+            // Note: The 'ban' event type uses the explosion sound by default
+            soundManager.playEvent('ban');
           } else if (banDifficulty === 'medium') {
             // Medium mode: Play a subtle error/buzz sound
-            if (typeof window !== 'undefined' && window.Audio) {
-              const audio = new Audio('/sounds/standard/Error.mp3');
-              audio.volume = 0.4;
-              audio.play().catch(() => {
-                console.log('Banned move attempted:', orig, dest);
-              });
-            }
+            soundManager.playEvent('ban-attempt-medium');
+          } else if (banDifficulty === 'easy') {
+            // Easy mode: No sound event (visual feedback only)
+            soundManager.playEvent('ban-attempt-easy');
           }
-          // Easy mode: No sound, just visual feedback
           
           // Reset the alert after animation
           setTimeout(() => {

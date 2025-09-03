@@ -20,6 +20,8 @@ export const eventTypes = [
   "game-invite",
   "game-start",
   "ban",
+  "ban-attempt-easy",
+  "ban-attempt-medium",
   "move",
   "opponent-move",
   "capture",
@@ -41,6 +43,8 @@ export const eventMetadata: Record<
   "game-invite": { name: "Game Invite", icon: Mail },
   "game-start": { name: "Game Start", icon: Play },
   ban: { name: "Ban", icon: Ban },
+  "ban-attempt-easy": { name: "Ban Attempt (Easy)", icon: Ban },
+  "ban-attempt-medium": { name: "Ban Attempt (Medium)", icon: AlertTriangle },
   move: { name: "Move", icon: Move },
   "opponent-move": { name: "Opponent Move", icon: Users },
   capture: { name: "Capture", icon: Swords },
@@ -125,6 +129,8 @@ const defaultEventSoundMap: Record<EventType, string | null> = {
   "game-invite": "/sounds/standard/NewChallenge.mp3",
   "game-start": "/sounds/standard/Confirmation.mp3",
   ban: "/sounds/standard/Explosion.mp3",
+  "ban-attempt-easy": null, // No sound for easy mode
+  "ban-attempt-medium": "/sounds/standard/Error.mp3",
   move: "/sounds/standard/Move.mp3",
   "opponent-move": "/sounds/standard/Move.mp3",
   capture: "/sounds/standard/Capture.mp3",
@@ -536,6 +542,8 @@ class SoundManager {
         soundFiles["Confirmation"]
       ),
       ban: this.findAvailableSound(themePath, soundFiles["Explosion"]),
+      "ban-attempt-easy": null, // No sound for easy mode
+      "ban-attempt-medium": this.findAvailableSound(themePath, soundFiles["Error"]),
       move: this.findAvailableSound(themePath, soundFiles["Move"]),
       "opponent-move": this.findAvailableSound(themePath, soundFiles["Move"]),
       capture: this.findAvailableSound(themePath, soundFiles["Capture"]),

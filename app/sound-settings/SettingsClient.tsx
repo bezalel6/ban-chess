@@ -194,8 +194,8 @@ export default function SettingsClient() {
               <div className="mt-3 flex items-start gap-2 text-xs text-foreground-muted/70">
                 <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
                 <p>
-                  Click any sound to preview it. To assign a sound to a game event, play the sound you like, 
-                  then click the event button below.
+                  Click any sound to preview it. To customize event sounds: Switch to &quot;Customize event sounds&quot; mode below, 
+                  play a sound from the explorer, then click the event you want to assign it to.
                 </p>
               </div>
             </div>
@@ -211,14 +211,19 @@ export default function SettingsClient() {
                 </h3>
                 <button
                   onClick={() => {
-                    setEventMode(eventMode === 'assign' ? 'play' : 'assign');
-                    setLastPlayedSound(null);
-                    setSelectedEventForCustomization(null);
+                    const newMode = eventMode === 'assign' ? 'play' : 'assign';
+                    setEventMode(newMode);
+                    // Reset state when switching modes
+                    if (newMode === 'play') {
+                      // Entering play mode - clear assignment state
+                      setLastPlayedSound(null);
+                      setSelectedEventForCustomization(null);
+                    }
                   }}
                   className="text-xs text-foreground-muted hover:text-lichess-orange-500 transition-colors"
                 >
                   Mode: <span className="font-medium text-lichess-orange-500">
-                    {eventMode === 'assign' ? 'Assign sounds to events' : 'Preview event sounds'}
+                    {eventMode === 'assign' ? 'Customize event sounds' : 'Test event sounds'}
                   </span> (click to toggle)
                 </button>
               </div>
@@ -251,10 +256,9 @@ export default function SettingsClient() {
                     <button
                       onClick={() => {
                         if (eventMode === 'play') {
-                          // In play mode, just play the current sound
-                          if (currentSound) {
-                            playSound(currentSound);
-                          }
+                          // In play mode, use sound manager's playEvent to play the event sound
+                          // This respects user's custom sound assignments
+                          soundManager.playEvent(eventType);
                         } else {
                           // In assign mode, assign the last played sound or select for assignment
                           if (lastPlayedSound) {
