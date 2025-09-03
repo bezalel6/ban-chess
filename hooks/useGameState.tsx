@@ -358,7 +358,13 @@ export function useGameState() {
 
         case "matched":
           console.log("[GameState] Matched with opponent, game:", msg.gameId);
-          // Don't set currentGameId here - let GameClient handle it when joining
+          // Prevent duplicate matched messages from causing issues
+          if (currentGameId === msg.gameId) {
+            console.log("[GameState] Already matched to this game, ignoring duplicate");
+            break;
+          }
+          // Set the game ID to prevent duplicate processing
+          setCurrentGameId(msg.gameId);
           // Navigate immediately - the game page will handle joining
           router.push(`/game/${msg.gameId}`);
           showNotification(`Matched with ${msg.opponent}`, "success");

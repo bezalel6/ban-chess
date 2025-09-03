@@ -49,20 +49,8 @@ export const eventMetadata: Record<EventType, { name: string; icon: LucideIcon }
   "game-end": { name: "Game End", icon: Trophy },
 };
 
-// Available sound themes and files from Lichess
-export const soundThemes = {
-  standard: { path: "/sounds/standard", name: "Standard" },
-  lisp: { path: "/sounds/lisp", name: "Lisp" },
-  piano: { path: "/sounds/piano", name: "Piano" },
-  futuristic: { path: "/sounds/futuristic", name: "Futuristic" },
-  nes: { path: "/sounds/nes", name: "NES Retro" },
-  robot: { path: "/sounds/robot", name: "Robot" },
-  sfx: { path: "/sounds/sfx", name: "SFX" },
-  woodland: { path: "/sounds/woodland", name: "Woodland" },
-  instrument: { path: "/sounds/instrument", name: "Instrument" },
-} as const;
-
-export type SoundTheme = keyof typeof soundThemes;
+// Sound theme type
+export type SoundTheme = string;
 
 // Common sound types available across themes
 const _commonSoundTypes = [
@@ -83,7 +71,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound", "Select",
     "SocialNotify", "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/standard/${s}.mp3`, 
+    file: `/api/sounds?theme=standard&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -95,7 +83,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
     "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/piano/${s}.mp3`, 
+    file: `/api/sounds?theme=piano&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -107,7 +95,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
     "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/nes/${s}.mp3`, 
+    file: `/api/sounds?theme=nes&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -120,7 +108,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "PracticeComplete", "PuzzleStormEnd", "PuzzleStormGood", "Tournament1st", "Tournament2nd",
     "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/lisp/${s}.mp3`, 
+    file: `/api/sounds?theme=lisp&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -132,7 +120,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "GenericNotify", "LowTime", "Move", "NewChallenge", "NewChatMessage", "NewPM", "OutOfBound",
     "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/futuristic/${s}.mp3`, 
+    file: `/api/sounds?theme=futuristic&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -144,7 +132,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
     "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/robot/${s}.mp3`, 
+    file: `/api/sounds?theme=robot&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -156,7 +144,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM", "OutOfBound",
     "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/sfx/${s}.mp3`, 
+    file: `/api/sounds?theme=sfx&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -168,7 +156,7 @@ export const themeSoundLibrary: Record<string, Array<{ file: string; name: strin
     "GenericNotify", "LowTime", "Move", "NewChallenge", "NewPM",
     "Tournament1st", "Tournament2nd", "Tournament3rd", "TournamentOther", "Victory"
   ].map(s => ({ 
-    file: `/sounds/woodland/${s}.mp3`, 
+    file: `/api/sounds?theme=woodland&file=${s}`, 
     name: s,
     displayName: s.replace(/([A-Z])/g, ' $1').replace(/Count Down/, 'Countdown ').trim()
   })),
@@ -231,18 +219,18 @@ export const availableSounds = buildAvailableSounds();
 
 // Default sound file for each event type using Lichess standard theme
 const defaultEventSoundMap: Record<EventType, string | null> = {
-  "game-invite": "/sounds/standard/NewChallenge.mp3",
-  "game-start": "/sounds/standard/Confirmation.mp3",
-  "ban": "/sounds/standard/Explosion.mp3", // More appropriate than placeholder
-  "move": "/sounds/standard/Move.mp3",
-  "opponent-move": "/sounds/standard/Move.mp3", // Same as move for consistency
-  "capture": "/sounds/standard/Capture.mp3",
-  "castle": "/sounds/lisp/Castles.mp3", // Using lisp theme as standard lacks castle sound
-  "check": "/sounds/standard/Check.mp3",
-  "promote": "/sounds/standard/Checkmate.mp3", // Promotion is significant like checkmate
-  "draw-offer": "/sounds/standard/GenericNotify.mp3",
-  "time-warning": "/sounds/standard/LowTime.mp3",
-  "game-end": "/sounds/standard/Victory.mp3", // Default to victory, can be changed based on result
+  "game-invite": "/api/sounds?theme=standard&file=NewChallenge",
+  "game-start": "/api/sounds?theme=standard&file=Confirmation",
+  "ban": "/api/sounds?theme=standard&file=Explosion", // More appropriate than placeholder
+  "move": "/api/sounds?theme=standard&file=Move",
+  "opponent-move": "/api/sounds?theme=standard&file=Move", // Same as move for consistency
+  "capture": "/api/sounds?theme=standard&file=Capture",
+  "castle": "/api/sounds?theme=lisp&file=Castles", // Using lisp theme as standard lacks castle sound
+  "check": "/api/sounds?theme=standard&file=Check",
+  "promote": "/api/sounds?theme=standard&file=Checkmate", // Promotion is significant like checkmate
+  "draw-offer": "/api/sounds?theme=standard&file=GenericNotify",
+  "time-warning": "/api/sounds?theme=standard&file=LowTime",
+  "game-end": "/api/sounds?theme=standard&file=Victory", // Default to victory, can be changed based on result
 };
 
 class SoundManager {
@@ -253,14 +241,22 @@ class SoundManager {
   private currentTheme: SoundTheme = "standard";
   private lastPlayedSound: { eventType: string; timestamp: number } | null = null;
   private soundDebounceMs = 100; // Prevent duplicate sounds within 100ms
+  private isServer: boolean;
 
   constructor() {
+    // Check if we're running on the server
+    this.isServer = typeof window === "undefined";
+    
     // console.log(`[SoundManager] Constructing SoundManager...`);
     this.sounds = new Map();
     this.eventSoundMap = { ...defaultEventSoundMap };
     // console.log(`[SoundManager] Default event sound map:`, this.eventSoundMap);
-    this.initializeSounds();
-    this.loadPreferences();
+    
+    // Only initialize sounds and load preferences on the client
+    if (!this.isServer) {
+      this.initializeSounds();
+      this.loadPreferences();
+    }
     // console.log(`[SoundManager] SoundManager constructed. Enabled: ${this.enabled}, Volume: ${this.volume}, Theme: ${this.currentTheme}`);
   }
 
@@ -335,6 +331,9 @@ class SoundManager {
 
   // Play sound for a specific event type
   playEvent(eventType: EventType, context?: { result?: string; playerRole?: "white" | "black" | null }) {
+    // Skip on server
+    if (this.isServer) return;
+    
     // console.log(`[SoundManager] playEvent called: ${eventType}, enabled: ${this.enabled}`);
     
     if (!this.enabled) {
@@ -385,6 +384,11 @@ class SoundManager {
   setEventSound(eventType: EventType, soundFile: string | null) {
     this.eventSoundMap[eventType] = soundFile;
     
+    // Skip loading on server
+    if (this.isServer) {
+      return;
+    }
+    
     // If it's a new sound file we haven't loaded yet, load it
     if (soundFile && !this.sounds.has(soundFile)) {
       this.sounds.set(
@@ -417,6 +421,9 @@ class SoundManager {
     promotion?: boolean;
     isOpponent?: boolean;
   }) {
+    // Skip on server
+    if (this.isServer) return;
+    
     console.log(`[SoundManager] playMoveSound called:`, moveDetails, `enabled: ${this.enabled}`);
     
     if (!this.enabled) {
@@ -448,12 +455,12 @@ class SoundManager {
 
   // Play game end sound based on result
   playGameEndSound(result: "victory" | "defeat" | "draw") {
-    if (!this.enabled) return;
+    if (this.isServer || !this.enabled) return;
 
     const soundFile = {
-      victory: "/sounds/standard/Victory.mp3",
-      defeat: "/sounds/standard/Defeat.mp3",
-      draw: "/sounds/standard/Draw.mp3",
+      victory: "/api/sounds?theme=standard&file=Victory",
+      defeat: "/api/sounds?theme=standard&file=Defeat",
+      draw: "/api/sounds?theme=standard&file=Draw",
     }[result];
 
     if (soundFile) {
@@ -467,7 +474,7 @@ class SoundManager {
 
   // Smart game end sound that analyzes result string and player role
   playGameEndSoundSmart(resultString: string, userRole: "white" | "black" | null) {
-    if (!this.enabled) return;
+    if (this.isServer || !this.enabled) return;
 
     // If spectator or role unknown, just play a generic game end sound
     if (!userRole) {
@@ -501,9 +508,11 @@ class SoundManager {
   setVolume(volume: number) {
     this.volume = Math.max(0, Math.min(1, volume));
 
-    this.sounds.forEach((sound) => {
-      sound.volume(this.volume);
-    });
+    if (!this.isServer) {
+      this.sounds.forEach((sound) => {
+        sound.volume(this.volume);
+      });
+    }
 
     this.savePreferences();
   }
@@ -517,6 +526,8 @@ class SoundManager {
   }
 
   preloadAll() {
+    if (this.isServer) return;
+    
     this.sounds.forEach((sound) => {
       if (sound.state() === "unloaded") {
         sound.load();
@@ -540,6 +551,13 @@ class SoundManager {
     if (!theme) return;
 
     this.currentTheme = themeName;
+    
+    // Skip loading on server
+    if (this.isServer) {
+      this.savePreferences();
+      return;
+    }
+    
     const themePath = theme.path;
 
     // Special handling for certain themes that might not have all sounds

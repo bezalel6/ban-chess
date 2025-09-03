@@ -867,6 +867,24 @@ async function matchPlayers() {
   if (!players) return;
 
   const [player1, player2] = players;
+  
+  // Check if either player already has an active game (prevent double matching)
+  const player1GameId = await redis.get(KEYS.PLAYER_GAME(player1.userId));
+  const player2GameId = await redis.get(KEYS.PLAYER_GAME(player2.userId));
+  
+  if (player1GameId || player2GameId) {
+    console.log(
+      `[matchPlayers] Skipping match - players already in games. P1: ${player1GameId}, P2: ${player2GameId}`
+    );
+    // Put players back in queue if they were incorrectly removed
+    if (!player1GameId) {
+      await addToQueue(player1.userId, player1.username);
+    }
+    if (!player2GameId) {
+      await addToQueue(player2.userId, player2.username);
+    }
+    return;
+  }
   const gameId = uuidv4();
   const timeControl = { initial: 900, increment: 10 }; // Default 15+10 for matchmaking
 
