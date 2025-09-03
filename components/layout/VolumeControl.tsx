@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Volume2, VolumeX, Volume1, Settings } from "lucide-react";
+import { Volume2, VolumeX, Volume1, Settings, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import soundManager from "@/lib/sound-manager";
 
@@ -10,10 +10,8 @@ export default function VolumeControl() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [volume, setVolume] = useState(0.5);
   const [isOpen, setIsOpen] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const controlRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const soundPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load actual state after mount (client-side only)
@@ -86,21 +84,12 @@ export default function VolumeControl() {
 
   // Handle mouse enter
   const handleMouseEnter = () => {
-    setIsHovering(true);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
     setIsOpen(true);
   };
 
-  // Handle mouse leave
+  // Handle mouse leave - don't auto-close on hover out
   const handleMouseLeave = () => {
-    setIsHovering(false);
-    timeoutRef.current = setTimeout(() => {
-      if (!isHovering) {
-        setIsOpen(false);
-      }
-    }, 300);
+    // Removed auto-close on mouse leave - dropdown stays open until clicked outside
   };
 
   // Handle keyboard accessibility
@@ -117,7 +106,7 @@ export default function VolumeControl() {
     }
   };
 
-  // Handle button click - just open dropdown, don't toggle mute
+  // Handle button click - just open dropdown
   const handleButtonClick = () => {
     setIsOpen(!isOpen);
   };
@@ -142,9 +131,6 @@ export default function VolumeControl() {
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
       if (soundPreviewTimeoutRef.current) {
         clearTimeout(soundPreviewTimeoutRef.current);
       }
@@ -160,7 +146,7 @@ export default function VolumeControl() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Volume Icon Button */}
+      {/* Volume Control Button - using sliders icon to differentiate from mute button */}
       <button
         onClick={handleButtonClick}
         onKeyDown={handleKeyDown}
@@ -172,7 +158,7 @@ export default function VolumeControl() {
         title={`Volume: ${displayPercentage}% (Click to open controls)`}
         aria-label={`Volume control: ${displayPercentage}%`}
       >
-        <VolumeIcon className="h-4 w-4" />
+        <SlidersHorizontal className="h-4 w-4" />
       </button>
 
       {/* Volume Slider - appears on hover */}
@@ -183,10 +169,16 @@ export default function VolumeControl() {
         ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-95 pointer-events-none'}
       `}>
         <div className="flex items-center gap-3">
-          {/* Small volume icon */}
-          <VolumeIcon className={`h-4 w-4 flex-shrink-0 ${
-            displayEnabled ? 'text-lichess-orange-500' : 'text-foreground-muted'
-          }`} />
+          {/* Mute/unmute button with icon */}
+          <button
+            onClick={toggleMute}
+            className={`p-2 rounded-lg transition-colors hover:bg-background ${
+              displayEnabled ? 'text-lichess-orange-500' : 'text-foreground-muted'
+            }`}
+            title={displayEnabled ? "Mute" : "Unmute"}
+          >
+            <VolumeIcon className="h-5 w-5" />
+          </button>
           
           {/* Volume slider */}
           <div className="flex-1">
@@ -206,8 +198,8 @@ export default function VolumeControl() {
             />
           </div>
           
-          {/* Volume percentage */}
-          <span className="text-xs font-mono w-10 text-right text-lichess-orange-500 font-medium flex-shrink-0">
+          {/* Volume percentage - larger and more prominent */}
+          <span className="text-sm font-bold w-12 text-right text-lichess-orange-500 flex-shrink-0">
             {displayPercentage}%
           </span>
         </div>
@@ -218,7 +210,7 @@ export default function VolumeControl() {
             <button
               key={preset}
               onClick={() => handleVolumeChange(preset / 100)}
-              className={`flex-1 px-1 py-1 text-xs rounded transition-colors ${
+              className={`flex-1 px-1 py-1.5 text-xs rounded transition-colors ${
                 displayPercentage === preset && displayEnabled
                   ? 'bg-lichess-orange-500 text-white'
                   : 'bg-background hover:bg-lichess-orange-500/20 text-foreground-muted hover:text-foreground'
@@ -228,24 +220,6 @@ export default function VolumeControl() {
             </button>
           ))}
         </div>
-        
-        {/* Mute/Unmute button */}
-        <button
-          onClick={toggleMute}
-          className="w-full mt-3 px-3 py-2 text-sm rounded-lg transition-colors bg-background hover:bg-lichess-orange-500/20 flex items-center justify-center gap-2"
-        >
-          {displayEnabled ? (
-            <>
-              <VolumeX className="h-4 w-4" />
-              <span>Mute Sound</span>
-            </>
-          ) : (
-            <>
-              <Volume2 className="h-4 w-4" />
-              <span>Unmute Sound</span>
-            </>
-          )}
-        </button>
         
         {/* Divider */}
         <div className="my-3 border-t border-border"></div>
