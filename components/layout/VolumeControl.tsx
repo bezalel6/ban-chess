@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Volume2, VolumeX, Volume1, Settings, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import soundManager from "@/lib/sound-manager";
 
 export default function VolumeControl() {
@@ -13,6 +14,7 @@ export default function VolumeControl() {
   const [isMounted, setIsMounted] = useState(false);
   const controlRef = useRef<HTMLDivElement>(null);
   const soundPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pathname = usePathname();
 
   // Load actual state after mount (client-side only)
   useEffect(() => {
@@ -102,6 +104,11 @@ export default function VolumeControl() {
   const handleButtonClick = () => {
     setIsOpen(!isOpen);
   };
+
+  // Close dropdown on navigation
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   // Handle click outside to close dropdown
   useEffect(() => {

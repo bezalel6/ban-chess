@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Headphones } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 type Mode = "tone" | "noise" | "wav";
 
@@ -17,6 +18,7 @@ export default function HeadsetMode() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioNode | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const pathname = usePathname();
 
   // client-only initialization
   useEffect(() => {
@@ -31,6 +33,11 @@ export default function HeadsetMode() {
     }
     setMounted(true);
   }, []);
+
+  // Close dropdown on navigation
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
