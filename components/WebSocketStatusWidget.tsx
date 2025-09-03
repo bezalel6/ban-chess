@@ -31,7 +31,7 @@ export default function WebSocketStatusWidget() {
     switch (readyState) {
       case ReadyState.CONNECTING:
         return { text: "Connecting", color: "text-yellow-500", icon: Activity };
-      case ReadyState.OPEN:
+      case ReadyState.OPEN: {
         if (!isAuthenticated) {
           return {
             text: "Authenticating",
@@ -39,7 +39,9 @@ export default function WebSocketStatusWidget() {
             icon: User,
           };
         }
-        return { text: "Connected", color: "text-green-500", icon: Wifi };
+        const adminSuffix = user?.isAdmin ? " (Admin)" : "";
+        return { text: `Connected${adminSuffix}`, color: "text-green-500", icon: Wifi };
+      }
       case ReadyState.CLOSING:
         return { text: "Closing", color: "text-orange-500", icon: WifiOff };
       case ReadyState.CLOSED:
@@ -112,7 +114,14 @@ export default function WebSocketStatusWidget() {
             {user && (
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">User:</span>
-                <span className="font-mono">{user.username || "Guest"}</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-mono">{user.username || "Guest"}</span>
+                  {user.isAdmin && (
+                    <span className="text-yellow-500 text-xs font-bold" title="Administrator">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 

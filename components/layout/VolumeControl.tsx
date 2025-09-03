@@ -117,14 +117,9 @@ export default function VolumeControl() {
     }
   };
 
-  // Handle button click (for mobile and keyboard users)
+  // Handle button click - just open dropdown, don't toggle mute
   const handleButtonClick = () => {
-    // On mobile, toggle the dropdown, on desktop just mute/unmute
-    if (window.innerWidth < 768) {
-      setIsOpen(!isOpen);
-    } else {
-      toggleMute();
-    }
+    setIsOpen(!isOpen);
   };
 
   // Handle click outside to close dropdown
@@ -174,7 +169,7 @@ export default function VolumeControl() {
             ? 'text-lichess-orange-500 hover:bg-background-secondary' 
             : 'text-foreground-muted hover:text-foreground hover:bg-background-secondary'
         }`}
-        title={`Volume: ${displayPercentage}% (Click to ${displayEnabled ? 'mute' : 'unmute'})`}
+        title={`Volume: ${displayPercentage}% (Click to open controls)`}
         aria-label={`Volume control: ${displayPercentage}%`}
       >
         <VolumeIcon className="h-4 w-4" />
@@ -233,6 +228,24 @@ export default function VolumeControl() {
             </button>
           ))}
         </div>
+        
+        {/* Mute/Unmute button */}
+        <button
+          onClick={toggleMute}
+          className="w-full mt-3 px-3 py-2 text-sm rounded-lg transition-colors bg-background hover:bg-lichess-orange-500/20 flex items-center justify-center gap-2"
+        >
+          {displayEnabled ? (
+            <>
+              <VolumeX className="h-4 w-4" />
+              <span>Mute Sound</span>
+            </>
+          ) : (
+            <>
+              <Volume2 className="h-4 w-4" />
+              <span>Unmute Sound</span>
+            </>
+          )}
+        </button>
         
         {/* Divider */}
         <div className="my-3 border-t border-border"></div>

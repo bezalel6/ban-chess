@@ -15,6 +15,7 @@ model User {
   image         String?
   username      String    @unique
   isGuest       Boolean   @default(false)
+  isAdmin       Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   preferences   Json?     @default("{}")
@@ -93,4 +94,12 @@ model PlayerPresence {
 
   @@index([status])
   @@index([lastHeartbeat])
+}
+
+model GlobalSettings {
+  id             String   @id @default("global")
+  soundEnabled   Boolean  @default(true)
+  soundVolume    Float    @default(0.5)
+  eventSoundMap  Json?    @default("{}") // Stores custom sound mappings for each event
+  updatedAt      DateTime @updatedAt
 }

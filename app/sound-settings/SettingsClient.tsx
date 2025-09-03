@@ -10,9 +10,10 @@ interface SoundLibrary {
 
 interface SettingsClientProps {
   initialSoundLibrary: SoundLibrary;
+  isAdmin?: boolean;
 }
 
-export default function SettingsClient({ initialSoundLibrary }: SettingsClientProps) {
+export default function SettingsClient({ initialSoundLibrary, isAdmin = false }: SettingsClientProps) {
   // Sound settings state - initialize with defaults to avoid hydration mismatch
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [eventSoundMap, setEventSoundMap] = useState<Record<EventType, string | null>>({} as Record<EventType, string | null>);
@@ -23,6 +24,15 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
   const [isPlayingSound, setIsPlayingSound] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   
+  // Admin mode state
+  const [editingGlobalDefaults, setEditingGlobalDefaults] = useState(false);
+  const [savingGlobalDefaults, setSavingGlobalDefaults] = useState(false);
+  const [savedUserPrefs, setSavedUserPrefs] = useState<{
+    enabled: boolean;
+    volume: number;
+    eventMap: Record<EventType, string | null>;
+  } | null>(null);
+  
   // Simple assignment state - no persistent selections
   const [pendingAssignment, setPendingAssignment] = useState<{
     soundFile: string;
@@ -31,12 +41,101 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
 
   // No need to load sound library - it's passed as props from server
 
+  // Handle mode switching between personal and global settings
+  const handleModeSwitch = (toGlobalMode: boolean) => {
+    if (toGlobalMode && isAdmin) {
+      // Save current personal settings before switching
+      setSavedUserPrefs({
+        enabled: soundEnabled,
+        volume: soundManager.getVolume(),
+        eventMap: { ...eventSoundMap }
+      });
+      
+      // Load global settings
+      fetch('/api/admin/global-settings')
+        .then(res => res.json())
+        .then(globalSettings => {
+          setSoundEnabled(globalSettings.soundEnabled ?? true);
+          soundManager.setVolume(globalSettings.soundVolume || 0.5);
+          soundManager.setEnabled(globalSettings.soundEnabled ?? true);
+          
+          // Clear and apply global event sounds
+          const newEventMap: Record<EventType, string | null> = {} as Record<EventType, string | null>;
+          eventTypes.forEach(event => {
+            newEventMap[event] = null;
+          });
+          
+          if (globalSettings.eventSoundMap) {
+            Object.entries(globalSettings.eventSoundMap).forEach(([event, soundPath]) => {
+              if (soundPath) {
+                newEventMap[event as EventType] = soundPath as string;
+                soundManager.setEventSound(event as EventType, soundPath as string);
+              }
+            });
+          }
+          
+          setEventSoundMap(newEventMap);
+          setEditingGlobalDefaults(true);
+        })
+        .catch(err => {
+          console.error('Failed to load global settings:', err);
+        });
+    } else if (!toGlobalMode && savedUserPrefs) {
+      // Restore personal settings
+      setSoundEnabled(savedUserPrefs.enabled);
+      soundManager.setVolume(savedUserPrefs.volume);
+      soundManager.setEnabled(savedUserPrefs.enabled);
+      
+      // Restore personal event sounds
+      Object.entries(savedUserPrefs.eventMap).forEach(([event, soundPath]) => {
+        soundManager.setEventSound(event as EventType, soundPath);
+      });
+      
+      setEventSoundMap(savedUserPrefs.eventMap);
+      setSavedUserPrefs(null);
+      setEditingGlobalDefaults(false);
+    }
+  };
+
   // Load initial preferences after hydration to avoid mismatch
   useEffect(() => {
-    setSoundEnabled(soundManager.isEnabled());
-    setEventSoundMap(soundManager.getEventSoundMap());
-    setIsHydrated(true);
-  }, []);
+    // Only run initial setup, not on mode changes
+    if (!isHydrated) {
+      const hasExistingPrefs = localStorage.getItem('soundPreferences');
+      
+      if (!hasExistingPrefs) {
+        // New user - load global defaults
+        fetch('/api/global-settings')
+          .then(res => res.json())
+          .then(globalSettings => {
+            soundManager.setVolume(globalSettings.soundVolume || 0.5);
+            soundManager.setEnabled(globalSettings.soundEnabled ?? true);
+            
+            if (globalSettings.eventSoundMap && Object.keys(globalSettings.eventSoundMap).length > 0) {
+              Object.entries(globalSettings.eventSoundMap).forEach(([event, soundPath]) => {
+                if (soundPath) {
+                  soundManager.setEventSound(event as EventType, soundPath as string);
+                }
+              });
+            }
+            
+            setSoundEnabled(globalSettings.soundEnabled ?? true);
+            setEventSoundMap(soundManager.getEventSoundMap());
+          })
+          .catch(err => {
+            console.error('Failed to fetch global settings:', err);
+            setSoundEnabled(soundManager.isEnabled());
+            setEventSoundMap(soundManager.getEventSoundMap());
+          });
+      } else {
+        // Existing user - use their preferences
+        setSoundEnabled(soundManager.isEnabled());
+        setEventSoundMap(soundManager.getEventSoundMap());
+      }
+      
+      setIsHydrated(true);
+    }
+  }, [isHydrated]);
 
   // Volume is controlled via header component, not here
 
@@ -67,8 +166,15 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
 
   // Assign sound to event - immediate assignment
   const assignSoundToEvent = (eventType: EventType, soundFile: string) => {
-    soundManager.setEventSound(eventType, soundFile);
-    setEventSoundMap(soundManager.getEventSoundMap());
+    if (!editingGlobalDefaults) {
+      // Personal mode - save to localStorage via soundManager
+      soundManager.setEventSound(eventType, soundFile);
+    } else {
+      // Global mode - just update state, don't save to localStorage
+      const newMap = { ...eventSoundMap };
+      newMap[eventType] = soundFile;
+      setEventSoundMap(newMap);
+    }
     setPendingAssignment(null); // Clear assignment state
   };
 
@@ -128,10 +234,89 @@ export default function SettingsClient({ initialSoundLibrary }: SettingsClientPr
     if (theme === 'yoinks') return 'text-[rgb(93,153,72)]';
     return 'text-lichess-orange-500/70';
   };
+  
+  // Save global defaults (admin only)
+  const saveGlobalDefaults = async () => {
+    setSavingGlobalDefaults(true);
+    
+    try {
+      // Save the current customized event sound map
+      const res = await fetch('/api/admin/global-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          soundEnabled: soundEnabled,
+          soundVolume: soundManager.getVolume(),
+          eventSoundMap: eventSoundMap // Save the entire custom event-to-sound mapping
+        })
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to save global defaults');
+      }
+      
+      // Exit admin mode after save and restore personal settings
+      handleModeSwitch(false);
+    } catch (err) {
+      console.error('Error saving global defaults:', err);
+    } finally {
+      setSavingGlobalDefaults(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Sound Settings</h1>
+      {/* Debug info - remove this after testing */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-gray-500 font-mono">
+          Debug: isAdmin={String(isAdmin)}, editingGlobalDefaults={String(editingGlobalDefaults)}
+        </div>
+      )}
+      
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">
+          {editingGlobalDefaults ? 'Global Default Sound Settings' : 'Sound Settings'}
+        </h1>
+        
+        {/* Admin controls */}
+        {isAdmin && (
+          <div className="flex items-center gap-3">
+            {editingGlobalDefaults ? (
+              <>
+                <button
+                  onClick={() => handleModeSwitch(false)}
+                  className="px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Back to Personal Settings
+                </button>
+                <button
+                  onClick={saveGlobalDefaults}
+                  disabled={savingGlobalDefaults}
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors"
+                >
+                  {savingGlobalDefaults ? 'Saving...' : 'Save as Global Defaults'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => handleModeSwitch(true)}
+                className="px-4 py-2 text-sm bg-lichess-orange-500 hover:bg-lichess-orange-600 rounded-lg transition-colors"
+              >
+                Edit Global Defaults
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Admin mode notice */}
+      {editingGlobalDefaults && (
+        <div className="bg-blue-600/20 border border-blue-600/50 rounded-lg p-4">
+          <p className="text-sm">
+            You are editing the global default settings. These will be applied to all new users and guests.
+          </p>
+        </div>
+      )}
 
       {/* Sound Explorer and Event Customization */}
       <div className="bg-background-secondary rounded-lg p-6">

@@ -9,6 +9,7 @@ interface AuthContextType {
     userId: string;
     username: string;
     provider: AuthProviderType;
+    isAdmin?: boolean;
   } | null;
   loading: boolean;
 }
@@ -25,6 +26,7 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
     providerId?: string; 
     username?: string;
     provider?: AuthProviderType;
+    isAdmin?: boolean;
     name?: string | null;
     email?: string | null;
     image?: string | null;
@@ -34,7 +36,8 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
     // Use userId if available, fall back to providerId (matches server logic)
     userId: extendedUser.userId || extendedUser.providerId || '',
     username: extendedUser.username,
-    provider: extendedUser.provider
+    provider: extendedUser.provider,
+    isAdmin: extendedUser.isAdmin
   } : null;
 
   return (
