@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition, useEffect, useRef } from "react";
-import { Search, LogOut, Volume2, User, Shield, ChevronRight, Check } from "lucide-react";
+import { Search, LogOut, User, Shield, ChevronRight, Check } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "next-auth/react";
 import MobileMenu from "./MobileMenu";
 import Image from "next/image";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import VolumeControl from "./VolumeControl";
 
 function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -146,14 +147,6 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
                     </button>
                   </div>
                 )}
-                <Link
-                  href="/sound-settings"
-                  className="flex items-center px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Volume2 className="h-4 w-4 mr-2" />
-                  Sound Settings
-                </Link>
                 <div className="border-t border-border my-1"></div>
               </>
             )}
@@ -226,6 +219,7 @@ export default function Header() {
           {/* User Actions */}
           <div className="flex items-center space-x-3">
             <SearchButton />
+            <VolumeControl />
             {user ? (
               <UserMenu user={user} />
             ) : (
