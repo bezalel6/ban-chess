@@ -13,7 +13,11 @@ import {
   addActionToHistory,
   getActionHistory,
   addMoveTime,
+  redis,
+  KEYS,
+  type GameStateData,
 } from "../redis";
+import { saveCompletedGame } from "./game-persistence";
 
 export interface GameValidationResult {
   success: boolean;
@@ -102,9 +106,16 @@ export class GameService {
     if (gameOver.isOver) {
       gameState.gameOver = true;
       gameState.result = gameOver.result;
+      
+      // Save the final state to Redis first
+      await saveGameState(gameId, gameState);
+      
+      // Handle game ending - save to database and clean up Redis
+      await this.handleGameEnd(gameId, gameOver.result || "Game over", gameState);
+    } else {
+      // Only save to Redis if game is not over
+      await saveGameState(gameId, gameState);
     }
-
-    await saveGameState(gameId, gameState);
 
     return {
       success: true,
@@ -163,6 +174,69 @@ export class GameService {
       inCheck: game.inCheck(),
       gameOver: game.gameOver(),
     };
+  }
+
+  /**
+   * Handle game ending - save to database and clean up Redis
+   */
+  private static async handleGameEnd(
+    gameId: string,
+    result: string,
+    gameState: NonNullable<GameStateData>
+  ): Promise<void> {
+    // Save to database (skip local games where same player plays both sides)
+    if (gameState.whitePlayerId && 
+        gameState.blackPlayerId && 
+        gameState.whitePlayerId !== gameState.blackPlayerId) {
+      try {
+        await saveCompletedGame(gameId);
+        console.log(`[GameService] Game ${gameId} saved to database with result: ${result}`);
+      } catch (error) {
+        console.error(`[GameService] Failed to save game ${gameId} to database:`, error);
+      }
+      
+      // Clean up Redis immediately after successful database save
+      try {
+        const pipeline = redis.pipeline();
+        pipeline.del(KEYS.GAME_STATE(gameId));
+        pipeline.del(KEYS.GAME_ACTION_HISTORY(gameId));
+        pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
+        
+        // Remove player-game associations
+        if (gameState.whitePlayerId) {
+          const whiteGameId = await redis.get(KEYS.PLAYER_GAME(gameState.whitePlayerId));
+          if (whiteGameId === gameId) {
+            pipeline.del(KEYS.PLAYER_GAME(gameState.whitePlayerId));
+          }
+        }
+        if (gameState.blackPlayerId) {
+          const blackGameId = await redis.get(KEYS.PLAYER_GAME(gameState.blackPlayerId));
+          if (blackGameId === gameId) {
+            pipeline.del(KEYS.PLAYER_GAME(gameState.blackPlayerId));
+          }
+        }
+        
+        await pipeline.exec();
+        console.log(`[GameService] Cleaned up Redis data for game ${gameId}`);
+      } catch (error) {
+        console.error(`[GameService] Failed to clean up Redis for game ${gameId}:`, error);
+      }
+    } else {
+      // For local/solo games, clean up Redis after 1 minute
+      console.log(`[GameService] Local game ${gameId} ended, will clean up in 1 minute`);
+      setTimeout(async () => {
+        try {
+          const pipeline = redis.pipeline();
+          pipeline.del(KEYS.GAME_STATE(gameId));
+          pipeline.del(KEYS.GAME_ACTION_HISTORY(gameId));
+          pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
+          await pipeline.exec();
+          console.log(`[GameService] Cleaned up local game ${gameId} from Redis`);
+        } catch (error) {
+          console.error(`[GameService] Failed to clean up local game ${gameId}:`, error);
+        }
+      }, 60 * 1000); // 1 minute for local games
+    }
   }
 
   /**
