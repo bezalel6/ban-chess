@@ -148,7 +148,11 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
     // Play the sound directly with current manager volume
     const audio = new Audio(soundFile);
     audio.volume = soundManager.getVolume();
-    audio.play().catch(err => console.error("Failed to play sound:", err));
+    
+    // Just log errors quietly, no special UI handling needed
+    audio.play().catch(() => {
+      console.warn(`Sound not available: ${soundFile}`);
+    });
     
     // Clear playing state after a short delay
     setTimeout(() => setIsPlayingSound(null), 1000);
@@ -198,7 +202,12 @@ export default function SettingsClient({ initialSoundLibrary, isAdmin = false }:
       if (soundPath) {
         const audio = new Audio(soundPath);
         audio.volume = soundManager.getVolume();
-        audio.play().catch(err => console.error("Failed to play sound:", err));
+        audio.onerror = () => {
+          console.warn(`Sound not available for ${eventType}: ${soundPath}`);
+        };
+        audio.play().catch(() => {
+          console.warn(`Could not play ${eventType} sound`);
+        });
       }
     } else {
       // Personal mode - test current event sound from soundManager
