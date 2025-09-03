@@ -55,12 +55,14 @@ async function handleGameEnd(
   gameState: NonNullable<GameStateData>
 ): Promise<void> {
   const startTime = Date.now();
-  
+
   // Update game state
   gameState.gameOver = true;
   gameState.result = result;
   await saveGameState(gameId, gameState);
-  console.log(`[handleGameEnd] Saved game state in ${Date.now() - startTime}ms`);
+  console.log(
+    `[handleGameEnd] Saved game state in ${Date.now() - startTime}ms`
+  );
 
   // Stop any active timers
   const timeManager = timeManagers.get(gameId);
@@ -79,8 +81,12 @@ async function handleGameEnd(
     try {
       const dbStart = Date.now();
       await saveCompletedGame(gameId);
-      console.log(`[GameEnd] Game ${gameId} saved to database in ${Date.now() - dbStart}ms`);
-      
+      console.log(
+        `[GameEnd] Game ${gameId} saved to database in ${
+          Date.now() - dbStart
+        }ms`
+      );
+
       // Clean up Redis data immediately after successful database save
       // Since database now has priority for completed games, we can safely remove from Redis
       try {
@@ -787,29 +793,25 @@ async function broadcastGameState(gameId: string) {
   // Get the last action from Redis for incremental updates
   const storedActions = await getActionHistory(gameId);
 
-  // Reconstruct the last move from action history
+  // Get the last move from the game's history which includes SAN notation
   let lastMove: HistoryEntry | undefined = undefined;
   if (storedActions.length > 0) {
-    // We could reconstruct the full game to get the last move with proper notation
-    // But for efficiency, we'll just send the last action for now
-    const lastActionSerialized = storedActions[storedActions.length - 1];
-    // Deserialize the action to get the proper type
-    const deserializedAction = BanChess.deserializeAction(lastActionSerialized);
-    const actionObj =
-      "ban" in deserializedAction
-        ? deserializedAction.ban
-        : deserializedAction.move;
-
-    lastMove = {
-      fen: game.fen(),
-      turnNumber: Math.floor(storedActions.length / 2) + 1,
-      player: storedActions.length % 2 === 0 ? "black" : "white",
-      actionType: lastActionSerialized.startsWith("b:") ? "ban" : "move",
-      action: actionObj,
-      // Optional fields from ban-chess.ts HistoryEntry
-      san: undefined,
-      bannedMove: undefined,
-    };
+    // Get the full history from the game which includes SAN from ban-chess.ts 3.0.1
+    const fullHistory = game.history();
+    if (fullHistory.length > 0) {
+      // Get the last entry which has the proper SAN notation
+      const lastEntry = fullHistory[fullHistory.length - 1];
+      lastMove = {
+        ...lastEntry,
+        turnNumber: Math.floor(lastEntry.ply / 4) + 1,
+        bannedMove: lastEntry.bannedMove === null ? undefined : lastEntry.bannedMove,
+      };
+      
+      // Log the SAN if available for debugging
+      if (lastMove.san) {
+        console.log(`[broadcastGameState] Last move SAN: ${lastMove.san}`);
+      }
+    }
   }
 
   const stateMsg = {
@@ -1390,7 +1392,9 @@ wss.on("connection", (ws: WebSocket, request) => {
           const gameSource = await getGameSource(gameId);
 
           if (!gameSource) {
-            console.log(`[join-game] Game ${gameId} not found in Redis or database`);
+            console.log(
+              `[join-game] Game ${gameId} not found in Redis or database`
+            );
             ws.send(
               JSON.stringify({
                 type: "error",
@@ -1399,12 +1403,14 @@ wss.on("connection", (ws: WebSocket, request) => {
             );
             return;
           }
-          
+
           // Reconstruct the game to check if it's over
           const game = reconstructGameFromBCN(gameSource.bcn);
           const isGameOver = game.gameOver() || !!gameSource.result;
-          
-          console.log(`[join-game] Game ${gameId}: storage=${gameSource.type}, gameOver=${isGameOver}`);
+
+          console.log(
+            `[join-game] Game ${gameId}: storage=${gameSource.type}, gameOver=${isGameOver}`
+          );
 
           // For games that are over (regardless of where they're stored), just send the state
           // For active games still in progress, handle subscriptions and associations
@@ -1417,23 +1423,23 @@ wss.on("connection", (ws: WebSocket, request) => {
                 gameId,
               } as SimpleServerMsg)
             );
-            
+
             await sendFullGameState(gameId, ws);
             console.log(
               `Player ${currentPlayer.username} viewing completed game ${gameId}`
             );
           } else {
             // Game is still active - set up proper associations and subscriptions
-            
+
             // Check if player was already in this game before setting the new association
             const previousGameId = await redis.get(
               KEYS.PLAYER_GAME(currentPlayer.userId)
             );
-            
+
             // Now set the new association and subscribe
             await redis.set(KEYS.PLAYER_GAME(currentPlayer.userId), gameId);
             await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
-            
+
             ws.send(
               JSON.stringify({
                 type: "joined",
@@ -1445,7 +1451,11 @@ wss.on("connection", (ws: WebSocket, request) => {
             // This ensures players get the current state regardless of reconnection scenario
             await sendFullGameState(gameId, ws);
             console.log(
-              `Player ${currentPlayer.username} joined active game ${gameId} (previous game: ${previousGameId || 'none'})`
+              `Player ${
+                currentPlayer.username
+              } joined active game ${gameId} (previous game: ${
+                previousGameId || "none"
+              })`
             );
           }
           break;
@@ -1490,12 +1500,15 @@ wss.on("connection", (ws: WebSocket, request) => {
           }
 
           console.log(`Action in game ${gameId}:`, action);
-          
+
           // Deserialize the action string to Action object
           const deserializedAction = BanChess.deserializeAction(action);
-          
+
           // Use GameService to apply the action (handles validation, history, and move times)
-          const result = await GameService.applyAction(gameId, deserializedAction);
+          const result = await GameService.applyAction(
+            gameId,
+            deserializedAction
+          );
 
           if (result.success) {
             // Handle clock switching after successful move/ban
@@ -1723,8 +1736,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "resign": {
           const resignStart = Date.now();
-          console.log(`[resign] Starting resignation process for game ${msg.gameId}`);
-          
+          console.log(
+            `[resign] Starting resignation process for game ${msg.gameId}`
+          );
+
           if (!currentPlayer) {
             ws.send(
               JSON.stringify({
@@ -1737,7 +1752,9 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           const { gameId } = msg;
           const gameState = await getGameState(gameId);
-          console.log(`[resign] Got game state in ${Date.now() - resignStart}ms`);
+          console.log(
+            `[resign] Got game state in ${Date.now() - resignStart}ms`
+          );
 
           if (!gameState) {
             ws.send(
@@ -1767,8 +1784,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           const winner = isWhite ? "black" : "white";
           const loser = isWhite ? "white" : "black";
 
-          console.log(`[resign] Handling game end at ${Date.now() - resignStart}ms`);
-          
+          console.log(
+            `[resign] Handling game end at ${Date.now() - resignStart}ms`
+          );
+
           // Handle resignation
           await handleGameEnd(
             gameId,
@@ -1776,7 +1795,9 @@ wss.on("connection", (ws: WebSocket, request) => {
             gameState
           );
 
-          console.log(`[resign] Game end handled at ${Date.now() - resignStart}ms`);
+          console.log(
+            `[resign] Game end handled at ${Date.now() - resignStart}ms`
+          );
 
           // Create and store resignation event
           const event: GameEvent = {
@@ -1794,7 +1815,11 @@ wss.on("connection", (ws: WebSocket, request) => {
           await broadcastGameState(gameId);
 
           console.log(
-            `[resign] ${currentPlayer.username} (${loser}) resigned in game ${gameId} - Total time: ${Date.now() - resignStart}ms`
+            `[resign] ${
+              currentPlayer.username
+            } (${loser}) resigned in game ${gameId} - Total time: ${
+              Date.now() - resignStart
+            }ms`
           );
 
           // Note: We don't clean up Redis data anymore - it's persisted to database
@@ -1870,13 +1895,15 @@ const shutdown = async (signal: string) => {
     console.log(`[WebSocket] Already shutting down, ignoring ${signal}`);
     return;
   }
-  
+
   isShuttingDown = true;
   console.log(`\n[WebSocket] Received ${signal}, shutting down gracefully...`);
 
   // Set a timeout to force exit if graceful shutdown takes too long
   const forceExitTimeout = setTimeout(() => {
-    console.error("[WebSocket] Graceful shutdown timeout exceeded, forcing exit...");
+    console.error(
+      "[WebSocket] Graceful shutdown timeout exceeded, forcing exit..."
+    );
     process.exit(1);
   }, 10000); // 10 second timeout
 
@@ -1887,7 +1914,7 @@ const shutdown = async (signal: string) => {
       return new Promise<void>((resolve) => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.close(1000, "Server shutting down");
-          ws.on('close', () => resolve());
+          ws.on("close", () => resolve());
           // Timeout for individual connection close
           setTimeout(() => resolve(), 1000);
         } else {
@@ -1895,7 +1922,7 @@ const shutdown = async (signal: string) => {
         }
       });
     });
-    
+
     await Promise.all(closePromises);
     console.log("[WebSocket] All connections closed");
 
@@ -1944,7 +1971,12 @@ process.on("SIGHUP", () => shutdown("SIGHUP"));
 
 // Prevent unhandled promise rejections from crashing the server
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("[WebSocket] Unhandled Rejection at:", promise, "reason:", reason);
+  console.error(
+    "[WebSocket] Unhandled Rejection at:",
+    promise,
+    "reason:",
+    reason
+  );
 });
 
 // Prevent uncaught exceptions from crashing the server without cleanup
