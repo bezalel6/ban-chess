@@ -81,6 +81,11 @@ export class GameService {
       };
     }
 
+    // Log the SAN notation if available (new in ban-chess.ts 3.0.1)
+    if (result.san) {
+      console.log(`[GameService] Action SAN: ${result.san}`);
+    }
+
     // Calculate time taken for this action
     const now = Date.now();
     const baseTime = gameState.lastMoveTime || gameState.startTime || now;
