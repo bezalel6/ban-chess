@@ -98,19 +98,19 @@ export default function SettingsClient() {
   // Sort themes alphabetically and categorize them
   const allThemes = soundLibrary ? Object.keys(soundLibrary.themes).sort() : [];
   
-  // Separate Lichess themes from other sources
+  // Separate Lichess themes from other sources - ALL current themes are Lichess
   const lichessThemes = allThemes.filter(theme => 
-    // These are the known Lichess themes
-    ['standard', 'piano', 'nes', 'sfx', 'futuristic', 'robot', 'music', 'speech'].includes(theme)
+    // All existing themes are from Lichess
+    theme !== 'demo' && theme !== 'alternative' && theme !== 'custom' && theme !== 'user'
   );
   
-  // Other themes (temporary placeholder for demonstration)
+  // Other themes (for demonstration - would be actual alternative sources in future)
   const otherThemes = allThemes.filter(theme => 
-    !lichessThemes.includes(theme) && theme !== 'custom' && theme !== 'user'
+    theme === 'demo' || theme === 'alternative'
   );
   
-  // Add temporary theme for demonstration if not present
-  const demoOtherThemes = otherThemes.length > 0 ? otherThemes : ['eww'];
+  // Always show demo section even if no alternative themes exist yet
+  const demoOtherThemes = otherThemes.length > 0 ? otherThemes : ['demo'];
   
   // Count total sound effects across all Lichess themes
   const totalLichessSounds = soundLibrary 
@@ -222,37 +222,33 @@ export default function SettingsClient() {
                 </div>
                 
                 {/* Other Themes Section - Secondary/Necessary */}
-                {demoOtherThemes.length > 0 && (
-                  <div className="border border-gray-600/20 rounded-lg p-3 bg-gray-900/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <p className="text-xs text-gray-400 font-medium">
-                        Alternative sounds (required for compatibility)
-                      </p>
-                      <span className="text-[10px] text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded">
-                        Necessary
-                      </span>
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {demoOtherThemes.map((theme) => (
-                        <button
-                          key={theme}
-                          onClick={() => setActiveTheme(theme)}
-                          disabled={!soundEnabled || theme === 'eww'} 
-                          className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                            activeTheme === theme
-                              ? 'bg-gray-600 text-white'
-                              : theme === 'eww' 
-                                ? 'bg-gray-800/50 text-gray-500 border border-gray-700/50 cursor-not-allowed'
-                                : 'bg-background hover:bg-gray-700/20 border border-gray-700/30'
-                          } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          title={theme === 'eww' ? 'Placeholder for future alternative themes' : ''}
-                        >
-                          {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                        </button>
-                      ))}
-                    </div>
+                <div className="border border-gray-600/20 rounded-lg p-3 bg-gray-900/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <p className="text-xs text-gray-400 font-medium">
+                      Alternative sounds (future addition)
+                    </p>
+                    <span className="text-[10px] text-gray-500 bg-gray-800/50 px-2 py-0.5 rounded">
+                      Placeholder
+                    </span>
                   </div>
-                )}
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {demoOtherThemes.map((theme) => (
+                      <button
+                        key={theme}
+                        onClick={() => theme !== 'demo' && setActiveTheme(theme)}
+                        disabled={!soundEnabled || theme === 'demo'} 
+                        className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                          activeTheme === theme
+                            ? 'bg-gray-600 text-white'
+                            : 'bg-gray-800/50 text-gray-500 border border-gray-700/50 cursor-not-allowed opacity-60'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title="Placeholder for future alternative theme sources"
+                      >
+                        {theme === 'demo' ? 'Demo Theme' : theme.charAt(0).toUpperCase() + theme.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Sound Grid - with direct assignment buttons */}
