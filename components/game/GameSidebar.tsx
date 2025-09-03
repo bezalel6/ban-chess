@@ -86,7 +86,7 @@ export default function GameSidebar({
       />
       <div className="my-2 border-t border-border"></div>
       {/* Fixed height for 4 rows of moves (approximately 120px) */}
-      <div className="h-[120px] overflow-hidden">
+      <div className="h-[120px]">
         <MoveList 
           history={gameState.history || []} 
           gameState={gameState}
