@@ -194,16 +194,16 @@ export default function SettingsClient() {
                 <div className="flex-1 border border-lichess-orange-500/30 rounded-lg p-3 bg-lichess-orange-500/5">
                   <div className="flex items-center gap-2 mb-2">
                     <p className="text-xs text-foreground font-medium">
-                      All {totalLichessSounds} sound effects from{' '}
-                      <a 
-                        href="https://lichess.org" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-lichess-orange-500 hover:underline font-bold"
-                      >
-                        Lichess.org
-                      </a> ❤️
+                      All {totalLichessSounds} sound effects from
                     </p>
+                    <a 
+                      href="https://lichess.org" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-lichess-orange-500 bg-lichess-orange-500/20 px-3 py-0.5 rounded font-bold hover:bg-lichess-orange-500/30 transition-colors"
+                    >
+                      Lichess.org ❤️
+                    </a>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {lichessThemes.map((theme) => (
@@ -253,7 +253,7 @@ export default function SettingsClient() {
 
               {/* Sound Grid - with direct assignment buttons */}
               <div className="bg-background rounded-lg p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 max-h-[400px] overflow-y-auto pr-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 max-h-[400px] overflow-y-auto pr-2 pt-2">
                   {soundLibrary.themes[activeTheme]?.map((sound) => {
                     const isPlaying = isPlayingSound === sound.file;
                     
