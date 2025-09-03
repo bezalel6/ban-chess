@@ -2,7 +2,7 @@
 
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import { memo, useMemo, useState, useCallback, useEffect } from "react";
+import React, { memo, useMemo, useState, useCallback, useEffect } from "react";
 import type {
   Dests,
   Key,
@@ -138,6 +138,9 @@ const ChessBoard = memo(function ChessBoard({
     return destsMap;
   }, [propDests]);
 
+  // State for banned move alert
+  const [bannedMoveAlert, setBannedMoveAlert] = useState<boolean>(false);
+
   // Memoize the move handler
   const handleAfterMove = useCallback(
     (orig: string, dest: string) => {
@@ -146,6 +149,30 @@ const ChessBoard = memo(function ChessBoard({
       if (nextAction === "ban") {
         onBan({ from: orig, to: dest });
       } else {
+        // Check if this move is banned
+        if (currentBan && currentBan.from === orig && currentBan.to === dest) {
+          // This is a banned move! Show alert
+          setBannedMoveAlert(true);
+          
+          // Play error sound if available (using explosion sound from futuristic theme)
+          if (typeof window !== 'undefined' && window.Audio) {
+            const audio = new Audio('/sounds/futuristic/Explosion.mp3');
+            audio.volume = 0.3; // Lower volume for explosion sound
+            audio.play().catch(() => {
+              // Fallback if audio fails
+              console.log('Banned move attempted:', orig, dest);
+            });
+          }
+          
+          // Reset the alert after animation
+          setTimeout(() => {
+            setBannedMoveAlert(false);
+          }, 2000);
+          
+          // Don't process the move
+          return false;
+        }
+        
         // Check if this is a pawn promotion
         const piece = getPieceAt(fenData.position, orig);
         const isPromotion = piece === "P" || piece === "p";
@@ -164,7 +191,7 @@ const ChessBoard = memo(function ChessBoard({
       }
       return true;
     },
-    [gameState, fenData, nextAction, onMove, onBan]
+    [gameState, fenData, nextAction, onMove, onBan, currentBan]
   );
 
   // Board key that incorporates external refresh trigger
@@ -251,10 +278,35 @@ const ChessBoard = memo(function ChessBoard({
       </div>
     );
   }
+  // Apply red theme CSS variables when in ban mode
+  const boardStyle = canBan && !canMove ? {
+    '--cg-move-dest-color': 'rgba(139, 0, 0, 0.5)',
+    '--cg-move-dest-center': '#8b0000',
+    '--cg-move-dest-hover': 'rgba(220, 20, 60, 0.4)',
+    '--cg-selected-color': 'rgba(220, 20, 60, 0.5)',
+  } as React.CSSProperties : {};
+
   return (
-    <div className="chess-board-outer">
+    <div className="chess-board-outer" style={boardStyle}>
       <div className="chess-board-inner">
         <Chessground key={boardKey} {...config} />
+        {/* Banned Move Alert Overlay */}
+        {bannedMoveAlert && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-50">
+            <div className="bg-red-600/95 text-white px-8 py-4 rounded-xl shadow-2xl animate-shake-alert border-2 border-red-400">
+              <div className="flex items-center gap-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" 
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                <div>
+                  <span className="font-bold text-xl block">Banned Move!</span>
+                  <p className="text-sm opacity-90">This move is not allowed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

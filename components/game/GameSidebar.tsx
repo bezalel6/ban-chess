@@ -7,6 +7,7 @@ import { useGameState } from "@/hooks/useGameState";
 import PlayerInfo from "./PlayerInfo";
 import MoveList from "./MoveList";
 import GameActions from "./GameActions";
+import CompactNavigation from "./CompactNavigation";
 
 interface GameSidebarProps {
   gameState: SimpleGameState;
@@ -15,6 +16,11 @@ interface GameSidebarProps {
   onMoveSelect?: (moveIndex: number) => void;
   currentMoveIndex?: number;
   isLocalGame?: boolean;
+  onFlipBoard?: () => void;
+  onToggleAutoFlip?: () => void;
+  autoFlipEnabled?: boolean;
+  isViewingHistory?: boolean;
+  onReturnToLive?: () => void;
 }
 
 export default function GameSidebar({
@@ -24,6 +30,11 @@ export default function GameSidebar({
   onMoveSelect,
   currentMoveIndex,
   isLocalGame = false,
+  onFlipBoard,
+  onToggleAutoFlip,
+  autoFlipEnabled,
+  isViewingHistory = false,
+  onReturnToLive,
 }: GameSidebarProps) {
   const { activePlayer } = useGameState();
   const { role, orientation } = useUserRole();
@@ -94,6 +105,22 @@ export default function GameSidebar({
           currentMoveIndex={currentMoveIndex}
         />
       </div>
+      {/* Compact Navigation */}
+      {onFlipBoard && (
+        <div className="mt-2">
+          <CompactNavigation
+            currentMoveIndex={currentMoveIndex ?? null}
+            totalMoves={gameState.history?.length || 0}
+            isViewingHistory={isViewingHistory}
+            onNavigate={onMoveSelect || (() => {})}
+            onFlipBoard={onFlipBoard}
+            onReturnToLive={onReturnToLive}
+            onToggleAutoFlip={onToggleAutoFlip}
+            autoFlipEnabled={autoFlipEnabled}
+            isLocalGame={isLocalGame}
+          />
+        </div>
+      )}
       <div className="my-2 border-t border-border"></div>
       {/* Game Actions section */}
       <div className="mb-2">
