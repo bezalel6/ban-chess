@@ -2,6 +2,9 @@
   "name": "2ban-2chess",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "node scripts/dev-server.js",
     "dev:old": "concurrently --kill-others --kill-others-on-fail -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
