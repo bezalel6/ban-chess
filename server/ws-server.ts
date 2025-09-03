@@ -56,16 +56,25 @@ async function handleGameEnd(
 ): Promise<void> {
   const startTime = Date.now();
 
-  // Update game state
+  // Capture final clock values before stopping the timer
+  const timeManager = timeManagers.get(gameId);
+  let finalClocks = undefined;
+  if (timeManager) {
+    finalClocks = timeManager.getClocks();
+  }
+  
+  // Update game state with final clocks
   gameState.gameOver = true;
   gameState.result = result;
+  if (finalClocks) {
+    gameState.finalClocks = finalClocks;
+  }
   await saveGameState(gameId, gameState);
   console.log(
     `[handleGameEnd] Saved game state in ${Date.now() - startTime}ms`
   );
 
-  // Stop any active timers
-  const timeManager = timeManagers.get(gameId);
+  // Now stop any active timers
   if (timeManager) {
     timeManager.destroy();
     timeManagers.delete(gameId);
@@ -439,9 +448,13 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
     } ran out of time in game ${gameId}`
   );
 
-  // Stop the time manager
+  // Capture final clocks before stopping the time manager
   const timeManager = timeManagers.get(gameId);
   if (timeManager) {
+    const finalClocks = timeManager.getClocks();
+    if (finalClocks && gameState) {
+      gameState.finalClocks = finalClocks;
+    }
     timeManager.destroy();
     timeManagers.delete(gameId);
   }
@@ -489,7 +502,7 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
       bannedMove: entry.bannedMove === null ? undefined : entry.bannedMove,
     })),
     timeControl: gameState.timeControl,
-    clocks: timeManager ? timeManager.getClocks() : undefined,
+    clocks: timeManager ? timeManager.getClocks() : gameState.finalClocks,
   };
 
   await redisPub.publish(
@@ -842,7 +855,7 @@ async function broadcastGameState(gameId: string) {
     }),
     ...(gameState.timeControl && {
       timeControl: gameState.timeControl,
-      clocks: timeManager ? timeManager.getClocks() : undefined,
+      clocks: timeManager ? timeManager.getClocks() : gameState.finalClocks,
       startTime: gameState.startTime,
     }),
   } as SimpleServerMsg & { messageId: string };

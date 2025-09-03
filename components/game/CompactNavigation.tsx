@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 
 interface CompactNavigationProps {
   currentMoveIndex: number | null;
@@ -31,122 +31,113 @@ export default function CompactNavigation({
   const isAtLive = currentIndex === totalMoves - 1;
 
   return (
-    <div className="flex items-center justify-center gap-2 py-1">
-      {/* Left arrow pair */}
-      <div className="flex items-center gap-0">
+    <div className="flex items-center justify-between bg-background-tertiary rounded-lg px-2 py-1">
+      {/* Left section: Navigation arrows */}
+      <div className="flex items-center gap-1">
         <button
           onClick={() => onNavigate(-1)}
           disabled={currentIndex < 0}
-          className={`p-0.5 rounded transition-all ${
+          className={`p-1 rounded hover:bg-background-secondary transition-all ${
             currentIndex >= 0
-              ? 'hover:bg-background-tertiary/50 text-foreground-muted hover:text-foreground'
-              : 'text-foreground-muted/20 cursor-not-allowed'
+              ? 'text-foreground-muted hover:text-foreground'
+              : 'text-foreground-muted/30 cursor-not-allowed'
           }`}
-          title="First position (Home)"
+          title="First move"
         >
-          <ChevronFirst className="w-3.5 h-3.5" />
+          <ChevronFirst className="w-4 h-4" />
         </button>
         <button
           onClick={() => onNavigate(currentIndex - 1)}
           disabled={!canGoBack}
-          className={`p-0.5 rounded transition-all ${
+          className={`p-1 rounded hover:bg-background-secondary transition-all ${
             canGoBack
-              ? 'hover:bg-background-tertiary/50 text-foreground-muted hover:text-foreground'
-              : 'text-foreground-muted/20 cursor-not-allowed'
+              ? 'text-foreground-muted hover:text-foreground'
+              : 'text-foreground-muted/30 cursor-not-allowed'
           }`}
-          title="Previous (←)"
+          title="Previous move"
         >
-          <ChevronLeft className="w-3.5 h-3.5" />
+          <ChevronLeft className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Center: Flip board - minimal with transparent background */}
-      <div className="flex items-center gap-2">
-        {/* Flip button - just icon with subtle border */}
-        <div className="relative">
-          <button
-            onClick={onFlipBoard}
-            className="relative p-1 rounded-full transition-all border border-border/30 hover:border-border/60 hover:bg-background-tertiary/20"
-            title={isLocalGame && autoFlipEnabled ? "Flip board (Auto-flip ON)" : "Flip board (F)"}
-          >
-            {/* Circular recycling icon with two arrows */}
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-3.5 h-3.5 text-foreground-muted"
-            >
-              <path d="M7.5 7.5h9m0 0l-3-3m3 3l-3 3" />
-              <path d="M16.5 16.5h-9m0 0l3 3m-3-3l3-3" />
-            </svg>
-            
-            {/* Auto indicator - very subtle dot */}
-            {isLocalGame && autoFlipEnabled && (
-              <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-foreground-muted/50 rounded-full" />
-            )}
-          </button>
-
-          {/* Auto-flip toggle - tiny text below for local games */}
-          {isLocalGame && onToggleAutoFlip && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleAutoFlip();
-              }}
-              className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] text-foreground-muted/50 hover:text-foreground-muted/70 transition-colors"
-              title={autoFlipEnabled ? "Click to disable auto-flip" : "Click to enable auto-flip"}
-            >
-              {autoFlipEnabled ? 'A' : 'M'}
-            </button>
-          )}
+      {/* Center section: Move counter and controls */}
+      <div className="flex items-center gap-3">
+        {/* Move counter */}
+        <div className="text-xs font-medium text-foreground-muted">
+          Move {currentIndex < 0 ? '0' : currentIndex + 1} of {totalMoves}
         </div>
 
-        {/* Move counter - tiny and subtle */}
-        <span className="text-[10px] text-foreground-muted/50 select-none">
-          {currentIndex < 0 ? '0' : currentIndex + 1}/{totalMoves}
-        </span>
-
-        {/* Return to live button when viewing history */}
-        {isViewingHistory && !isAtLive && (
+        {/* Return to live indicator and button */}
+        {isViewingHistory && !isAtLive && onReturnToLive && (
           <button
             onClick={onReturnToLive}
-            className="p-0.5 bg-amber-600/70 hover:bg-amber-600/90 text-white rounded transition-all"
+            className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 rounded transition-colors"
             title="Return to current position"
           >
-            <ChevronLast className="w-3.5 h-3.5" />
+            <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+            <span className="text-xs text-amber-500 font-medium">Live</span>
           </button>
         )}
       </div>
 
-      {/* Right arrow pair */}
-      <div className="flex items-center gap-0">
+      {/* Right section: Forward arrows and flip board */}
+      <div className="flex items-center gap-1">
         <button
           onClick={() => onNavigate(Math.min(totalMoves - 1, currentIndex + 1))}
           disabled={!canGoForward}
-          className={`p-0.5 rounded transition-all ${
+          className={`p-1 rounded hover:bg-background-secondary transition-all ${
             canGoForward
-              ? 'hover:bg-background-tertiary/50 text-foreground-muted hover:text-foreground'
-              : 'text-foreground-muted/20 cursor-not-allowed'
+              ? 'text-foreground-muted hover:text-foreground'
+              : 'text-foreground-muted/30 cursor-not-allowed'
           }`}
-          title="Next (→)"
+          title="Next move"
         >
-          <ChevronRight className="w-3.5 h-3.5" />
+          <ChevronRight className="w-4 h-4" />
         </button>
         <button
           onClick={() => onNavigate(totalMoves - 1)}
           disabled={!canGoForward}
-          className={`p-0.5 rounded transition-all ${
+          className={`p-1 rounded hover:bg-background-secondary transition-all ${
             canGoForward
-              ? 'hover:bg-background-tertiary/50 text-foreground-muted hover:text-foreground'
-              : 'text-foreground-muted/20 cursor-not-allowed'
+              ? 'text-foreground-muted hover:text-foreground'
+              : 'text-foreground-muted/30 cursor-not-allowed'
           }`}
-          title="Last position (End)"
+          title="Last move"
         >
-          <ChevronLast className="w-3.5 h-3.5" />
+          <ChevronLast className="w-4 h-4" />
         </button>
+        
+        {/* Divider */}
+        <div className="w-px h-4 bg-border mx-1" />
+        
+        {/* Flip board button */}
+        <button
+          onClick={onFlipBoard}
+          className="p-1 rounded hover:bg-background-secondary transition-all text-foreground-muted hover:text-foreground group relative"
+          title="Flip board"
+        >
+          <RefreshCw className="w-4 h-4" />
+          {/* Auto-flip indicator for local games */}
+          {isLocalGame && autoFlipEnabled && (
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-lichess-orange-500 rounded-full" 
+                 title="Auto-flip enabled" />
+          )}
+        </button>
+
+        {/* Auto-flip toggle for local games */}
+        {isLocalGame && onToggleAutoFlip && (
+          <button
+            onClick={onToggleAutoFlip}
+            className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+              autoFlipEnabled 
+                ? 'bg-lichess-orange-500/20 text-lichess-orange-500 hover:bg-lichess-orange-500/30' 
+                : 'bg-background-secondary text-foreground-muted hover:bg-background-tertiary'
+            }`}
+            title={autoFlipEnabled ? "Auto-flip ON (click to disable)" : "Manual flip (click to enable auto)"}
+          >
+            {autoFlipEnabled ? 'Auto' : 'Manual'}
+          </button>
+        )}
       </div>
     </div>
   );

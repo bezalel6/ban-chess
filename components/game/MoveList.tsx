@@ -134,6 +134,22 @@ export default function MoveList(props: MoveListProps) {
     // Otherwise, maintain current position in history
   }, [history.length, selectedIndex]); // React to length changes and selected index
 
+  // Auto-scroll to bottom when new moves are added
+  useEffect(() => {
+    if (scrollRef.current && history.length > 0) {
+      // Only scroll if we're following the live game (at or near the end)
+      const isNearEnd = selectedIndex === null || 
+                       selectedIndex >= history.length - 2 ||
+                       currentMoveIndex === undefined ||
+                       currentMoveIndex >= history.length - 2;
+      
+      if (isNearEnd) {
+        // Scroll to bottom to show latest moves
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }
+  }, [history.length, selectedIndex, currentMoveIndex]);
+
   // Track the last played sound to avoid duplicates
   const lastPlayedMoveRef = useRef<number>(-1);
   

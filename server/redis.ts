@@ -13,6 +13,7 @@ export interface GameStateData {
   result?: string;
   timeControl?: TimeControl;
   moveCount?: number; // Track number of moves for efficient updates
+  finalClocks?: { white: { remaining: number; lastUpdate: number }; black: { remaining: number; lastUpdate: number } }; // Final clock values when game ends
 }
 
 // Action history stored as BCN (Ban Chess Notation) strings
