@@ -14,7 +14,6 @@ services:
       - PORT=3000
       # Production environment variables
       - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws-chess.rndev.site}
-      - NEXT_PUBLIC_WS_HEALTH_URL=${NEXT_PUBLIC_WS_HEALTH_URL}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - DATABASE_URL=${DATABASE_URL}
@@ -42,11 +41,9 @@ services:
     image: ghcr.io/bezalel6/2ban-2chess-websocket:latest
     ports:
       - "3001:3001"
-      - "3002:3002"  # Health check port
     environment:
       - NODE_ENV=production
       - WS_PORT=3001
-      - HEALTH_PORT=3002
       # Use Coolify's external Redis via environment variable
       - REDIS_URL=${REDIS_URL}
       - DATABASE_URL=${DATABASE_URL}
@@ -60,7 +57,7 @@ services:
     networks:
       - coolify
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      test: ["CMD", "nc", "-z", "localhost", "3001"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,9 +65,6 @@ services:
       - coolify.managed=true
       - coolify.port=3001
       - coolify.domain=${SERVICE_FQDN_WEBSOCKET:-ws-chess.rndev.site}
-      # Additional label for health check endpoint on port 3002
-      - coolify.health.port=3002
-      - coolify.health.path=/health
 
 networks:
   coolify:

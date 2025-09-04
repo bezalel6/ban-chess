@@ -10,7 +10,6 @@ import Header from "@/components/layout/Header";
 import ConnectionStatusOverlay from "@/components/ConnectionStatusOverlay";
 import WebSocketStatusWidget from "@/components/WebSocketStatusWidget";
 import ToastContainer from "@/components/ToastContainer";
-import ServerStatus from "@/components/ServerStatus";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -52,7 +51,6 @@ export default function RootLayout({
           <ToastProvider>
             <WebSocketProvider>
               <UserRoleProvider>
-                <ServerStatus />
                 <ConnectionStatusOverlay />
                 <WebSocketStatusWidget />
                 <Header />

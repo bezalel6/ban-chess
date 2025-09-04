@@ -299,7 +299,6 @@ redis
 })();
 
 console.log("\n📝 Quick Reference:");
-console.log("   • Health check: http://localhost:3002/health");
 console.log("   • WebSocket URL: ws://localhost:3001");
 console.log("   • Graceful shutdown: Ctrl+C");
 console.log("=".repeat(60) + "\n");
@@ -1917,40 +1916,6 @@ wss.on("connection", (ws: WebSocket, request) => {
   });
 });
 
-// Simple HTTP health check endpoint
-import { createServer } from "http";
-
-const healthServer = createServer((req, res) => {
-  if (req.url === "/health" && req.method === "GET") {
-    // Enable CORS for health checks
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET");
-    res.writeHead(200, { "Content-Type": "application/json" });
-    
-    const redisStatus = redis && redis.status === 'ready' ? 'connected' : 'disconnected';
-    const overallStatus = redisStatus === 'connected' ? 'healthy' : 'degraded';
-    
-    res.end(
-      JSON.stringify({
-        status: overallStatus,
-        timestamp: new Date().toISOString(),
-        service: "websocket-server",
-        redis: redisStatus,
-        connections: wss.clients.size,
-        activeManagers: timeManagers.size,
-      })
-    );
-  } else {
-    res.writeHead(404);
-    res.end("Not Found");
-  }
-});
-
-// Start health check server on port 3002
-healthServer.listen(3002, () => {
-  console.log("[WebSocket] Health check endpoint available on port 3002");
-});
-
 // Track if we're already shutting down to prevent multiple shutdowns
 let isShuttingDown = false;
 
@@ -2004,15 +1969,6 @@ const shutdown = async (signal: string) => {
       });
       // Timeout for server close
       setTimeout(() => resolve(), 2000);
-    });
-
-    // Close health check server
-    await new Promise<void>((resolve) => {
-      healthServer.close(() => {
-        console.log("[WebSocket] Health check server closed");
-        resolve();
-      });
-      setTimeout(() => resolve(), 1000);
     });
 
     // Shutdown Redis connections

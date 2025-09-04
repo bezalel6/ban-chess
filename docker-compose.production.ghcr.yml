@@ -12,7 +12,6 @@ services:
       - PORT=3000
       # Production environment variables
       - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-wss://ws-chess.rndev.site}
-      - NEXT_PUBLIC_WS_HEALTH_URL=${NEXT_PUBLIC_WS_HEALTH_URL}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - DATABASE_URL=${DATABASE_URL}
@@ -41,11 +40,9 @@ services:
     image: ghcr.io/bezalel6/2ban-2chess-websocket:latest
     ports:
       - "3001:3001"
-      - "3002:3002"  # Health check port
     environment:
       - NODE_ENV=production
       - WS_PORT=3001
-      - HEALTH_PORT=3002
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - DATABASE_URL=${DATABASE_URL}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
@@ -58,7 +55,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      test: ["CMD", "nc", "-z", "localhost", "3001"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,10 +64,6 @@ services:
       - "traefik.http.routers.websocket.rule=Host(`ws-chess.rndev.site`)"
       - "traefik.http.routers.websocket.tls=true"
       - "traefik.http.services.websocket.loadbalancer.server.port=3001"
-      # Health endpoint routing
-      - "traefik.http.routers.ws-health.rule=Host(`ws-chess.rndev.site`) && Path(`/health`)"
-      - "traefik.http.routers.ws-health.tls=true"
-      - "traefik.http.services.ws-health.loadbalancer.server.port=3002"
 
   # Redis - OPTIONAL (uncomment if not using external Redis)
   # NOTE: If deploying to Coolify or using external Redis, comment out this entire service
