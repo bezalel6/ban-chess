@@ -6,6 +6,7 @@ services:
   # Next.js Application from GHCR
   app:
     image: ghcr.io/bezalel6/2ban-2chess-app:latest
+    pull_policy: always
     ports:
       - "3000:3000"
     environment:
@@ -39,6 +40,7 @@ services:
   # WebSocket Server from GHCR
   websocket:
     image: ghcr.io/bezalel6/2ban-2chess-websocket:latest
+    pull_policy: always
     ports:
       - "3001:3001"
     environment:
