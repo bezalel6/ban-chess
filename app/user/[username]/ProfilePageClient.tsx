@@ -67,7 +67,7 @@ export default function ProfilePageClient({
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`/api/profile/${username}?page=1`);
       if (!response.ok) {
         if (response.status === 404) {
@@ -77,7 +77,7 @@ export default function ProfilePageClient({
         }
         return;
       }
-      
+
       const data = await response.json();
       setProfileData(data);
       setPage(1);
@@ -91,21 +91,21 @@ export default function ProfilePageClient({
 
   const loadMoreGames = async () => {
     if (!profileData || loadingMore || !profileData.hasMore) return;
-    
+
     try {
       setLoadingMore(true);
       const nextPage = page + 1;
-      
+
       const response = await fetch(`/api/profile/${username}?page=${nextPage}`);
       if (!response.ok) {
         throw new Error("Failed to load more games");
       }
-      
+
       const data = await response.json();
-      setProfileData(prev => ({
+      setProfileData((prev) => ({
         ...prev!,
         games: [...prev!.games, ...data.games],
-        hasMore: data.hasMore
+        hasMore: data.hasMore,
       }));
       setPage(nextPage);
     } catch (err) {
@@ -164,7 +164,7 @@ export default function ProfilePageClient({
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{profileUser.username}</h1>
-                
+
                 {/* Show provider info for own profile */}
                 {isOwnProfile && user && (
                   <div className="mt-2 flex items-center gap-2">
@@ -222,16 +222,21 @@ export default function ProfilePageClient({
               <div className="text-foreground-muted text-sm">Draws</div>
             </div>
           </div>
-          
+
           <div className="mt-4 text-sm text-foreground-muted">
-            Member since {formatDistanceToNow(new Date(profileUser.createdAt), { addSuffix: true })}
+            Member since{" "}
+            {formatDistanceToNow(new Date(profileUser.createdAt), {
+              addSuffix: true,
+            })}
           </div>
         </div>
 
         {/* Game History */}
         <div className="bg-background-secondary rounded-lg p-6">
-          <h2 className="text-xl font-bold text-foreground mb-4">Game History</h2>
-          
+          <h2 className="text-xl font-bold text-foreground mb-4">
+            Game History
+          </h2>
+
           {games.length === 0 ? (
             <div className="text-center text-foreground-muted py-8">
               No games played yet
@@ -241,30 +246,35 @@ export default function ProfilePageClient({
               <div className="grid gap-4">
                 {games.map((game) => {
                   const isWhite = game.whitePlayer.username === username;
-                  const opponent = isWhite ? game.blackPlayer : game.whitePlayer;
+                  const opponent = isWhite
+                    ? game.blackPlayer
+                    : game.whitePlayer;
                   const gameResult = getGameResult(game.result, isWhite);
-                  
+
                   return (
                     <div
                       key={game.id}
                       className="bg-background-tertiary rounded-lg p-4 hover:bg-background transition-colors cursor-pointer"
                       onClick={() => viewGame(game.id)}
                     >
+                      <pre>{JSON.stringify(game, null, 2)}</pre>
                       <div className="flex gap-4">
                         {/* Mini Board */}
                         <div className="w-32 h-32 flex-shrink-0">
                           {game.finalPosition ? (
-                            <MiniBoard 
+                            <MiniBoard
                               fen={game.finalPosition}
                               orientation={isWhite ? "white" : "black"}
                             />
                           ) : (
                             <div className="w-full h-full bg-background-secondary rounded flex items-center justify-center">
-                              <span className="text-foreground-muted text-xs">No board data</span>
+                              <span className="text-foreground-muted text-xs">
+                                No board data
+                              </span>
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Game Info */}
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
@@ -273,29 +283,43 @@ export default function ProfilePageClient({
                                 vs {opponent.username}
                               </div>
                               <div className="text-sm text-foreground-muted">
-                                {isWhite ? "Playing as White" : "Playing as Black"}
+                                {isWhite
+                                  ? "Playing as White"
+                                  : "Playing as Black"}
                               </div>
                             </div>
-                            
-                            <div className={`px-3 py-1 rounded text-sm font-semibold ${
-                              gameResult === "win" ? "bg-green-500 text-white" :
-                              gameResult === "loss" ? "bg-red-500 text-white" :
-                              "bg-yellow-500 text-black"
-                            }`}>
-                              {gameResult === "win" ? "Won" :
-                               gameResult === "loss" ? "Lost" : "Draw"}
+
+                            <div
+                              className={`px-3 py-1 rounded text-sm font-semibold ${
+                                gameResult === "win"
+                                  ? "bg-green-500 text-white"
+                                  : gameResult === "loss"
+                                  ? "bg-red-500 text-white"
+                                  : "bg-yellow-500 text-black"
+                              }`}
+                            >
+                              {gameResult === "win"
+                                ? "Won"
+                                : gameResult === "loss"
+                                ? "Lost"
+                                : "Draw"}
                             </div>
                           </div>
-                          
+
                           <div className="text-sm text-foreground-muted space-y-1">
                             <div>
-                              {game.resultReason || "Game completed"} • {game.moveCount || 0} moves
+                              {game.resultReason || "Game completed"} •{" "}
+                              {game.moveCount || 0} moves
                             </div>
                             <div>
-                              Time control: {formatTimeControl(game.timeControl)}
+                              Time control:{" "}
+                              {formatTimeControl(game.timeControl)}
                             </div>
                             <div>
-                              Played {formatDistanceToNow(new Date(game.createdAt), { addSuffix: true })}
+                              Played{" "}
+                              {formatDistanceToNow(new Date(game.createdAt), {
+                                addSuffix: true,
+                              })}
                             </div>
                           </div>
                         </div>
@@ -304,7 +328,7 @@ export default function ProfilePageClient({
                   );
                 })}
               </div>
-              
+
               {/* Load More Button */}
               {profileData.hasMore && (
                 <div className="mt-6 text-center">
@@ -337,7 +361,10 @@ export default function ProfilePageClient({
   );
 }
 
-function getGameResult(result: string, isWhite: boolean): "win" | "loss" | "draw" {
+function getGameResult(
+  result: string,
+  isWhite: boolean
+): "win" | "loss" | "draw" {
   if (result === "1/2-1/2") return "draw";
   if (result === "1-0") return isWhite ? "win" : "loss";
   if (result === "0-1") return isWhite ? "loss" : "win";
@@ -346,14 +373,14 @@ function getGameResult(result: string, isWhite: boolean): "win" | "loss" | "draw
 
 function formatTimeControl(timeControl: string): string {
   if (timeControl === "unlimited") return "Unlimited";
-  
+
   const match = timeControl.match(/(\d+)\+(\d+)/);
   if (!match) return timeControl;
-  
+
   const [, initial, increment] = match;
   const minutes = Math.floor(parseInt(initial) / 60);
   const incrementSec = parseInt(increment);
-  
+
   if (minutes > 0 && incrementSec > 0) {
     return `${minutes}+${incrementSec}`;
   } else if (minutes > 0) {
