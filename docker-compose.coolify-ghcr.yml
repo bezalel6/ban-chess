@@ -47,8 +47,8 @@ services:
       - NODE_ENV=production
       - WS_PORT=3001
       - HEALTH_PORT=3002
-      # Use internal Redis from this compose file
-      - REDIS_URL=redis://redis:6379
+      # Use Coolify's external Redis via environment variable
+      - REDIS_URL=${REDIS_URL}
       - DATABASE_URL=${DATABASE_URL}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://chess.rndev.site}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
@@ -57,8 +57,6 @@ services:
       # Admin setup
       - ADMIN_EMAILS=${ADMIN_EMAILS}
     restart: unless-stopped
-    depends_on:
-      - redis
     networks:
       - coolify
     healthcheck:
@@ -71,24 +69,6 @@ services:
       - coolify.port=3001
       - coolify.domain=${SERVICE_FQDN_WEBSOCKET:-ws-chess.rndev.site}
 
-  # Redis (included in the project)
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis-data:/data
-    networks:
-      - coolify
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 networks:
   coolify:
     external: true
-
-volumes:
-  redis-data:
