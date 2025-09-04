@@ -484,6 +484,30 @@ async function getPlayerInfo(gameState: GameStateWithPlayers): Promise<{
 // Clean up all game data when a game ends
 // Note: cleanupFinishedGame removed - we now persist game data to database instead of deleting it
 
+/**
+ * Determine the reason for game ending based on game state and position
+ */
+function determineResultReason(game: BanChess, gameState: NonNullable<GameStateData>): string {
+  // Check flags set during game ending
+  if (gameState.timedOut) {
+    return "timeout";
+  }
+  if (gameState.resigned) {
+    return "resignation";
+  }
+  
+  // Check position-based endings
+  if (game.inCheckmate()) {
+    return "checkmate";
+  }
+  if (game.inStalemate()) {
+    return "stalemate";
+  }
+  
+  // Default to unknown
+  return "unknown";
+}
+
 async function handleTimeout(gameId: string, winner: "white" | "black") {
   const gameState = await getGameState(gameId);
   if (!gameState) return;
@@ -516,9 +540,13 @@ async function handleTimeout(gameId: string, winner: "white" | "black") {
 
   // Update game state in Redis with final PGN
   gameState.pgn = game.pgn(); // Store final PGN
+  // Mark that this game ended due to timeout
+  gameState.timedOut = true;
+  // Use standardized chess notation for result
+  const standardResult = winner === "white" ? "1-0" : "0-1";
   await handleGameEnd(
     gameId,
-    `${winner === "white" ? "White" : "Black"} wins on time!`,
+    standardResult,
     gameState
   );
 
@@ -822,11 +850,13 @@ async function broadcastGameState(gameId: string) {
     if (isCheckmate || (game.inCheck() && legalActions.length === 0)) {
       // The player whose turn it is to act (ban or move) is in checkmate
       const loser = game.turn;
-      result = `${loser === "white" ? "Black" : "White"} wins by checkmate!`;
+      // Use standardized chess notation
+      result = loser === "white" ? "0-1" : "1-0";
     } else if (isStalemate) {
-      result = "Draw by stalemate";
+      result = "1/2-1/2";
     } else {
-      result = "Game over";
+      // This shouldn't happen, but handle it gracefully
+      result = "1/2-1/2";
     }
 
     gameState.pgn = game.pgn(); // Store final PGN
@@ -898,6 +928,7 @@ async function broadcastGameState(gameId: string) {
     ...((isGameOver || gameState.gameOver) && {
       gameOver: true,
       result: gameState.result,
+      resultReason: determineResultReason(game, gameState),
     }),
     ...(gameState.timeControl && {
       timeControl: gameState.timeControl,
@@ -1844,10 +1875,17 @@ wss.on("connection", (ws: WebSocket, request) => {
             `[resign] Handling game end at ${Date.now() - resignStart}ms`
           );
 
+          // Mark that this game ended due to resignation
+          gameState.resigned = true;
+          gameState.resignedPlayer = loser;
+          
+          // Use standardized chess notation for result
+          const standardResult = winner === "white" ? "1-0" : "0-1";
+          
           // Handle resignation
           await handleGameEnd(
             gameId,
-            `${winner === "white" ? "White" : "Black"} wins by resignation`,
+            standardResult,
             gameState
           );
 

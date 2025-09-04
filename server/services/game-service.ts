@@ -265,21 +265,22 @@ export class GameService {
       const loser = game.turn;
       return {
         isOver: true,
-        result: `${loser === "white" ? "Black" : "White"} wins by checkmate!`,
+        // Use standardized chess notation
+        result: loser === "white" ? "0-1" : "1-0",
       };
     }
 
     if (game.inStalemate()) {
       return {
         isOver: true,
-        result: "Draw by stalemate",
+        result: "1/2-1/2",
       };
     }
 
     if (game.gameOver()) {
       return {
         isOver: true,
-        result: "Game over",
+        result: "1/2-1/2",
       };
     }
 

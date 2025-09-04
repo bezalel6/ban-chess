@@ -22,6 +22,7 @@
     "analyze": "npm run type-check && npm run lint",
     "db:reset": "npx prisma migrate reset --force",
     "db:seed": "npx prisma db seed",
+    "db:fix-results": "npx tsx scripts/fix-game-results.ts",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",

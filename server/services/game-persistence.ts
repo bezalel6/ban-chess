@@ -134,13 +134,30 @@ export async function saveCompletedGame(gameId: string): Promise<void> {
     const finalPosition = finalGame.fen(); // This includes the ban state in the 7th field
     const moveCount = bcn.filter(action => action.startsWith('m:')).length;
     
-    // Extract result reason from the result string
+    // Determine result reason based on game state and standardized result
     let resultReason = 'unknown';
-    if (result.includes('checkmate')) resultReason = 'checkmate';
-    else if (result.includes('resignation')) resultReason = 'resignation';
-    else if (result.includes('timeout')) resultReason = 'timeout';
-    else if (result.includes('stalemate')) resultReason = 'stalemate';
-    else if (result.includes('draw')) resultReason = 'draw';
+    
+    // Check the actual game state to determine the reason
+    if (finalGame.inCheckmate()) {
+      resultReason = 'checkmate';
+    } else if (finalGame.inStalemate()) {
+      resultReason = 'stalemate';
+    } else if (gameState.resigned) {
+      resultReason = 'resignation';
+    } else if (gameState.timedOut) {
+      resultReason = 'timeout';
+    } else if (result === '1/2-1/2') {
+      resultReason = 'draw';
+    }
+    
+    // If we still don't know the reason but have a decisive result,
+    // check if it was a timeout (common case)
+    if (resultReason === 'unknown' && (result === '1-0' || result === '0-1')) {
+      // Most likely a timeout if game isn't in checkmate
+      if (!finalGame.inCheckmate()) {
+        resultReason = 'timeout';
+      }
+    }
 
     // Save to database WITH THE ORIGINAL GAME ID
     console.log(`[GamePersistence] Step 6: Saving game to database...`);

@@ -92,7 +92,8 @@ export interface SimpleGameState {
   inCheck?: boolean;  // Is the active player in check
   // These fields are ONLY for display/metadata, NOT game logic:
   gameOver?: boolean;  // For UI display only
-  result?: string;     // For UI display only
+  result?: string;     // Standardized result (1-0, 0-1, 1/2-1/2)
+  resultReason?: string; // Reason for game ending (checkmate, resignation, timeout, stalemate)
   history?: HistoryEntry[] | string[]; // For move replay only
   actionHistory?: string[]; // BCN format actions for position reconstruction
   timeControl?: TimeControl; // Time control settings

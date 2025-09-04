@@ -14,6 +14,10 @@ export interface GameStateData {
   timeControl?: TimeControl;
   moveCount?: number; // Track number of moves for efficient updates
   finalClocks?: { white: { remaining: number; lastUpdate: number }; black: { remaining: number; lastUpdate: number } }; // Final clock values when game ends
+  // Track the reason for game ending
+  timedOut?: boolean; // True if game ended due to timeout
+  resigned?: boolean; // True if game ended due to resignation
+  resignedPlayer?: "white" | "black"; // Which player resigned
 }
 
 // Action history stored as BCN (Ban Chess Notation) strings
