@@ -20,54 +20,42 @@ export default function ServerStatus() {
 
   useEffect(() => {
     const checkStatus = async () => {
-      try {
-        // Skip WebSocket health check if no URL is configured or in production
-        const healthUrl = process.env.NEXT_PUBLIC_WS_HEALTH_URL;
-        
-        let wsHealth = { status: "ok", redis: "connected" }; // Default to OK
-        
-        if (healthUrl && healthUrl !== "") {
-          // Only check if explicitly configured
+      const newStatus = {
+        websocket: true, // Default to true
+        redis: true,     // Default to true  
+        database: true,  // Default to true
+      };
+      
+      // Check WebSocket health endpoint separately
+      const healthUrl = process.env.NEXT_PUBLIC_WS_HEALTH_URL;
+      if (healthUrl && healthUrl !== "") {
+        try {
           const wsHealthRes = await fetch(healthUrl);
-          wsHealth = await wsHealthRes.json();
-        }
-        
-        // Check main API health (which includes database)
-        const apiHealthRes = await fetch("/api/health");
-        const apiHealth = await apiHealthRes.json();
-        
-        setStatus({
-          websocket: wsHealth.status === "ok",
-          redis: wsHealth.redis === "connected",
-          database: apiHealth.database === "connected",
-        });
-        
-        // Show banner if any service is down
-        const hasIssues = !wsHealth.redis || wsHealth.redis !== "connected" || 
-                         !apiHealth.database || apiHealth.database !== "connected";
-        setIsVisible(hasIssues && !dismissed);
-        
-      } catch {
-        // Only show error banner if we were actually checking
-        const healthUrl = process.env.NEXT_PUBLIC_WS_HEALTH_URL;
-        if (healthUrl && healthUrl !== "") {
-          // If health check fails and was configured, assume services are down
-          setStatus({
-            websocket: false,
-            redis: false,
-            database: false,
-          });
-          setIsVisible(!dismissed);
-        } else {
-          // If no health check configured, assume everything is OK
-          setStatus({
-            websocket: true,
-            redis: true,
-            database: true,
-          });
-          setIsVisible(false);
+          const wsHealth = await wsHealthRes.json();
+          newStatus.websocket = wsHealth.status === "ok";
+          newStatus.redis = wsHealth.redis === "connected";
+        } catch {
+          // Only WebSocket/Redis are down, not necessarily database
+          newStatus.websocket = false;
+          newStatus.redis = false;
         }
       }
+      
+      // Check API/Database health separately
+      try {
+        const apiHealthRes = await fetch("/api/health");
+        const apiHealth = await apiHealthRes.json();
+        newStatus.database = apiHealth.database === "connected";
+      } catch {
+        // Only database connection failed
+        newStatus.database = false;
+      }
+      
+      setStatus(newStatus);
+      
+      // Show banner if any service is actually down
+      const hasIssues = !newStatus.websocket || !newStatus.redis || !newStatus.database;
+      setIsVisible(hasIssues && !dismissed);
     };
 
     // Check immediately
