@@ -1,4 +1,5 @@
 name: Build and Push to GHCR
+# Rebuild trigger: 2024-09-04
 
 on:
   push:
