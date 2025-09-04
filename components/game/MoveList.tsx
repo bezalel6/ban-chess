@@ -7,29 +7,31 @@ import { useAuth } from "@/components/AuthProvider";
 import { getUserRole } from "@/lib/game-utils";
 
 // Support both old and new prop formats for compatibility
-type MoveListProps = {
-  history?: HistoryEntry[] | string[];
-  onMoveSelect?: (moveIndex: number) => void;
-  currentMoveIndex?: number;
-  gameState?: SimpleGameState;
-} | {
-  // CompletedGameViewer format
-  actions: string[];
-  moveTimes?: number[];
-  currentIndex?: number;
-  onNavigate?: (moveIndex: number) => void;
-};
+type MoveListProps =
+  | {
+      history?: HistoryEntry[] | string[];
+      onMoveSelect?: (moveIndex: number) => void;
+      currentMoveIndex?: number;
+      gameState?: SimpleGameState;
+    }
+  | {
+      // CompletedGameViewer format
+      actions: string[];
+      moveTimes?: number[];
+      currentIndex?: number;
+      onNavigate?: (moveIndex: number) => void;
+    };
 
 export default function MoveList(props: MoveListProps) {
   const { user } = useAuth();
-  
+
   // Handle both prop formats
   let history: HistoryEntry[] | string[];
   let onMoveSelect: ((moveIndex: number) => void) | undefined;
   let currentMoveIndex: number | undefined;
   let gameState: SimpleGameState | undefined;
-  
-  if ('actions' in props) {
+
+  if ("actions" in props) {
     // CompletedGameViewer format - convert BCN actions to display format
     // Note: This is a temporary solution until we properly integrate BCN
     history = [];
@@ -71,47 +73,55 @@ export default function MoveList(props: MoveListProps) {
   }, [selectedIndex]);
 
   // Play sound when navigating to a historical move
-  const playNavigationSound = useCallback((moveIndex: number) => {
-    if (!history || history.length === 0 || moveIndex < 0 || moveIndex >= history.length) {
-      return;
-    }
-    
-    // Check if this is a HistoryEntry array
-    if (typeof history[0] === 'object') {
-      const entries = history as HistoryEntry[];
-      const entry = entries[moveIndex];
-      
-      if (entry.actionType === 'ban') {
-        // Play ban sound
-        soundManager.playEvent('ban');
-      } else if (entry.actionType === 'move' && entry.san) {
-        // Analyze the SAN to determine move type
-        const san = entry.san;
-        const isCapture = san.includes('x');
-        const isCheck = san.includes('+');
-        const isCheckmate = san.includes('#');
-        const isCastle = san === 'O-O' || san === 'O-O-O';
-        const isPromotion = san.includes('=');
-        
-        // Play appropriate move sound (treat all navigation as non-opponent moves)
-        soundManager.playMoveSound({
-          check: isCheck || isCheckmate,
-          capture: isCapture,
-          castle: isCastle,
-          promotion: isPromotion,
-          isOpponent: false, // Navigation sounds are always "our" perspective
-        });
+  const playNavigationSound = useCallback(
+    (moveIndex: number) => {
+      if (
+        !history ||
+        history.length === 0 ||
+        moveIndex < 0 ||
+        moveIndex >= history.length
+      ) {
+        return;
       }
-    }
-  }, [history]);
+
+      // Check if this is a HistoryEntry array
+      if (typeof history[0] === "object") {
+        const entries = history as HistoryEntry[];
+        const entry = entries[moveIndex];
+
+        if (entry.actionType === "ban") {
+          // Play ban sound
+          soundManager.playEvent("ban");
+        } else if (entry.actionType === "move" && entry.san) {
+          // Analyze the SAN to determine move type
+          const san = entry.san;
+          const isCapture = san.includes("x");
+          const isCheck = san.includes("+");
+          const isCheckmate = san.includes("#");
+          const isCastle = san === "O-O" || san === "O-O-O";
+          const isPromotion = san.includes("=");
+
+          // Play appropriate move sound (treat all navigation as non-opponent moves)
+          soundManager.playMoveSound({
+            check: isCheck || isCheckmate,
+            capture: isCapture,
+            castle: isCastle,
+            promotion: isPromotion,
+            isOpponent: false, // Navigation sounds are always "our" perspective
+          });
+        }
+      }
+    },
+    [history]
+  );
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (!history || history.length === 0) return;
+      if (e.altKey || !history || history.length === 0) return;
 
       const totalMoves = history.length;
-      let newIndex = selectedIndex ?? (totalMoves - 1); // Default to last move if nothing selected
+      let newIndex = selectedIndex ?? totalMoves - 1; // Default to last move if nothing selected
 
       switch (e.key) {
         case "ArrowLeft":
@@ -182,7 +192,11 @@ export default function MoveList(props: MoveListProps) {
       }
 
       // Always update if we have a valid new index
-      if (newIndex !== selectedIndex && newIndex >= -1 && newIndex < totalMoves) {
+      if (
+        newIndex !== selectedIndex &&
+        newIndex >= -1 &&
+        newIndex < totalMoves
+      ) {
         setSelectedIndex(newIndex);
         onMoveSelect?.(newIndex);
         // Only play navigation sound for valid move indices (not starting position)
@@ -209,18 +223,21 @@ export default function MoveList(props: MoveListProps) {
 
   // Track previous history length to detect when new moves arrive
   const prevHistoryLengthRef = useRef(history.length);
-  
+
   // When history updates and we're at the end, auto-follow
   useEffect(() => {
     // Only auto-follow if the history actually grew (new moves added)
     if (history.length > prevHistoryLengthRef.current && history.length > 0) {
       // If selectedIndex is at or near the end, follow to the new end
-      if (selectedIndex === null || selectedIndex >= prevHistoryLengthRef.current - 2) {
+      if (
+        selectedIndex === null ||
+        selectedIndex >= prevHistoryLengthRef.current - 2
+      ) {
         setSelectedIndex(history.length - 1);
       }
       // Otherwise, maintain current position in history
     }
-    
+
     // Update the ref for next comparison
     prevHistoryLengthRef.current = history.length;
   }, [history.length, selectedIndex]); // React to history length and selected index changes
@@ -229,11 +246,12 @@ export default function MoveList(props: MoveListProps) {
   useEffect(() => {
     if (scrollRef.current && history.length > 0) {
       // Only scroll if we're following the live game (at or near the end)
-      const isNearEnd = selectedIndex === null || 
-                       selectedIndex >= history.length - 2 ||
-                       currentMoveIndex === undefined ||
-                       currentMoveIndex >= history.length - 2;
-      
+      const isNearEnd =
+        selectedIndex === null ||
+        selectedIndex >= history.length - 2 ||
+        currentMoveIndex === undefined ||
+        currentMoveIndex >= history.length - 2;
+
       if (isNearEnd) {
         // Scroll to bottom to show latest moves
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -243,37 +261,40 @@ export default function MoveList(props: MoveListProps) {
 
   // Track the last played sound to avoid duplicates
   const lastPlayedMoveRef = useRef<number>(-1);
-  
+
   // Play sound effects when new moves are added
   useEffect(() => {
     // Skip if no history
     if (!history || history.length === 0) {
       return;
     }
-    
+
     // Only play sound for truly new moves (not initial load or navigation)
-    if (history.length > lastPlayedMoveRef.current && lastPlayedMoveRef.current >= 0) {
+    if (
+      history.length > lastPlayedMoveRef.current &&
+      lastPlayedMoveRef.current >= 0
+    ) {
       // Check if this is a HistoryEntry array
-      if (typeof history[0] === 'object') {
+      if (typeof history[0] === "object") {
         const entries = history as HistoryEntry[];
         const latestEntry = entries[entries.length - 1];
-        
+
         // Determine if this is our move or opponent's
         const userRole = getUserRole(gameState || null, user?.userId);
         const isOpponentMove = latestEntry.player !== userRole.role;
-        
-        if (latestEntry.actionType === 'ban') {
+
+        if (latestEntry.actionType === "ban") {
           // Play ban sound
-          soundManager.playEvent('ban');
-        } else if (latestEntry.actionType === 'move' && latestEntry.san) {
+          soundManager.playEvent("ban");
+        } else if (latestEntry.actionType === "move" && latestEntry.san) {
           // Analyze the SAN to determine move type
           const san = latestEntry.san;
-          const isCapture = san.includes('x');
-          const isCheck = san.includes('+');
-          const isCheckmate = san.includes('#');
-          const isCastle = san === 'O-O' || san === 'O-O-O';
-          const isPromotion = san.includes('=');
-          
+          const isCapture = san.includes("x");
+          const isCheck = san.includes("+");
+          const isCheckmate = san.includes("#");
+          const isCastle = san === "O-O" || san === "O-O-O";
+          const isPromotion = san.includes("=");
+
           // Play appropriate move sound
           soundManager.playMoveSound({
             check: isCheck || isCheckmate,
@@ -285,7 +306,7 @@ export default function MoveList(props: MoveListProps) {
         }
       }
     }
-    
+
     // Update the last played move index
     if (history.length > 0) {
       lastPlayedMoveRef.current = history.length;
@@ -393,103 +414,103 @@ export default function MoveList(props: MoveListProps) {
             {rows.map((row, index) => (
               <tr key={index} className="hover:bg-background-secondary/50 h-8">
                 <td
-                className={`px-2 py-1 text-foreground-muted font-semibold align-middle text-center border border-border w-8 ${
-                  index % 2 === 0
-                    ? "bg-background-secondary/30"
-                    : "bg-background-tertiary/50"
-                }`}
-              >
-                {index + 1}.
+                  className={`px-2 py-1 text-foreground-muted font-semibold align-middle text-center border border-border w-8 ${
+                    index % 2 === 0
+                      ? "bg-background-secondary/30"
+                      : "bg-background-tertiary/50"
+                  }`}
+                >
+                  {index + 1}.
                 </td>
                 <td
-                className={`px-2 py-1 text-left align-middle border border-border ${
-                  index % 2 === 0
-                    ? "bg-background-secondary/20"
-                    : "bg-background-tertiary/30"
-                }`}
-              >
-                {row.white && (
-                  <span className="text-foreground font-medium">
-                    {row.white.ban && (
-                      <span
-                        className={`text-red-500 font-bold cursor-pointer hover:bg-red-500/20 px-1 rounded ${
-                          selectedIndex === row.white.banIndex
-                            ? "bg-red-500/30"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          row.white?.banIndex !== undefined &&
-                          handleMoveClick(row.white.banIndex)
-                        }
-                        data-move-index={row.white.banIndex}
-                      >
-                        {row.white.ban}
-                      </span>
-                    )}
-                    {row.white.ban && row.white.move && " "}
-                    {row.white.move && (
-                      <span
-                        className={`cursor-pointer hover:bg-blue-500/20 px-1 rounded ${
-                          selectedIndex === row.white.moveIndex
-                            ? "bg-blue-500/30"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          row.white?.moveIndex !== undefined &&
-                          handleMoveClick(row.white.moveIndex)
-                        }
-                        data-move-index={row.white.moveIndex}
-                      >
-                        {row.white.move}
-                      </span>
-                    )}
-                  </span>
-                )}
+                  className={`px-2 py-1 text-left align-middle border border-border ${
+                    index % 2 === 0
+                      ? "bg-background-secondary/20"
+                      : "bg-background-tertiary/30"
+                  }`}
+                >
+                  {row.white && (
+                    <span className="text-foreground font-medium">
+                      {row.white.ban && (
+                        <span
+                          className={`text-red-500 font-bold cursor-pointer hover:bg-red-500/20 px-1 rounded ${
+                            selectedIndex === row.white.banIndex
+                              ? "bg-red-500/30"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            row.white?.banIndex !== undefined &&
+                            handleMoveClick(row.white.banIndex)
+                          }
+                          data-move-index={row.white.banIndex}
+                        >
+                          {row.white.ban}
+                        </span>
+                      )}
+                      {row.white.ban && row.white.move && " "}
+                      {row.white.move && (
+                        <span
+                          className={`cursor-pointer hover:bg-blue-500/20 px-1 rounded ${
+                            selectedIndex === row.white.moveIndex
+                              ? "bg-blue-500/30"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            row.white?.moveIndex !== undefined &&
+                            handleMoveClick(row.white.moveIndex)
+                          }
+                          data-move-index={row.white.moveIndex}
+                        >
+                          {row.white.move}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </td>
                 <td
-                className={`px-2 py-1 text-left align-middle border border-border ${
-                  index % 2 === 0
-                    ? "bg-background-secondary/20"
-                    : "bg-background-tertiary/30"
-                }`}
-              >
-                {row.black && (
-                  <span className="text-foreground font-medium">
-                    {row.black.ban && (
-                      <span
-                        className={`text-red-500 font-bold cursor-pointer hover:bg-red-500/20 px-1 rounded ${
-                          selectedIndex === row.black.banIndex
-                            ? "bg-red-500/30"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          row.black?.banIndex !== undefined &&
-                          handleMoveClick(row.black.banIndex)
-                        }
-                        data-move-index={row.black.banIndex}
-                      >
-                        {row.black.ban}
-                      </span>
-                    )}
-                    {row.black.ban && row.black.move && " "}
-                    {row.black.move && (
-                      <span
-                        className={`cursor-pointer hover:bg-blue-500/20 px-1 rounded ${
-                          selectedIndex === row.black.moveIndex
-                            ? "bg-blue-500/30"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          row.black?.moveIndex !== undefined &&
-                          handleMoveClick(row.black.moveIndex)
-                        }
-                        data-move-index={row.black.moveIndex}
-                      >
-                        {row.black.move}
-                      </span>
-                    )}
-                  </span>
-                )}
+                  className={`px-2 py-1 text-left align-middle border border-border ${
+                    index % 2 === 0
+                      ? "bg-background-secondary/20"
+                      : "bg-background-tertiary/30"
+                  }`}
+                >
+                  {row.black && (
+                    <span className="text-foreground font-medium">
+                      {row.black.ban && (
+                        <span
+                          className={`text-red-500 font-bold cursor-pointer hover:bg-red-500/20 px-1 rounded ${
+                            selectedIndex === row.black.banIndex
+                              ? "bg-red-500/30"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            row.black?.banIndex !== undefined &&
+                            handleMoveClick(row.black.banIndex)
+                          }
+                          data-move-index={row.black.banIndex}
+                        >
+                          {row.black.ban}
+                        </span>
+                      )}
+                      {row.black.ban && row.black.move && " "}
+                      {row.black.move && (
+                        <span
+                          className={`cursor-pointer hover:bg-blue-500/20 px-1 rounded ${
+                            selectedIndex === row.black.moveIndex
+                              ? "bg-blue-500/30"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            row.black?.moveIndex !== undefined &&
+                            handleMoveClick(row.black.moveIndex)
+                          }
+                          data-move-index={row.black.moveIndex}
+                        >
+                          {row.black.move}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
