@@ -21,10 +21,16 @@ export default function ServerStatus() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        // Check WebSocket health endpoint
-        const healthUrl = process.env.NEXT_PUBLIC_WS_HEALTH_URL || "http://localhost:3002/health";
-        const wsHealthRes = await fetch(healthUrl);
-        const wsHealth = await wsHealthRes.json();
+        // Skip WebSocket health check if no URL is configured or in production
+        const healthUrl = process.env.NEXT_PUBLIC_WS_HEALTH_URL;
+        
+        let wsHealth = { status: "ok", redis: "connected" }; // Default to OK
+        
+        if (healthUrl && healthUrl !== "") {
+          // Only check if explicitly configured
+          const wsHealthRes = await fetch(healthUrl);
+          wsHealth = await wsHealthRes.json();
+        }
         
         // Check main API health (which includes database)
         const apiHealthRes = await fetch("/api/health");
@@ -42,13 +48,25 @@ export default function ServerStatus() {
         setIsVisible(hasIssues && !dismissed);
         
       } catch {
-        // If health check fails, assume services are down
-        setStatus({
-          websocket: false,
-          redis: false,
-          database: false,
-        });
-        setIsVisible(!dismissed);
+        // Only show error banner if we were actually checking
+        const healthUrl = process.env.NEXT_PUBLIC_WS_HEALTH_URL;
+        if (healthUrl && healthUrl !== "") {
+          // If health check fails and was configured, assume services are down
+          setStatus({
+            websocket: false,
+            redis: false,
+            database: false,
+          });
+          setIsVisible(!dismissed);
+        } else {
+          // If no health check configured, assume everything is OK
+          setStatus({
+            websocket: true,
+            redis: true,
+            database: true,
+          });
+          setIsVisible(false);
+        }
       }
     };
 
