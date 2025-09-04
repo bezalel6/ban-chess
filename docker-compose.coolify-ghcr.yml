@@ -6,7 +6,8 @@ services:
   # Next.js Application from GHCR
   app:
     image: ghcr.io/bezalel6/2ban-2chess-app:latest
-    # Coolify handles port routing via labels, no need to expose ports
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=production
       - HOSTNAME=0.0.0.0
@@ -39,7 +40,9 @@ services:
   # WebSocket Server from GHCR
   websocket:
     image: ghcr.io/bezalel6/2ban-2chess-websocket:latest
-    # Coolify handles port routing via labels, no need to expose ports
+    ports:
+      - "3001:3001"
+      - "3002:3002"  # Health check port
     environment:
       - NODE_ENV=production
       - WS_PORT=3001
