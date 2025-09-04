@@ -68,6 +68,9 @@ services:
       - coolify.managed=true
       - coolify.port=3001
       - coolify.domain=${SERVICE_FQDN_WEBSOCKET:-ws-chess.rndev.site}
+      # Additional label for health check endpoint on port 3002
+      - coolify.health.port=3002
+      - coolify.health.path=/health
 
 networks:
   coolify:
