@@ -1,0 +1,24 @@
+# Standalone Redis service for development
+# Run with: docker-compose -f docker-compose.redis.yml up -d
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: 2ban-2chess-redis
+    restart: unless-stopped  # Automatically restart unless explicitly stopped
+    command: redis-server --appendonly yes --protected-mode no --requirepass ""
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+
+volumes:
+  redis-data:
+    driver: local

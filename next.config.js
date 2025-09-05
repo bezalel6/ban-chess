@@ -8,6 +8,8 @@ const nextConfig = {
     // This ensures tsc runs in strict mode
     tsconfigPath: './tsconfig.json'
   },
+  // Automatically transpile and bundle local packages
+  transpilePackages: ['ban-chess.ts'],
   // Ensure public files are served correctly in standalone mode
   experimental: {
     outputFileTracingIncludes: {
