@@ -9,15 +9,11 @@ import type { Move, Ban, Square } from "@/lib/game-types";
 interface GameViewerProps {
   initialBcn: string[];
   className?: string;
-  visibleRows?: number; // Number of visible move rows
-  fontSize?: number; // Font size in pixels
 }
 
 export default function GameViewer({ 
   initialBcn, 
-  className = "",
-  visibleRows = 10,
-  fontSize = 14
+  className = ""
 }: GameViewerProps) {
   const [currentMoveIndex, setCurrentMoveIndex] = useState(initialBcn.length - 1);
   
@@ -81,9 +77,9 @@ export default function GameViewer({
       setCurrentMoveIndex(prev => Math.max(0, prev - 1));
     } else if (e.key === "ArrowRight") {
       setCurrentMoveIndex(prev => Math.min(initialBcn.length - 1, prev + 1));
-    } else if (e.key === "Home") {
+    } else if (e.key === "ArrowUp" || e.key === "Home") {
       setCurrentMoveIndex(0);
-    } else if (e.key === "End") {
+    } else if (e.key === "ArrowDown" || e.key === "End") {
       setCurrentMoveIndex(initialBcn.length - 1);
     }
   }, [initialBcn.length]);
@@ -117,7 +113,8 @@ export default function GameViewer({
   };
   
   return (
-    <div className={`flex gap-4 justify-center items-start ${className}`}>
+    <div className={`relative flex justify-center items-start ${className}`}>
+      {/* Board - centered as the main focus */}
       <div className="w-[600px] h-[600px]">
         <ChessboardV2
           gameState={gameState}
@@ -133,45 +130,15 @@ export default function GameViewer({
         />
       </div>
       
-      <div className="flex flex-col h-[600px] justify-center">
+      {/* Moves sidebar - positioned to the right */}
+      <div className="absolute left-[calc(50%+320px)] h-[600px] flex items-center">
         <MovesList
           bcnMoves={movesWithSan}
           currentMoveIndex={currentMoveIndex}
           onMoveClick={handleMoveClick}
-          visibleRows={visibleRows}
-          fontSize={fontSize}
+          onNavigate={setCurrentMoveIndex}
+          totalMoves={initialBcn.length}
         />
-        
-        <div className="mt-4 flex gap-1">
-          <button
-            onClick={() => setCurrentMoveIndex(0)}
-            className="flex-1 px-2 py-1.5 bg-background-secondary hover:bg-background-tertiary rounded transition-colors text-sm"
-            title="First move (Home)"
-          >
-            ⏮
-          </button>
-          <button
-            onClick={() => setCurrentMoveIndex(prev => Math.max(0, prev - 1))}
-            className="flex-1 px-2 py-1.5 bg-background-secondary hover:bg-background-tertiary rounded transition-colors text-sm"
-            title="Previous move (←)"
-          >
-            ◀
-          </button>
-          <button
-            onClick={() => setCurrentMoveIndex(prev => Math.min(initialBcn.length - 1, prev + 1))}
-            className="flex-1 px-2 py-1.5 bg-background-secondary hover:bg-background-tertiary rounded transition-colors text-sm"
-            title="Next move (→)"
-          >
-            ▶
-          </button>
-          <button
-            onClick={() => setCurrentMoveIndex(initialBcn.length - 1)}
-            className="flex-1 px-2 py-1.5 bg-background-secondary hover:bg-background-tertiary rounded transition-colors text-sm"
-            title="Last move (End)"
-          >
-            ⏭
-          </button>
-        </div>
       </div>
     </div>
   );

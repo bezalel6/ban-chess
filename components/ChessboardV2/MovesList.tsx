@@ -1,39 +1,69 @@
 "use client";
 
-import React, { memo, useRef, useEffect } from "react";
+import React, { memo, useRef, useEffect, useState } from "react";
 
 interface MovesListProps {
   bcnMoves: string[];
   currentMoveIndex: number;
   onMoveClick: (index: number) => void;
-  visibleRows?: number;
-  fontSize?: number;
+  onNavigate?: (index: number) => void;
+  totalMoves?: number;
 }
 
 const MovesList = memo(function MovesList({
   bcnMoves,
   currentMoveIndex,
   onMoveClick,
-  visibleRows = 10,
-  fontSize = 14,
+  onNavigate,
+  totalMoves = 0,
 }: MovesListProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const currentMoveRef = useRef<HTMLButtonElement>(null);
   
+  // Settings state with localStorage
+  const [showSettings, setShowSettings] = useState(false);
+  const [visibleRows, setVisibleRows] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('movesList.visibleRows');
+      return stored ? Number(stored) : 4;
+    }
+    return 4;
+  });
+  const [fontSize, setFontSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('movesList.fontSize');
+      return stored ? Number(stored) : 19;
+    }
+    return 19;
+  });
+  
+  // Save settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('movesList.visibleRows', String(visibleRows));
+  }, [visibleRows]);
+  
+  useEffect(() => {
+    localStorage.setItem('movesList.fontSize', String(fontSize));
+  }, [fontSize]);
+  
   // Auto-scroll to current move
   useEffect(() => {
-    if (currentMoveRef.current && scrollContainerRef.current) {
-      const button = currentMoveRef.current;
+    if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      const buttonTop = button.offsetTop;
-      const buttonBottom = buttonTop + button.offsetHeight;
-      const containerTop = container.scrollTop;
-      const containerBottom = containerTop + container.clientHeight;
+      const currentMoveRow = Math.floor(currentMoveIndex / 4);
+      const rowElement = container.querySelector(`tr:nth-child(${currentMoveRow + 1})`) as HTMLElement;
       
-      if (buttonBottom > containerBottom) {
-        container.scrollTop = buttonTop - container.clientHeight + button.offsetHeight + 20;
-      } else if (buttonTop < containerTop) {
-        container.scrollTop = buttonTop - 20;
+      if (rowElement) {
+        const rowTop = rowElement.offsetTop;
+        const rowHeight = rowElement.offsetHeight;
+        const containerHeight = container.clientHeight;
+        const scrollTop = container.scrollTop;
+        
+        // Check if row is outside visible area
+        if (rowTop < scrollTop || rowTop + rowHeight > scrollTop + containerHeight) {
+          // Center the row in the container
+          container.scrollTop = rowTop - (containerHeight / 2) + (rowHeight / 2);
+        }
       }
     }
   }, [currentMoveIndex]);
@@ -44,6 +74,7 @@ const MovesList = memo(function MovesList({
     blackBan?: { text: string; index: number };
     blackMove?: { text: string; index: number };
     moveNumber: number;
+    isEmpty?: boolean;
   };
   
   const fullMoves: MoveEntry[] = [];
@@ -72,6 +103,17 @@ const MovesList = memo(function MovesList({
     
     fullMoves.push(move);
     moveNumber++;
+  }
+  
+  // Remember actual move count before adding empty rows
+  const _actualMoveCount = fullMoves.length;
+  
+  // Add empty rows if needed
+  while (fullMoves.length < visibleRows) {
+    fullMoves.push({ 
+      moveNumber: fullMoves.length + 1, 
+      isEmpty: true 
+    });
   }
 
   // Helper to format move display
@@ -135,8 +177,47 @@ const MovesList = memo(function MovesList({
   const moveColumnWidth = fontSize * 3.5;
   
   return (
-    <div className="bg-background-secondary rounded-lg p-3" style={{ height: `${containerHeight}px` }}>
-      <div ref={scrollContainerRef} className="overflow-y-auto border-4 border-black dark:border-white rounded" style={{ height: `${visibleRows * rowHeight}px` }}>
+    <div className="bg-background-secondary rounded-lg p-3" style={{ height: `${containerHeight + 50}px` }}>
+      
+      {/* Settings popup */}
+      {showSettings && (
+        <div className="absolute top-10 right-2 bg-background border-2 border-gray-600 dark:border-gray-400 rounded-lg shadow-lg p-4 z-20" style={{ minWidth: '250px' }}>
+          <h4 className="font-semibold mb-3 text-base">Moves List Settings</h4>
+          
+          <div className="mb-3">
+            <label className="text-sm text-foreground-muted block mb-1">Visible Rows: {visibleRows}</label>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              value={visibleRows}
+              onChange={(e) => setVisibleRows(Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
+          
+          <div className="mb-3">
+            <label className="text-sm text-foreground-muted block mb-1">Font Size: {fontSize}px</label>
+            <input
+              type="range"
+              min="8"
+              max="32"
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
+          
+          <button
+            onClick={() => setShowSettings(false)}
+            className="w-full px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 rounded text-sm transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      )}
+      
+      <div ref={scrollContainerRef} className="overflow-y-auto border-4 border-black dark:border-white rounded mb-2" style={{ height: `${visibleRows * rowHeight}px` }}>
         <table style={{ tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: `${moveNumberWidth}px` }} />
@@ -152,12 +233,12 @@ const MovesList = memo(function MovesList({
             return (
               <tr 
                 key={move.moveNumber} 
-                className={index !== fullMoves.length - 1 ? "border-b border-gray-400" : ""}
+                className={`${index !== fullMoves.length - 1 && !move.isEmpty ? "border-b border-gray-400" : ""} ${move.isEmpty ? "pointer-events-none" : ""}`}
               >
                 {/* Move number column */}
                 <td className={`px-2 text-center ${
                   isLightRow ? "bg-white/40 dark:bg-black/5" : "bg-black/25 dark:bg-white/10"
-                }`} style={{ height: `${rowHeight}px` }}>
+                } ${move.isEmpty ? "opacity-0" : ""}`} style={{ height: `${rowHeight}px` }}>
                   <span className="font-bold text-foreground-muted" style={{ fontSize: `${fontSize}px` }}>
                     {move.moveNumber}.
                   </span>
@@ -195,6 +276,48 @@ const MovesList = memo(function MovesList({
           })}
         </tbody>
         </table>
+      </div>
+      
+      {/* Navigation controls */}
+      <div className="flex gap-1 items-center">
+        <button
+          onClick={() => onNavigate?.(0)}
+          className="flex-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
+          title="First move (Home/↑)"
+        >
+          ⏮
+        </button>
+        <button
+          onClick={() => onNavigate?.(Math.max(0, currentMoveIndex - 1))}
+          className="flex-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
+          title="Previous move (←)"
+        >
+          ◀
+        </button>
+        <button
+          onClick={() => onNavigate?.(Math.min(totalMoves - 1, currentMoveIndex + 1))}
+          className="flex-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
+          title="Next move (→)"
+        >
+          ▶
+        </button>
+        <button
+          onClick={() => onNavigate?.(totalMoves - 1)}
+          className="flex-1 px-2 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors text-sm"
+          title="Last move (End/↓)"
+        >
+          ⏭
+        </button>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+          title="Settings"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
       </div>
     </div>
   );

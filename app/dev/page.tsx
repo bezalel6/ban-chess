@@ -68,44 +68,12 @@ const game = {
 };
 
 export default function Miniboard() {
-  const [visibleRows, setVisibleRows] = React.useState(10);
-  const [fontSize, setFontSize] = React.useState(14);
-  
   return (
     <div className="p-8 flex flex-col items-center">
       <h2 className="text-2xl font-bold mb-6">Ban Chess Game Viewer</h2>
       
-      {/* Controls */}
-      <div className="flex gap-4 mb-4">
-        <div className="flex flex-col">
-          <label className="text-xs text-foreground-muted mb-1">Visible Rows: {visibleRows}</label>
-          <input
-            type="range"
-            min="1"
-            max="20"
-            value={visibleRows}
-            onChange={(e) => setVisibleRows(Number(e.target.value))}
-            className="w-32"
-          />
-        </div>
-        
-        <div className="flex flex-col">
-          <label className="text-xs text-foreground-muted mb-1">Font Size: {fontSize}px</label>
-          <input
-            type="range"
-            min="8"
-            max="32"
-            value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
-            className="w-32"
-          />
-        </div>
-      </div>
-      
       <GameViewer 
         initialBcn={game.bcn} 
-        visibleRows={visibleRows}
-        fontSize={fontSize}
       />
     </div>
   );
