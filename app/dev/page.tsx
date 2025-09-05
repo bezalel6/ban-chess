@@ -1,4 +1,8 @@
-import { BanChess } from "ban-chess.ts";
+"use client";
+
+import React from "react";
+import GameViewer from "../../components/ChessboardV2/GameViewer";
+
 const game = {
   id: "f7e489d4-07de-41d3-b20e-b3f8fcc03416",
   whitePlayerId: "cmf2xyot90000nu01jsyhostc",
@@ -62,19 +66,47 @@ const game = {
   moveCount: 21,
   createdAt: "2025-09-03T22:06:00.931",
 };
-export default async function Miniboard() {
-  const chess = BanChess.replayFromActions(game.bcn);
-  // BanChess.
-  chess.setIndicatorConfig({ pgn: true, san: true, serialization: true });
 
+export default function Miniboard() {
+  const [visibleRows, setVisibleRows] = React.useState(10);
+  const [fontSize, setFontSize] = React.useState(14);
+  
   return (
-    <div>
-      <JSONComponent o={chess.getSyncState()} />
-      <pre className="font-mono p-4 rounded-lg">{chess.ascii()}</pre>
+    <div className="p-8 flex flex-col items-center">
+      <h2 className="text-2xl font-bold mb-6">Ban Chess Game Viewer</h2>
+      
+      {/* Controls */}
+      <div className="flex gap-4 mb-4">
+        <div className="flex flex-col">
+          <label className="text-xs text-foreground-muted mb-1">Visible Rows: {visibleRows}</label>
+          <input
+            type="range"
+            min="1"
+            max="20"
+            value={visibleRows}
+            onChange={(e) => setVisibleRows(Number(e.target.value))}
+            className="w-32"
+          />
+        </div>
+        
+        <div className="flex flex-col">
+          <label className="text-xs text-foreground-muted mb-1">Font Size: {fontSize}px</label>
+          <input
+            type="range"
+            min="8"
+            max="32"
+            value={fontSize}
+            onChange={(e) => setFontSize(Number(e.target.value))}
+            className="w-32"
+          />
+        </div>
+      </div>
+      
+      <GameViewer 
+        initialBcn={game.bcn} 
+        visibleRows={visibleRows}
+        fontSize={fontSize}
+      />
     </div>
   );
-}
-
-function JSONComponent({ o }: { o: unknown }) {
-  return <pre>{JSON.stringify(o, null, 2)}</pre>;
 }
