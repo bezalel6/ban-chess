@@ -30,6 +30,7 @@ interface ChessBoardProps {
   
   // Optional props for different use cases
   viewOnly?: boolean;
+  canInteract?: boolean; // Controls whether the user can select and move pieces
   size?: number;
   className?: string;
   banDifficulty?: "easy" | "medium" | "hard";
@@ -44,6 +45,7 @@ const ChessBoard = memo(function ChessBoard({
   onBan,
   orientation = "white",
   viewOnly = false,
+  canInteract = true, // Default to true for backward compatibility
   size,
   className = "",
   banDifficulty = "medium",
@@ -126,6 +128,7 @@ const ChessBoard = memo(function ChessBoard({
   const movableColor = useMemo(() => {
     if (viewOnly) return undefined;
     if (!activePlayer) return undefined;
+    if (!canInteract) return undefined; // Disable all piece selection if user can't interact
     
     // In ban mode, can select opponent's pieces
     // In move mode, can select own pieces
@@ -134,7 +137,7 @@ const ChessBoard = memo(function ChessBoard({
     } else {
       return activePlayer; // Only move own pieces
     }
-  }, [viewOnly, activePlayer, actionType]);
+  }, [viewOnly, activePlayer, actionType, canInteract]);
   
   // Combine dests with banned move for visualization
   const effectiveDests = useMemo(() => {

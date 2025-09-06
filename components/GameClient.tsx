@@ -5,6 +5,9 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useGameState } from "@/hooks/useGameState";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { useAuth } from "@/components/AuthProvider";
+import { getUserRole } from "@/lib/game-utils";
+import { formatClockTime } from "@/lib/clock-calculator";
 import { BanChess } from "ban-chess.ts";
 import type { Move, Ban } from "@/lib/game-types";
 import GameSidebar from "./game/GameSidebar";
@@ -106,6 +109,7 @@ export default function GameClient({ gameId }: GameClientProps) {
     resignGame,
     isLocalGame,
   } = useGameState();
+  const { user } = useAuth();
   const { orientation: contextOrientation, autoFlipEnabled, isLocalGame: isLocal, setAutoFlipEnabled } = useUserRole();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
@@ -236,8 +240,42 @@ export default function GameClient({ gameId }: GameClientProps) {
     setIsViewingHistory(false);
   }, [gameState?.actionHistory]);
 
-  const handleMove = (move: Move) => sendAction({ move });
-  const handleBan = (ban: Ban) => sendAction({ ban });
+  // Determine the user's role/color in the game
+  const userRole = user && gameState ? getUserRole(gameState, user.userId) : null;
+  const userColor = userRole?.role; // "white", "black", or null for spectator
+  
+  // Only allow moves/bans if it's the player's turn
+  const handleMove = (move: Move) => {
+    // In local games, always allow moves
+    if (isLocalGame) {
+      sendAction({ move });
+      return;
+    }
+    
+    // In online games, only allow if it's your turn
+    if (userColor !== activePlayer) {
+      console.log("[GameClient] Not your turn. You are:", userColor, "Active:", activePlayer);
+      return;
+    }
+    
+    sendAction({ move });
+  };
+  
+  const handleBan = (ban: Ban) => {
+    // In local games, always allow bans
+    if (isLocalGame) {
+      sendAction({ ban });
+      return;
+    }
+    
+    // In online games, only allow if it's your turn
+    if (userColor !== activePlayer) {
+      console.log("[GameClient] Not your turn. You are:", userColor, "Active:", activePlayer);
+      return;
+    }
+    
+    sendAction({ ban });
+  };
   const handleNewGame = () => router.push("/");
 
   // Loading states
@@ -256,39 +294,84 @@ export default function GameClient({ gameId }: GameClientProps) {
 
   // Conditionally render based on screen size to prevent duplicate components
   if (isMobile) {
+    // Extract player information and clocks
+    const topPlayer = boardOrientation === "white" 
+      ? gameState.players.black?.username || "Waiting..."
+      : gameState.players.white?.username || "Waiting...";
+    const bottomPlayer = boardOrientation === "white"
+      ? gameState.players.white?.username || "Waiting..."
+      : gameState.players.black?.username || "Waiting...";
+    
+    const topClock = boardOrientation === "white"
+      ? gameState.clocks?.black
+      : gameState.clocks?.white;
+    const bottomClock = boardOrientation === "white"
+      ? gameState.clocks?.white
+      : gameState.clocks?.black;
+    
+    const isTopActive = boardOrientation === "white"
+      ? activePlayer === "black"
+      : activePlayer === "white";
+    const isBottomActive = !isTopActive;
+
     return (
       <>
-        {/* Mobile Layout - Minimal padding to maximize board size */}
-        <div className="flex flex-col gap-2 p-1">
-          <MobileBoard
-            gameState={navigationGame ? { ...gameState, fen: navigationGame.fen(), inCheck: navigationGame.inCheck() } : gameState}
-            dests={navigationGame ? new Map() : dests}
-            activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
-            actionType={navigationGame ? navigationGame.getActionType() : actionType}
-            onMove={handleMove}
-            onBan={handleBan}
-            refreshKey={boardRefreshKey}
-            orientation={boardOrientation}
-          />
-          <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
-          <GameSidebar
-            gameState={gameState}
-            onGiveTime={giveTime}
-            onResign={resignGame}
-            onMoveSelect={handleMoveSelect}
-            currentMoveIndex={currentMoveIndex ?? undefined}
-            isLocalGame={isLocalGame}
-          />
+        {/* Mobile Layout - Board-focused with player cards */}
+        <div className="flex flex-col h-[100dvh] bg-background">
+          {/* Top player card */}
+          <div className="flex-shrink-0 bg-background-secondary border-b border-border px-3 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isTopActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                <span className="font-medium text-sm">{topPlayer}</span>
+              </div>
+              {topClock !== undefined && gameState.timeControl && (
+                <div className={`font-mono text-sm px-2 py-1 rounded ${
+                  isTopActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
+                }`}>
+                  {formatClockTime(topClock)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Board container - flex-grow to fill available space */}
+          <div className="flex-grow flex items-center justify-center p-2 min-h-0">
+            <MobileBoard
+              gameState={navigationGame ? { ...gameState, fen: navigationGame.fen(), inCheck: navigationGame.inCheck() } : gameState}
+              dests={navigationGame ? new Map() : dests}
+              activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
+              actionType={navigationGame ? navigationGame.getActionType() : actionType}
+              onMove={handleMove}
+              onBan={handleBan}
+              refreshKey={boardRefreshKey}
+              orientation={boardOrientation}
+              canInteract={navigationGame ? false : (isLocalGame || userColor === activePlayer)}
+            />
+          </div>
+
+          {/* Bottom player card */}
+          <div className="flex-shrink-0 bg-background-secondary border-t border-border px-3 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isBottomActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                <span className="font-medium text-sm">{bottomPlayer}</span>
+              </div>
+              {bottomClock !== undefined && gameState.timeControl && (
+                <div className={`font-mono text-sm px-2 py-1 rounded ${
+                  isBottomActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
+                }`}>
+                  {formatClockTime(bottomClock)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Minimal game status bar */}
+          <div className="flex-shrink-0 bg-background-tertiary px-3 py-2 border-t border-border">
+            <GameStatusPanel gameState={gameState} onNewGame={handleNewGame} />
+          </div>
         </div>
-        <WebSocketStats />
-        {debugMode && (
-          <DebugPanel 
-            gameState={gameState} 
-            game={game} 
-            dests={dests}
-            onRefreshBoard={() => setBoardRefreshKey(prev => prev + 1)}
-          />
-        )}
       </>
     );
   }
@@ -351,6 +434,7 @@ export default function GameClient({ gameId }: GameClientProps) {
               onBan={handleBan}
               refreshKey={boardRefreshKey}
               orientation={boardOrientation}
+              canInteract={navigationGame ? false : (isLocalGame || userColor === activePlayer)}
             />
           </div>
 

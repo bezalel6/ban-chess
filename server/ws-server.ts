@@ -1599,7 +1599,25 @@ wss.on("connection", (ws: WebSocket, request) => {
             return;
           }
 
-          console.log(`Action in game ${gameId}:`, action);
+          // CRITICAL CHECK: Verify it's the player's turn
+          const game = new BanChess(gameState.fen);
+          const activePlayer = game.getActivePlayer();
+          const playerColor = currentPlayer.userId === gameState.whitePlayerId ? "white" : "black";
+          
+          if (activePlayer !== playerColor) {
+            console.log(
+              `[WebSocket] Player ${currentPlayer.username} tried to move out of turn. Active: ${activePlayer}, Player: ${playerColor}`
+            );
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: `It's not your turn. Waiting for ${activePlayer} to play.`,
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          console.log(`Action in game ${gameId} by ${playerColor}:`, action);
 
           // Deserialize the action string to Action object
           const deserializedAction = BanChess.deserializeAction(action);
