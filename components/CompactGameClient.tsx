@@ -19,9 +19,12 @@ const ResizableBoard = dynamic(
 
 interface CompactGameClientProps {
   gameId: string;
+  thumbnailMode?: boolean;  // Show as a static thumbnail of final position
+  thumbnailSize?: number;    // Size in pixels for thumbnail mode
+  onThumbnailClick?: () => void;  // Optional click handler for thumbnail
 }
 
-type ViewMode = "spectate" | "minimal" | "zen" | "custom";
+type ViewMode = "spectate" | "minimal" | "zen" | "custom" | "thumbnail";
 
 interface ViewConfig {
   showLeftSidebar: boolean;
@@ -65,9 +68,22 @@ const VIEW_PRESETS: Record<ViewMode, ViewConfig> = {
     showActions: true,
     showMovesList: true,
   },
+  thumbnail: {
+    showLeftSidebar: false,
+    showRightSidebar: false,
+    showPlayerNames: false,
+    showClocks: false,
+    showActions: false,
+    showMovesList: false,
+  },
 };
 
-export default function CompactGameClient({ gameId }: CompactGameClientProps) {
+export default function CompactGameClient({ 
+  gameId, 
+  thumbnailMode = false,
+  thumbnailSize = 300,
+  onThumbnailClick 
+}: CompactGameClientProps) {
   const {
     gameState,
     dests,
@@ -87,7 +103,7 @@ export default function CompactGameClient({ gameId }: CompactGameClientProps) {
   
   const { user } = useAuth();
   const [hasJoined, setHasJoined] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("spectate");
+  const [viewMode, setViewMode] = useState<ViewMode>(thumbnailMode ? "thumbnail" : "spectate");
   const [customConfig, setCustomConfig] = useState<ViewConfig>(VIEW_PRESETS.spectate);
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white");
   const [showSettings, setShowSettings] = useState(false);
@@ -185,6 +201,37 @@ export default function CompactGameClient({ gameId }: CompactGameClientProps) {
     ? activePlayer === "black"
     : activePlayer === "white";
   const isBottomActive = !isTopActive;
+
+  // Thumbnail mode - simple clickable board showing final position
+  if (thumbnailMode) {
+    return (
+      <div 
+        className="relative cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={onThumbnailClick}
+        style={{ width: thumbnailSize, height: thumbnailSize }}
+      >
+        <ResizableBoard
+          gameState={gameState}
+          dests={new Map()} // No moves in thumbnail
+          activePlayer={activePlayer}
+          actionType={actionType}
+          onMove={() => {}} // No moves allowed
+          onBan={() => {}} // No bans allowed
+          refreshKey={0}
+          orientation={boardOrientation}
+          canInteract={false} // No interaction in thumbnail
+          size={thumbnailSize}
+        />
+        {gameState.gameOver && (
+          <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 text-center">
+            {gameState.result === "1-0" && "White wins"}
+            {gameState.result === "0-1" && "Black wins"}
+            {gameState.result === "1/2-1/2" && "Draw"}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
