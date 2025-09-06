@@ -36,7 +36,8 @@ export type SerializedAction = string;
 export interface SyncState {
   fen: string; // Current FEN position with ban state
   lastAction?: SerializedAction; // Last action in BCN format
-  moveNumber: number; // Current move number
+  moveNumber: number; // Current move number (deprecated, use ply)
+  ply?: number; // Current ply number (v3.0.0+)
 }
 
 // Time control configuration

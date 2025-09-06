@@ -262,7 +262,6 @@ export default function GameClient({ gameId }: GameClientProps) {
         <div className="flex flex-col gap-2 p-1">
           <MobileBoard
             gameState={navigationGame ? { ...gameState, fen: navigationGame.fen(), inCheck: navigationGame.inCheck() } : gameState}
-            game={navigationGame || game}
             dests={navigationGame ? new Map() : dests}
             activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
             actionType={navigationGame ? navigationGame.getActionType() : actionType}
@@ -345,7 +344,6 @@ export default function GameClient({ gameId }: GameClientProps) {
             )}
             <ResizableBoard
               gameState={navigationGame ? { ...gameState, fen: navigationGame.fen(), inCheck: navigationGame.inCheck() } : gameState}
-              game={navigationGame || game}
               dests={navigationGame ? new Map() : dests}
               activePlayer={navigationGame ? navigationGame.getActivePlayer() : activePlayer}
               actionType={navigationGame ? navigationGame.getActionType() : actionType}

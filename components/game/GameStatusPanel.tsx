@@ -121,13 +121,22 @@ export default function GameStatusPanel({
         {/* Game State */}
         {gameState.gameOver ? (
           <div className="space-y-3">
-            <div className="bg-yellow-500 text-black px-3 py-2 rounded-md font-bold text-center animate-pulse">
-              GAME OVER
+            <div className={`px-3 py-2 rounded-md font-bold text-center animate-pulse ${
+              gameState.resultReason === 'checkmate' 
+                ? 'bg-red-600 text-white' 
+                : 'bg-yellow-500 text-black'
+            }`}>
+              {gameState.resultReason === 'checkmate' ? 'CHECKMATE!' : 'GAME OVER'}
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold text-foreground">
                 {gameState.result}
               </p>
+              {gameState.resultReason && (
+                <p className="text-xs text-foreground-muted mt-1">
+                  by {gameState.resultReason}
+                </p>
+              )}
             </div>
             {onNewGame && (
               <button

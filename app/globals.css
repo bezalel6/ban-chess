@@ -242,6 +242,22 @@ a {
     }
   }
   
+  /* Chessground board container */
+  .chessground-board {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    aspect-ratio: 1;
+  }
+  
+  /* Chess board container - for backwards compatibility */
+  .chess-board-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1;
+  }
+  
   /* Inner container - this is what chessground sees */
   .chess-board-inner {
     width: 100%;

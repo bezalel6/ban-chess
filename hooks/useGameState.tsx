@@ -356,7 +356,7 @@ export function useGameState() {
           showNotification(`Game created: ${msg.gameId}`, "success");
           break;
 
-        case "matched":
+        case "matched": {
           console.log("[GameState] Matched with opponent, game:", msg.gameId);
           // Prevent duplicate matched messages from causing issues
           if (currentGameId === msg.gameId) {
@@ -365,10 +365,25 @@ export function useGameState() {
           }
           // Set the game ID to prevent duplicate processing
           setCurrentGameId(msg.gameId);
-          // Navigate immediately - the game page will handle joining
-          router.push(`/game/${msg.gameId}`);
           showNotification(`Matched with ${msg.opponent}`, "success");
+          
+          // Navigate immediately - use window.location as fallback if router doesn't work
+          const gameUrl = `/game/${msg.gameId}`;
+          console.log("[GameState] Attempting navigation to:", gameUrl);
+          
+          // Try Next.js router first
+          router.push(gameUrl);
+          
+          // Also use a timeout as a fallback in case router.push doesn't work immediately
+          setTimeout(() => {
+            // Check if we're still not on the game page
+            if (!window.location.pathname.includes(`/game/${msg.gameId}`)) {
+              console.log("[GameState] Router navigation failed, using window.location");
+              window.location.href = gameUrl;
+            }
+          }, 500);
           break;
+        }
 
         case "queued":
           console.log("[GameState] Queued, position:", msg.position);

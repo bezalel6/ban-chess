@@ -12,7 +12,7 @@ export default function HomePage() {
   const router = useRouter();
 
   const playLocal = () => {
-    router.push("/play/local");
+    router.push("/local");
   };
 
   const playOnline = () => {
@@ -24,7 +24,7 @@ export default function HomePage() {
     return null;
   }
 
-  // Show sign-in prompt if not authenticated
+  // Show sign-in prompt if not authenticated, but still allow local play
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
@@ -43,14 +43,33 @@ export default function HomePage() {
             <h2 className="text-lg font-semibold text-center mb-6">
               Choose how to play
             </h2>
+            
+            {/* Local play option - no auth required */}
+            <button
+              onClick={playLocal}
+              className="w-full mb-4 px-6 py-3 bg-lichess-green-500 hover:bg-lichess-green-600 text-white rounded-lg transition-colors text-lg font-semibold"
+            >
+              Play Locally (No Sign-in Required)
+            </button>
+            
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-foreground-muted/20"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-background-secondary text-foreground-muted">
+                  Or sign in for online play
+                </span>
+              </div>
+            </div>
+            
             <SignInPanel compact />
           </div>
         </div>
 
         <div className="text-center text-sm text-muted-foreground max-w-md">
           <p>
-            Sign in with your preferred provider to start playing chess with a
-            twist - ban your opponent&apos;s moves!
+            Play locally to practice ban chess offline, or sign in to play against other players online.
           </p>
         </div>
       </div>
@@ -85,17 +104,16 @@ export default function HomePage() {
             <div className="flex flex-col gap-4 w-full">
               <button
                 onClick={playLocal}
-                disabled={!connected}
-                className="btn-secondary py-4 text-lg"
+                className="btn-secondary py-4 text-lg bg-lichess-green-500 hover:bg-lichess-green-600 text-white"
               >
-                Play Solo (Practice)
+                Play Locally (Solo Practice)
               </button>
               <button
                 onClick={playOnline}
                 disabled={!connected}
                 className="btn-primary py-4 text-lg"
               >
-                Find Opponent
+                Find Online Opponent
               </button>
             </div>
             {!connected && (

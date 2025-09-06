@@ -262,7 +262,6 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
                 fen: navigationGame.fen(), 
                 inCheck: navigationGame.inCheck() 
               } : gameState}
-              game={navigationGame}
               dests={new Map()} // No moves allowed in completed games
               activePlayer={navigationGame?.getActivePlayer() as "white" | "black"}
               actionType={navigationGame?.getActionType() as "move" | "ban"}

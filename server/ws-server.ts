@@ -240,9 +240,19 @@ const wss = new WebSocketServer({
         authToken: typeof token;
       };
       reqWithAuth.authToken = token;
-      cb(true);
-    } else {
+    }
+    
+    // In development, allow connections without auth (they'll be treated as guests)
+    // In production, require authentication
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    if (!token && !isDevelopment) {
+      console.log('[WebSocket] Rejecting unauthenticated connection in production mode');
       cb(false, 401, "Unauthorized");
+    } else {
+      if (!token) {
+        console.log('[WebSocket] Allowing unauthenticated connection in development mode (will be treated as guest)');
+      }
+      cb(true);
     }
   },
 });
@@ -256,6 +266,9 @@ console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
 console.log(`🔗 Allowed origins: ${allowedOrigins.join(", ")}`);
 console.log(
   `📦 Redis URL: ${process.env.REDIS_URL || "redis://localhost:6379"}`
+);
+console.log(
+  `🔐 NEXTAUTH_SECRET: ${process.env.NEXTAUTH_SECRET ? 'Configured' : 'NOT CONFIGURED'}`
 );
 
 // Check Redis connection on startup

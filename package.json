@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev-server.js",
+    "dev": "npm run dev:redis-setup && wt -w 0 nt -d . --title \"WebSocket Server\" powershell -NoExit -Command \"npm run dev:ws\" ; split-pane -V -d . --title \"Next.js Server\" powershell -NoExit -Command \"npm run dev:next\"",
     "dev:old": "concurrently --kill-others --kill-others-on-fail -n \"NEXT,WS\" -c \"cyan,magenta\" \"npm run dev:next\" \"npm run dev:ws\"",
     "dev:win": "node scripts/dev-windows.js",
     "dev:next": "portio --mine 3000 && dotenv -e .env -e .env.local -- next dev",
     "dev:ws": "portio --mine 3001 && tsx server/ws-server.ts",
+    "dev:redis-setup": "powershell -Command \"$redis = docker ps --filter 'name=2ban-2chess-redis' --format '{{.Names}}'; if (-not $redis) { Write-Host 'Starting Redis container...' -ForegroundColor Yellow; docker-compose -f docker-compose.redis.yml up -d; Start-Sleep -Seconds 2; Write-Host 'Redis started successfully!' -ForegroundColor Green } else { Write-Host 'Redis is already running' -ForegroundColor Green }\"",
     "build": "npx prisma generate && next build && npm run build:ws",
     "build:ws": "node server/build.js",
     "prestart": "npx prisma generate",

@@ -11,11 +11,9 @@ import React, {
 import ChessBoard from "../ChessBoard";
 import ChessBoardErrorBoundary from "../ChessBoardWrapper";
 import type { SimpleGameState, Move, Ban, Square } from "@/lib/game-types";
-import { BanChess } from "ban-chess.ts";
 
 interface ResizableBoardProps {
   gameState: SimpleGameState;
-  game: BanChess | null;
   dests: Map<Square, Square[]>;
   activePlayer?: "white" | "black";
   actionType?: "ban" | "move";
@@ -27,13 +25,12 @@ interface ResizableBoardProps {
 
 const ResizableBoard = memo(function ResizableBoard({
   gameState,
-  game,
   dests,
   activePlayer,
   actionType,
   onMove,
   onBan,
-  refreshKey,
+  refreshKey: _refreshKey,
   orientation = 'white',
 }: ResizableBoardProps) {
   // Default board size in pixels - use multiples of 8 for perfect square alignment
@@ -273,13 +270,11 @@ const ResizableBoard = memo(function ResizableBoard({
         <ChessBoardErrorBoundary>
           <ChessBoard 
             gameState={gameState} 
-            game={game} 
             dests={dests} 
             activePlayer={activePlayer}
             actionType={actionType}
             onMove={onMove} 
             onBan={onBan}
-            refreshKey={refreshKey}
             orientation={orientation}
           />
         </ChessBoardErrorBoundary>
