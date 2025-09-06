@@ -6,7 +6,6 @@ import StaticGameThumbnail from "./StaticGameThumbnail";
 interface LazyGameThumbnailProps {
   fen: string;
   orientation?: "white" | "black";
-  result?: string;
   onClick?: () => void;
 }
 
@@ -17,7 +16,6 @@ interface LazyGameThumbnailProps {
 export default function LazyGameThumbnail({
   fen,
   orientation = "white",
-  result,
   onClick,
 }: LazyGameThumbnailProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -54,7 +52,6 @@ export default function LazyGameThumbnail({
         <StaticGameThumbnail
           fen={fen}
           orientation={orientation}
-          result={result}
           onClick={onClick}
         />
       ) : (

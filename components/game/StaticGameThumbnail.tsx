@@ -3,20 +3,19 @@
 import { useMemo, useEffect, useRef } from "react";
 import { Chessground } from "chessground";
 import type { Api } from "chessground/api";
+import "chessground/assets/chessground.base.css";
+import "chessground/assets/chessground.brown.css";
+import "chessground/assets/chessground.cburnett.css";
 
 interface StaticGameThumbnailProps {
   fen: string;
   orientation?: "white" | "black";
-  size?: number;
-  result?: string;
   onClick?: () => void;
 }
 
 export default function StaticGameThumbnail({
   fen,
   orientation = "white",
-  size,
-  result,
   onClick,
 }: StaticGameThumbnailProps) {
   const boardRef = useRef<HTMLDivElement>(null);
@@ -49,29 +48,15 @@ export default function StaticGameThumbnail({
     };
   }, [boardFen, orientation]);
 
-  const style = size ? { width: size, height: size } : {};
-
   return (
     <div
-      className="relative w-full h-full overflow-hidden bg-gray-800"
-      style={style}
+      className="relative w-full h-full bg-gray-800 rounded-lg"
       onClick={onClick}
     >
       <div
-        className="absolute inset-0"
+        className="w-full h-full"
         ref={boardRef}
       />
-      
-      {/* Result overlay */}
-      {result && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-          <div className="text-white text-sm font-semibold text-center">
-            {result === "1-0" && "White wins"}
-            {result === "0-1" && "Black wins"}
-            {result === "1/2-1/2" && "Draw"}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -282,7 +282,6 @@ export default function ProfilePageClient({
                             <LazyGameThumbnail
                               fen={game.finalPosition}
                               orientation={isWhite ? "white" : "black"}
-                              result={game.result}
                             />
                           ) : (
                             <div className="w-full h-full bg-background-secondary rounded-lg flex items-center justify-center">
