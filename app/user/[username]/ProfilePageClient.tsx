@@ -17,6 +17,7 @@ interface GameRecord {
   timeControl: string;
   moveCount: number | null;
   finalPosition: string | null;
+  bcn: string[] | null;
   createdAt: string;
 }
 
@@ -254,62 +255,91 @@ export default function ProfilePageClient({
                   return (
                     <div
                       key={game.id}
-                      className="bg-background-tertiary rounded-lg p-6 hover:bg-background transition-all hover:shadow-xl cursor-pointer"
+                      className="group bg-background-tertiary rounded-xl overflow-hidden hover:bg-background transition-all duration-300 hover:shadow-2xl cursor-pointer border border-transparent hover:border-lichess-orange-500/20"
                       onClick={() => viewGame(game.id)}
                     >
-                      <div className="flex flex-col lg:flex-row items-center gap-6">
+                      <div className="flex flex-col lg:flex-row items-stretch">
                         {/* Left Side - Player Info */}
-                        <div className="flex-1 w-full lg:w-auto text-center lg:text-right">
-                          <div className="font-bold text-xl text-foreground mb-2">
-                            {username}
-                          </div>
-                          <div className="text-sm text-foreground-muted mb-1">
-                            {isWhite ? "White" : "Black"}
-                          </div>
-                          <div className={`inline-block px-3 py-1 rounded text-sm font-semibold ${
-                            gameResult === "win" ? "bg-green-500 text-white" :
-                            gameResult === "loss" ? "bg-red-500 text-white" :
-                            "bg-yellow-500 text-black"
-                          }`}>
-                            {gameResult === "win" ? "Won" :
-                             gameResult === "loss" ? "Lost" : "Draw"}
+                        <div className="flex-1 p-6 lg:pr-4 flex flex-col justify-center items-center lg:items-end bg-gradient-to-br from-background-tertiary to-background-secondary">
+                          <div className="text-center lg:text-right">
+                            <div className="flex items-center gap-2 justify-center lg:justify-end mb-2">
+                              <div className={`w-3 h-3 rounded-full ${isWhite ? "bg-white border border-gray-400" : "bg-gray-900 border border-gray-600"}`} />
+                              <div className="font-bold text-lg text-foreground">
+                                {username}
+                              </div>
+                            </div>
+                            <div className="text-xs text-foreground-muted uppercase tracking-wider mb-3">
+                              Playing as {isWhite ? "White" : "Black"}
+                            </div>
+                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold shadow-lg ${
+                              gameResult === "win" ? "bg-gradient-to-r from-green-500 to-green-600 text-white" :
+                              gameResult === "loss" ? "bg-gradient-to-r from-red-500 to-red-600 text-white" :
+                              "bg-gradient-to-r from-yellow-500 to-yellow-600 text-black"
+                            }`}>
+                              {gameResult === "win" ? "✓ Victory" :
+                               gameResult === "loss" ? "✗ Defeat" : "⏸ Draw"}
+                            </div>
                           </div>
                         </div>
 
                         {/* Center - Board */}
-                        <div className="relative w-80 h-80 flex-shrink-0">
-                          {game.finalPosition ? (
-                            <LazyGameThumbnail
-                              fen={game.finalPosition}
-                              orientation={isWhite ? "white" : "black"}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-background-secondary rounded-lg flex items-center justify-center">
-                              <span className="text-foreground-muted">No board data</span>
-                            </div>
-                          )}
+                        <div className="relative flex-shrink-0 p-4 lg:p-6">
+                          <div className="w-72 h-72 lg:w-80 lg:h-80 rounded-lg overflow-hidden shadow-xl group-hover:shadow-2xl transition-shadow duration-300">
+                            {game.finalPosition ? (
+                              <LazyGameThumbnail
+                                fen={game.finalPosition}
+                                orientation={isWhite ? "white" : "black"}
+                                bcn={game.bcn || undefined}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-background-secondary rounded-lg flex items-center justify-center">
+                                <span className="text-foreground-muted">No board data</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Right Side - Opponent & Game Info */}
-                        <div className="flex-1 w-full lg:w-auto text-center lg:text-left">
-                          <div className="font-bold text-xl text-foreground mb-2">
-                            {opponent.username}
-                          </div>
-                          <div className="text-sm text-foreground-muted mb-3">
-                            {isWhite ? "Black" : "White"}
-                          </div>
-                          <div className="text-sm text-foreground-muted space-y-1">
-                            <div>{game.resultReason || "Game completed"}</div>
-                            <div>{game.moveCount || 0} moves</div>
-                            <div>{formatTimeControl(game.timeControl)}</div>
-                            <div className="text-xs">
-                              {formatDistanceToNow(new Date(game.createdAt), {
-                                addSuffix: true,
-                              })}
+                        <div className="flex-1 p-6 lg:pl-4 flex flex-col justify-center items-center lg:items-start bg-gradient-to-bl from-background-tertiary to-background-secondary">
+                          <div className="text-center lg:text-left">
+                            <div className="flex items-center gap-2 justify-center lg:justify-start mb-2">
+                              <div className={`w-3 h-3 rounded-full ${!isWhite ? "bg-white border border-gray-400" : "bg-gray-900 border border-gray-600"}`} />
+                              <div className="font-bold text-lg text-foreground">
+                                {opponent.username}
+                              </div>
+                            </div>
+                            <div className="text-xs text-foreground-muted uppercase tracking-wider mb-4">
+                              Playing as {!isWhite ? "White" : "Black"}
+                            </div>
+                            
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center gap-2 text-foreground-muted">
+                                <span className="text-xs">📋</span>
+                                <span>{game.resultReason || "Game completed"}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-foreground-muted">
+                                <span className="text-xs">♟️</span>
+                                <span>{game.moveCount || 0} moves</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-foreground-muted">
+                                <span className="text-xs">⏱️</span>
+                                <span>{formatTimeControl(game.timeControl)}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-foreground-muted">
+                                <span className="text-xs">📅</span>
+                                <span className="text-xs">
+                                  {formatDistanceToNow(new Date(game.createdAt), {
+                                    addSuffix: true,
+                                  })}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
+                      
+                      {/* Bottom hover indicator */}
+                      <div className="h-1 bg-gradient-to-r from-lichess-orange-500 to-lichess-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
                     </div>
                   );
                 })}

@@ -121,6 +121,7 @@ export async function GET(
         timeControl: game.timeControl,
         moveCount: game.moveCount,
         finalPosition: game.finalPosition,
+        bcn: game.bcn, // Include Ban Chess Notation for ban indicators
         createdAt: game.createdAt.toISOString(),
       })),
       hasMore,

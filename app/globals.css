@@ -58,6 +58,19 @@
   box-sizing: border-box;
 }
 
+/* Global Chessground fix - ensure cg-container is always properly positioned */
+/* This prevents the board from glitching off its container */
+/* Use inline style override to beat Chessground's inline styles */
+cg-container {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* Reset margin for common block elements, but preserve default padding */
 body, h1, h2, h3, h4, h5, h6, p, ol, ul {
   margin: 0;
@@ -479,15 +492,6 @@ a {
     height: 100% !important;
   }
 
-  .static-thumbnail-board .cg-wrap cg-container {
-    position: absolute !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-  }
 
   .static-thumbnail-board .cg-wrap svg {
     width: 100% !important;
