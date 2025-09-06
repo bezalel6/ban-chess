@@ -17,10 +17,13 @@ import type {
 import soundManager from "@/lib/sound-manager";
 import { getUserRole } from "@/lib/game-utils";
 import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/lib/toast/toast-context";
 
-export function useGameState() {
+// Add option to disable toasts to prevent duplicates when multiple components use this hook
+export function useGameState(options: { disableToasts?: boolean } = {}) {
   const router = useRouter();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const wsContext = useGameWebSocket();
 
   // Handle null context (should not happen if provider is set up correctly)
@@ -36,7 +39,6 @@ export function useGameState() {
   const [error, setError] = useState<{ type: 'auth' | 'game' | 'network' | 'unknown'; message: string } | null>(null);
   const [currentGameId, setCurrentGameId] = useState<string | null>(null);
   const [gameEvents, setGameEvents] = useState<GameEvent[]>([]);
-  const [notification, setNotification] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null);
 
   // Refs for tracking
   const previousFen = useRef<string | null>(null);
@@ -104,9 +106,11 @@ export function useGameState() {
   );
 
   const showNotification = useCallback((message: string, type: 'info' | 'error' | 'success' = 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000); // Clear after 3 seconds
-  }, []);
+    // Only show toasts if not disabled (to prevent duplicates from multiple hook instances)
+    if (!options.disableToasts) {
+      showToast(message, type === 'error' ? 'error' : type === 'success' ? 'success' : 'info');
+    }
+  }, [showToast, options.disableToasts]);
 
   // Authentication is now handled centrally in WebSocketContext
 
@@ -117,7 +121,13 @@ export function useGameState() {
 
   // Handle incoming messages
   useEffect(() => {
-    if (!lastMessage || processingMessage.current) return;
+    if (!lastMessage) return;
+    
+    // CRITICAL: Check if we're already processing to prevent re-entry
+    if (processingMessage.current) {
+      console.warn("[GameState] Already processing a message, skipping");
+      return;
+    }
     
     // Mark as processing to prevent concurrent processing
     processingMessage.current = true;
@@ -132,6 +142,9 @@ export function useGameState() {
       processingMessage.current = false;
       return;
     }
+    
+    // Debug log to see how many times we're processing
+    console.log(`[GameState] Processing msg #${messageCounter.current}, type: ${msg.type}`);
 
     // Check if we've already processed this message ID
     if (msg.messageId && processedMessageIds.current.has(msg.messageId)) {
@@ -296,7 +309,6 @@ export function useGameState() {
               
               if (wasBan) {
                 soundManager.playEvent("ban");
-                showNotification("Ban made!", "info");
               } else {
                 // Determine if this was an opponent's move
                 const userRole = getUserRole(gameState, user?.userId);
@@ -311,7 +323,6 @@ export function useGameState() {
                   promotion: wasPromotion,
                   isOpponent: moveWasByOpponent || false,
                 });
-                showNotification("Move made!", "info");
               }
             }
             previousFen.current = msg.fen;
@@ -712,7 +723,6 @@ export function useGameState() {
     currentGameId,
     gameEvents,
     isLocalGame, // Helper to identify solo/practice games
-    notification,
 
     // Actions
     sendAction,

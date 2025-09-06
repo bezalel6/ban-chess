@@ -99,7 +99,7 @@ export default function CompactGameClient({
     acceptDraw,
     declineDraw,
     isLocalGame,
-  } = useGameState();
+  } = useGameState({ disableToasts: true });
   
   const { user } = useAuth();
   const [hasJoined, setHasJoined] = useState(false);

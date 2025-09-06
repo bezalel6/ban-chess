@@ -19,7 +19,7 @@ export default function DebugPanel({ gameState, game, dests, onRefreshBoard }: D
   const [frozenConfig, setFrozenConfig] = useState<Record<string, unknown> | null>(null);
   
   const { role, orientation } = useUserRole();
-  const { activePlayer, actionType } = useGameState();
+  const { activePlayer, actionType } = useGameState({ disableToasts: true });
   
   const fenData = useMemo(() => {
     if (!gameState?.fen) return null;

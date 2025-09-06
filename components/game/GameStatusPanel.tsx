@@ -14,7 +14,7 @@ export default function GameStatusPanel({
   gameState,
   onNewGame,
 }: GameStatusPanelProps) {
-  const { activePlayer, actionType } = useGameState();
+  const { activePlayer, actionType } = useGameState({ disableToasts: true });
   const { role } = useUserRole();
   const isPlayer = role !== null;
   const currentActivePlayer = activePlayer || gameState?.activePlayer || "white";

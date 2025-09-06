@@ -199,6 +199,17 @@ const lastBroadcastStates = new Map<string, string>();
 let messageIdCounter = 0;
 const sentMessageIds = new Map<WebSocket, Set<string>>(); // Track sent message IDs per connection
 
+// Helper function to send messages with messageIds
+function sendMessage(ws: WebSocket, msg: SimpleServerMsg & { messageId?: string }) {
+  // Add messageId if not present
+  if (!msg.messageId) {
+    msg.messageId = `${msg.type}-${++messageIdCounter}`;
+  }
+  
+  // Send the message
+  ws.send(JSON.stringify(msg));
+}
+
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
@@ -764,12 +775,10 @@ async function sendFullGameState(gameId: string, ws: WebSocket) {
 
   // Game not found anywhere
   // console.log(`[sendFullGameState] Game ${gameId} not found in Redis or database`);
-  ws.send(
-    JSON.stringify({
-      type: "error",
-      message: "Game not found",
-    } as SimpleServerMsg)
-  );
+  sendMessage(ws, {
+    type: "error",
+    message: "Game not found",
+  } as SimpleServerMsg);
 }
 
 // Helper function to parse time control string
@@ -1407,12 +1416,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "create-solo-game": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1486,12 +1493,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "join-game": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1503,12 +1508,10 @@ wss.on("connection", (ws: WebSocket, request) => {
             console.log(
               `[join-game] Game ${gameId} not found in Redis or database`
             );
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Game not found",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Game not found",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1571,12 +1574,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "action": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1584,12 +1585,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           const gameState = await getGameState(gameId);
 
           if (!gameState) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Game not found",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Game not found",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1598,12 +1597,10 @@ wss.on("connection", (ws: WebSocket, request) => {
             currentPlayer.userId !== gameState.whitePlayerId &&
             currentPlayer.userId !== gameState.blackPlayerId
           ) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "You are a spectator and cannot make moves.",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "You are a spectator and cannot make moves.",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1612,17 +1609,23 @@ wss.on("connection", (ws: WebSocket, request) => {
           const activePlayer = game.getActivePlayer();
           const playerColor = currentPlayer.userId === gameState.whitePlayerId ? "white" : "black";
           
-          if (activePlayer !== playerColor) {
+          // For local games (same player plays both sides), allow moves from either side
+          const isLocalGame = gameState.whitePlayerId === gameState.blackPlayerId;
+          
+          if (!isLocalGame && activePlayer !== playerColor) {
             console.log(
               `[WebSocket] Player ${currentPlayer.username} tried to move out of turn. Active: ${activePlayer}, Player: ${playerColor}`
             );
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: `It's not your turn. Waiting for ${activePlayer} to play.`,
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: `It's not your turn. Waiting for ${activePlayer} to play.`,
+            } as SimpleServerMsg);
             return;
+          }
+          
+          // For local games, log which side is being played
+          if (isLocalGame) {
+            console.log(`[WebSocket] Local game - Player ${currentPlayer.username} playing as ${activePlayer}`);
           }
 
           console.log(`Action in game ${gameId} by ${playerColor}:`, action);
@@ -1660,24 +1663,20 @@ wss.on("connection", (ws: WebSocket, request) => {
               "Error:",
               result.error
             );
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: result.error || "Invalid action",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: result.error || "Invalid action",
+            } as SimpleServerMsg);
           }
           break;
         }
 
         case "join-queue": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1725,12 +1724,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "give-time": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1738,23 +1735,19 @@ wss.on("connection", (ws: WebSocket, request) => {
           const gameState = await getGameState(gameId);
 
           if (!gameState) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Game not found",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Game not found",
+            } as SimpleServerMsg);
             return;
           }
 
           // Disable give-time if player is playing against themselves
           if (gameState.whitePlayerId === gameState.blackPlayerId) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Cannot give time when playing both sides",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Cannot give time when playing both sides",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1765,34 +1758,28 @@ wss.on("connection", (ws: WebSocket, request) => {
             currentPlayer.userId === gameState.blackPlayerId;
 
           if (!isWhitePlayer && !isBlackPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "You are not a player in this game",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "You are not a player in this game",
+            } as SimpleServerMsg);
             return;
           }
 
           // Check if game is still active
           if (gameState.gameOver) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Game has already ended",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Game has already ended",
+            } as SimpleServerMsg);
             return;
           }
 
           // Check if time control is enabled
           if (!gameState.timeControl) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "This game has no time control",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "This game has no time control",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1850,12 +1837,10 @@ wss.on("connection", (ws: WebSocket, request) => {
               `[give-time] ${giverColor} gave ${timeToGive} seconds to ${recipientColor} in game ${gameId}`
             );
           } else {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Time manager not found for this game",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Time manager not found for this game",
+            } as SimpleServerMsg);
           }
           break;
         }
@@ -1867,12 +1852,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           );
 
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1883,12 +1866,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           );
 
           if (!gameState) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Game not found",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Game not found",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1897,12 +1878,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           const isBlack = currentPlayer.userId === gameState.blackPlayerId;
 
           if (!isWhite && !isBlack) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "You are not in this game",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "You are not in this game",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1963,12 +1942,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "offer-draw": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1976,12 +1953,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           const gameState = await getGameState(gameId);
 
           if (!gameState || gameState.gameOver) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: gameState ? "Game already ended" : "Game not found",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: gameState ? "Game already ended" : "Game not found",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -1990,12 +1965,10 @@ wss.on("connection", (ws: WebSocket, request) => {
                             currentPlayer.userId === gameState.blackPlayerId ? "black" : null;
 
           if (!playerColor) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "You are not in this game",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "You are not in this game",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -2060,12 +2033,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "accept-draw": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -2073,12 +2044,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           const gameState = await getGameState(gameId);
 
           if (!gameState || gameState.gameOver) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: gameState ? "Game already ended" : "Game not found",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: gameState ? "Game already ended" : "Game not found",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -2087,23 +2056,19 @@ wss.on("connection", (ws: WebSocket, request) => {
                             currentPlayer.userId === gameState.blackPlayerId ? "black" : null;
 
           if (!playerColor) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "You are not in this game",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "You are not in this game",
+            } as SimpleServerMsg);
             return;
           }
 
           // Check if there's a draw offer to accept
           if (!gameState.drawOfferedBy || gameState.drawOfferedBy === playerColor) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "No draw offer to accept",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "No draw offer to accept",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -2138,12 +2103,10 @@ wss.on("connection", (ws: WebSocket, request) => {
 
         case "decline-draw": {
           if (!currentPlayer) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "Not authenticated",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "Not authenticated",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -2151,12 +2114,10 @@ wss.on("connection", (ws: WebSocket, request) => {
           const gameState = await getGameState(gameId);
 
           if (!gameState || gameState.gameOver) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: gameState ? "Game already ended" : "Game not found",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: gameState ? "Game already ended" : "Game not found",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -2165,23 +2126,19 @@ wss.on("connection", (ws: WebSocket, request) => {
                             currentPlayer.userId === gameState.blackPlayerId ? "black" : null;
 
           if (!playerColor) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "You are not in this game",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "You are not in this game",
+            } as SimpleServerMsg);
             return;
           }
 
           // Check if there's a draw offer to decline
           if (!gameState.drawOfferedBy || gameState.drawOfferedBy === playerColor) {
-            ws.send(
-              JSON.stringify({
-                type: "error",
-                message: "No draw offer to decline",
-              } as SimpleServerMsg)
-            );
+            sendMessage(ws, {
+              type: "error",
+              message: "No draw offer to decline",
+            } as SimpleServerMsg);
             return;
           }
 
@@ -2216,12 +2173,10 @@ wss.on("connection", (ws: WebSocket, request) => {
       }
     } catch (err) {
       console.error("Error handling message:", err);
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: "Server error",
-        } as SimpleServerMsg)
-      );
+      sendMessage(ws, {
+        type: "error",
+        message: "Server error",
+      } as SimpleServerMsg);
     }
   });
 

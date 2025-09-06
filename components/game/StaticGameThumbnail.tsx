@@ -14,7 +14,7 @@ import styles from "./StaticGameThumbnail.module.css";
 interface StaticGameThumbnailProps {
   fen: string;
   orientation?: "white" | "black";
-  bcn?: string[];  // Ban Chess Notation for banned moves
+  bcn?: string[]; // Ban Chess Notation for banned moves
   onClick?: () => void;
 }
 
@@ -26,12 +26,12 @@ export default function StaticGameThumbnail({
 }: StaticGameThumbnailProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<Api | null>(null);
-  
+
   // Parse FEN to get just the board position
   const boardFen = useMemo(() => {
     return fen.split(" ")[0];
   }, [fen]);
-  
+
   // Check if position is in check using BanChess
   const isInCheck = useMemo(() => {
     try {
@@ -41,15 +41,15 @@ export default function StaticGameThumbnail({
       return false;
     }
   }, [fen]);
-  
+
   // Extract banned squares from BCN (last ban action if it exists)
   const bannedMove = useMemo(() => {
     if (!bcn || bcn.length === 0) return null;
-    
+
     // Look for the last ban action in BCN
     for (let i = bcn.length - 1; i >= 0; i--) {
       const action = bcn[i];
-      if (action.startsWith('b:')) {
+      if (action.startsWith("b:")) {
         // Parse ban action format: "b:e2e4"
         const squares = action.slice(2);
         if (squares.length >= 4) {
@@ -60,7 +60,7 @@ export default function StaticGameThumbnail({
         }
       }
     }
-    
+
     return null;
   }, [bcn]);
 
@@ -72,15 +72,15 @@ export default function StaticGameThumbnail({
         shapes.push({
           orig: bannedMove.from as Key,
           dest: bannedMove.to as Key,
-          brush: 'red',
+          brush: "red",
         });
       }
-      
+
       apiRef.current = Chessground(boardRef.current, {
         fen: boardFen,
         orientation,
         viewOnly: true,
-        drawable: { 
+        drawable: {
           enabled: false,
           visible: true,
           autoShapes: shapes,
@@ -93,24 +93,26 @@ export default function StaticGameThumbnail({
           check: isInCheck,
         },
       });
-      
+
       // Force the container to respect parent size
-      const container = boardRef.current.querySelector('cg-container') as HTMLElement;
+      const container = boardRef.current.querySelector(
+        "cg-container"
+      ) as HTMLElement;
       if (container) {
-        container.removeAttribute('style');
-        
+        container.removeAttribute("style");
+
         // Watch for Chessground trying to set inline styles and remove them
         const observer = new MutationObserver(() => {
-          if (container.hasAttribute('style')) {
-            container.removeAttribute('style');
+          if (container.hasAttribute("style")) {
+            container.removeAttribute("style");
           }
         });
-        
-        observer.observe(container, { 
-          attributes: true, 
-          attributeFilter: ['style'] 
+
+        observer.observe(container, {
+          attributes: true,
+          attributeFilter: ["style"],
         });
-        
+
         return () => {
           observer.disconnect();
           if (apiRef.current) {
@@ -120,7 +122,7 @@ export default function StaticGameThumbnail({
         };
       }
     }
-    
+
     return () => {
       if (apiRef.current) {
         apiRef.current.destroy();
@@ -134,10 +136,7 @@ export default function StaticGameThumbnail({
       className={`${styles.boardContainer} static-thumbnail-board`}
       onClick={onClick}
     >
-      <div
-        className={styles.boardWrapper}
-        ref={boardRef}
-      />
+      <div className={styles.boardWrapper} ref={boardRef} />
     </div>
   );
 }
