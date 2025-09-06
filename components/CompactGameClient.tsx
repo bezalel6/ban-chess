@@ -113,15 +113,20 @@ export default function CompactGameClient({ gameId }: CompactGameClientProps) {
   const userRole = user && gameState ? getUserRole(gameState, user.userId) : null;
   const userColor = userRole?.role;
 
+  // Check if this is a local test game (same user playing both sides)
+  const isLocalTestGame = user && gameState && 
+    gameState.players.white?.id === user.userId && 
+    gameState.players.black?.id === user.userId;
+
   // Handle moves and bans
   const handleMove = (move: Move) => {
-    if (isLocalGame || userColor === activePlayer) {
+    if (isLocalGame || isLocalTestGame || userColor === activePlayer) {
       sendAction({ move });
     }
   };
 
   const handleBan = (ban: Ban) => {
-    if (isLocalGame || userColor === activePlayer) {
+    if (isLocalGame || isLocalTestGame || userColor === activePlayer) {
       sendAction({ ban });
     }
   };
@@ -320,7 +325,7 @@ export default function CompactGameClient({ gameId }: CompactGameClientProps) {
             onBan={handleBan}
             refreshKey={0}
             orientation={boardOrientation}
-            canInteract={isLocalGame || userColor === activePlayer}
+            canInteract={isLocalGame || isLocalTestGame || userColor === activePlayer}
           />
 
           {/* Bottom Player Info */}
