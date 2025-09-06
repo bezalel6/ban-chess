@@ -104,6 +104,7 @@ export interface SimpleGameState {
   };
   startTime?: number; // Game start timestamp
   dataSource?: 'active' | 'completed';  // Indicates if game is from Redis (active) or database (completed)
+  drawOfferedBy?: "white" | "black"; // Track active draw offer
   // REMOVED: legalActions, nextAction, inCheck - these come from BanChess
 }
 
@@ -177,7 +178,10 @@ export type SimpleServerMsg =
       playerId: string;
     }
   | { type: "sync-complete"; gameId: string }
-  | { type: "actions-since"; gameId: string; actions: SerializedAction[] };
+  | { type: "actions-since"; gameId: string; actions: SerializedAction[] }
+  | { type: "draw-offered"; gameId: string; offeredBy: "white" | "black" }
+  | { type: "draw-accepted"; gameId: string }
+  | { type: "draw-declined"; gameId: string; declinedBy: "white" | "black" };
 
 // Client messages - simplified
 export type SimpleClientMsg =
@@ -189,6 +193,9 @@ export type SimpleClientMsg =
   | { type: "action"; gameId: string; action: string } // Serialized action in BCN format (e.g., "b:e2e4" or "m:d2d4")
   | { type: "give-time"; gameId: string; amount: number } // Give time to opponent
   | { type: "resign"; gameId: string } // Resign the current game
+  | { type: "offer-draw"; gameId: string } // Offer a draw
+  | { type: "accept-draw"; gameId: string } // Accept a draw offer
+  | { type: "decline-draw"; gameId: string } // Decline a draw offer
   | { type: "ping" }; // Heartbeat ping from client
 
 // Helper functions to parse FEN

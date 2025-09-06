@@ -18,6 +18,8 @@ export interface GameStateData {
   timedOut?: boolean; // True if game ended due to timeout
   resigned?: boolean; // True if game ended due to resignation
   resignedPlayer?: "white" | "black"; // Which player resigned
+  // Draw offer tracking
+  drawOfferedBy?: "white" | "black" | null; // Which player has offered a draw (null = no active offer)
 }
 
 // Action history stored as BCN (Ban Chess Notation) strings

@@ -13,6 +13,9 @@ interface GameSidebarProps {
   gameState: SimpleGameState;
   onGiveTime?: () => void;
   onResign?: () => void;
+  onOfferDraw?: () => void;
+  onAcceptDraw?: () => void;
+  onDeclineDraw?: () => void;
   onMoveSelect?: (moveIndex: number) => void;
   currentMoveIndex?: number;
   isLocalGame?: boolean;
@@ -27,6 +30,9 @@ export default function GameSidebar({
   gameState,
   onGiveTime,
   onResign,
+  onOfferDraw,
+  onAcceptDraw,
+  onDeclineDraw,
   onMoveSelect,
   currentMoveIndex,
   isLocalGame = false,
@@ -127,6 +133,9 @@ export default function GameSidebar({
         <GameActions 
           gameState={gameState}
           onResign={onResign}
+          onOfferDraw={onOfferDraw}
+          onAcceptDraw={onAcceptDraw}
+          onDeclineDraw={onDeclineDraw}
         />
       </div>
       <div className="my-2 border-t border-border"></div>

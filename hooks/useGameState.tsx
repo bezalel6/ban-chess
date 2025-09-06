@@ -216,10 +216,8 @@ export function useGameState() {
               };
             });
             
-            // Clear currentGameId if game is over
-            if (msg.gameOver) {
-              setCurrentGameId(null);
-            }
+            // Don't clear currentGameId when game is over - we still want to show the final state
+            // Users can navigate away or start a new game when they're ready
 
             // Handle events if provided and play appropriate sounds
             let banEventProcessed = false;
@@ -450,6 +448,44 @@ export function useGameState() {
           setTimeout(() => setError(null), 5000);
           break;
 
+        case "draw-offered":
+          console.log("[GameState] Draw offered by:", msg.offeredBy);
+          showNotification(
+            `${msg.offeredBy === "white" ? "White" : "Black"} offers a draw`,
+            "info"
+          );
+          // Update game state to show draw offer UI
+          setGameState((prev) => {
+            if (!prev || prev.gameId !== msg.gameId) return prev;
+            return {
+              ...prev,
+              drawOfferedBy: msg.offeredBy,
+            };
+          });
+          break;
+
+        case "draw-accepted":
+          console.log("[GameState] Draw accepted");
+          showNotification("Draw accepted - Game ended", "success");
+          soundManager.playEvent("game-end");
+          break;
+
+        case "draw-declined":
+          console.log("[GameState] Draw declined by:", msg.declinedBy);
+          showNotification(
+            `${msg.declinedBy === "white" ? "White" : "Black"} declined the draw offer`,
+            "info"
+          );
+          // Clear draw offer from state
+          setGameState((prev) => {
+            if (!prev || prev.gameId !== msg.gameId) return prev;
+            return {
+              ...prev,
+              drawOfferedBy: undefined,
+            };
+          });
+          break;
+
         case "pong":
           // Heartbeat pong response - handled by WebSocketContext for latency tracking
           // No action needed here
@@ -629,6 +665,39 @@ export function useGameState() {
     }
   }, [currentGameId, connected, send]);
 
+  const offerDraw = useCallback(() => {
+    if (currentGameId && connected) {
+      send({ type: "offer-draw", gameId: currentGameId });
+      console.log("[GameState] Offering draw in game:", currentGameId);
+    } else {
+      console.warn(
+        "[GameState] Cannot offer draw: not in game or not connected",
+      );
+    }
+  }, [currentGameId, connected, send]);
+
+  const acceptDraw = useCallback(() => {
+    if (currentGameId && connected) {
+      send({ type: "accept-draw", gameId: currentGameId });
+      console.log("[GameState] Accepting draw in game:", currentGameId);
+    } else {
+      console.warn(
+        "[GameState] Cannot accept draw: not in game or not connected",
+      );
+    }
+  }, [currentGameId, connected, send]);
+
+  const declineDraw = useCallback(() => {
+    if (currentGameId && connected) {
+      send({ type: "decline-draw", gameId: currentGameId });
+      console.log("[GameState] Declining draw in game:", currentGameId);
+    } else {
+      console.warn(
+        "[GameState] Cannot decline draw: not in game or not connected",
+      );
+    }
+  }, [currentGameId, connected, send]);
+
   return {
     // State
     gameState,
@@ -653,6 +722,9 @@ export function useGameState() {
     joinGame,
     giveTime,
     resignGame,
+    offerDraw,
+    acceptDraw,
+    declineDraw,
 
     // Raw access if needed
     readyState,

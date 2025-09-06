@@ -1950,6 +1950,251 @@ wss.on("connection", (ws: WebSocket, request) => {
           // Note: We don't clean up Redis data anymore - it's persisted to database
           break;
         }
+
+        case "offer-draw": {
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Not authenticated",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          const { gameId } = msg;
+          const gameState = await getGameState(gameId);
+
+          if (!gameState || gameState.gameOver) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: gameState ? "Game already ended" : "Game not found",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Check if the player is in this game
+          const playerColor = currentPlayer.userId === gameState.whitePlayerId ? "white" :
+                            currentPlayer.userId === gameState.blackPlayerId ? "black" : null;
+
+          if (!playerColor) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "You are not in this game",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Check if there's already a draw offer from the opponent
+          if (gameState.drawOfferedBy && gameState.drawOfferedBy !== playerColor) {
+            // Auto-accept if opponent already offered
+            gameState.gameOver = true;
+            gameState.result = "1/2-1/2";
+            gameState.drawOfferedBy = null;
+            await saveGameState(gameId, gameState);
+            
+            await handleGameEnd(gameId, "1/2-1/2", gameState);
+            await broadcastGameState(gameId);
+            
+            // Broadcast draw accepted to all players in the game
+            const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
+              (p) => p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId
+            );
+            
+            connectedPlayers.forEach((player) => {
+              if (player.ws.readyState === WebSocket.OPEN) {
+                player.ws.send(
+                  JSON.stringify({
+                    type: "draw-accepted",
+                    gameId,
+                  } as SimpleServerMsg)
+                );
+              }
+            });
+            
+            console.log(`[draw] Draw agreed by mutual offer in game ${gameId}`);
+          } else {
+            // Store the draw offer
+            gameState.drawOfferedBy = playerColor;
+            await saveGameState(gameId, gameState);
+            
+            // Broadcast draw offer to all players in the game
+            const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
+              (p) => p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId
+            );
+            
+            connectedPlayers.forEach((player) => {
+              if (player.ws.readyState === WebSocket.OPEN) {
+                player.ws.send(
+                  JSON.stringify({
+                    type: "draw-offered",
+                    gameId,
+                    offeredBy: playerColor,
+                  } as SimpleServerMsg)
+                );
+              }
+            });
+            
+            console.log(`[draw] ${playerColor} offered draw in game ${gameId}`);
+          }
+          break;
+        }
+
+        case "accept-draw": {
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Not authenticated",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          const { gameId } = msg;
+          const gameState = await getGameState(gameId);
+
+          if (!gameState || gameState.gameOver) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: gameState ? "Game already ended" : "Game not found",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Check if the player is in this game
+          const playerColor = currentPlayer.userId === gameState.whitePlayerId ? "white" :
+                            currentPlayer.userId === gameState.blackPlayerId ? "black" : null;
+
+          if (!playerColor) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "You are not in this game",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Check if there's a draw offer to accept
+          if (!gameState.drawOfferedBy || gameState.drawOfferedBy === playerColor) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "No draw offer to accept",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Accept the draw
+          gameState.gameOver = true;
+          gameState.result = "1/2-1/2";
+          gameState.drawOfferedBy = null;
+          await saveGameState(gameId, gameState);
+          
+          await handleGameEnd(gameId, "1/2-1/2", gameState);
+          await broadcastGameState(gameId);
+          
+          // Broadcast draw accepted to all players in the game
+          const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
+            (p) => p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId
+          );
+          
+          connectedPlayers.forEach((player) => {
+            if (player.ws.readyState === WebSocket.OPEN) {
+              player.ws.send(
+                JSON.stringify({
+                  type: "draw-accepted",
+                  gameId,
+                } as SimpleServerMsg)
+              );
+            }
+          });
+          
+          console.log(`[draw] Draw accepted by ${playerColor} in game ${gameId}`);
+          break;
+        }
+
+        case "decline-draw": {
+          if (!currentPlayer) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Not authenticated",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          const { gameId } = msg;
+          const gameState = await getGameState(gameId);
+
+          if (!gameState || gameState.gameOver) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: gameState ? "Game already ended" : "Game not found",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Check if the player is in this game
+          const playerColor = currentPlayer.userId === gameState.whitePlayerId ? "white" :
+                            currentPlayer.userId === gameState.blackPlayerId ? "black" : null;
+
+          if (!playerColor) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "You are not in this game",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Check if there's a draw offer to decline
+          if (!gameState.drawOfferedBy || gameState.drawOfferedBy === playerColor) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "No draw offer to decline",
+              } as SimpleServerMsg)
+            );
+            return;
+          }
+
+          // Clear the draw offer
+          gameState.drawOfferedBy = null;
+          await saveGameState(gameId, gameState);
+          
+          // Broadcast draw declined to all players in the game
+          const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
+            (p) => p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId
+          );
+          
+          connectedPlayers.forEach((player) => {
+            if (player.ws.readyState === WebSocket.OPEN) {
+              player.ws.send(
+                JSON.stringify({
+                  type: "draw-declined",
+                  gameId,
+                  declinedBy: playerColor,
+                } as SimpleServerMsg)
+              );
+            }
+          });
+          
+          console.log(`[draw] Draw declined by ${playerColor} in game ${gameId}`);
+          break;
+        }
       }
     } catch (err) {
       console.error("Error handling message:", err);
