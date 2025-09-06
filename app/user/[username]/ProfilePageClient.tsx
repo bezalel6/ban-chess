@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { User, Edit2, Info } from "lucide-react";
 import UsernameChangeModal from "@/components/UsernameChangeModal";
-import GameThumbnail from "@/components/GameThumbnail";
+import StaticGameThumbnail from "@/components/game/StaticGameThumbnail";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import type { User as AuthUser } from "@/types/auth";
@@ -243,7 +243,7 @@ export default function ProfilePageClient({
             </div>
           ) : (
             <>
-              <div className="grid gap-4">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {games.map((game) => {
                   const isWhite = game.whitePlayer.username === username;
                   const opponent = isWhite
@@ -254,65 +254,68 @@ export default function ProfilePageClient({
                   return (
                     <div
                       key={game.id}
-                      className="bg-background-tertiary rounded-lg p-4 hover:bg-background transition-colors cursor-pointer"
+                      className="bg-background-tertiary rounded-lg overflow-hidden hover:bg-background transition-all hover:shadow-xl cursor-pointer"
                       onClick={() => viewGame(game.id)}
                     >
-                      <div className="flex gap-4">
-                        {/* Game Thumbnail */}
-                        <div className="w-32 h-32 flex-shrink-0">
-                          <GameThumbnail
-                            gameId={game.id}
-                            size={128}
-                            onClick={() => viewGame(game.id)}
+                      {/* Game Thumbnail */}
+                      <div className="aspect-square">
+                        {game.finalPosition ? (
+                          <StaticGameThumbnail
+                            fen={game.finalPosition}
+                            orientation={isWhite ? "white" : "black"}
+                            result={game.result}
                           />
-                        </div>
+                        ) : (
+                          <div className="w-full h-full bg-background-secondary flex items-center justify-center">
+                            <span className="text-foreground-muted">No board data</span>
+                          </div>
+                        )}
+                      </div>
 
-                        {/* Game Info */}
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <div className="font-semibold text-foreground">
-                                vs {opponent.username}
-                              </div>
-                              <div className="text-sm text-foreground-muted">
-                                {isWhite
-                                  ? "Playing as White"
-                                  : "Playing as Black"}
-                              </div>
+                      {/* Game Info */}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="font-semibold text-foreground text-lg">
+                              vs {opponent.username}
                             </div>
-
-                            <div
-                              className={`px-3 py-1 rounded text-sm font-semibold ${
-                                gameResult === "win"
-                                  ? "bg-green-500 text-white"
-                                  : gameResult === "loss"
-                                  ? "bg-red-500 text-white"
-                                  : "bg-yellow-500 text-black"
-                              }`}
-                            >
-                              {gameResult === "win"
-                                ? "Won"
-                                : gameResult === "loss"
-                                ? "Lost"
-                                : "Draw"}
+                            <div className="text-sm text-foreground-muted">
+                              {isWhite
+                                ? "Playing as White"
+                                : "Playing as Black"}
                             </div>
                           </div>
 
-                          <div className="text-sm text-foreground-muted space-y-1">
-                            <div>
-                              {game.resultReason || "Game completed"} •{" "}
-                              {game.moveCount || 0} moves
-                            </div>
-                            <div>
-                              Time control:{" "}
-                              {formatTimeControl(game.timeControl)}
-                            </div>
-                            <div>
-                              Played{" "}
-                              {formatDistanceToNow(new Date(game.createdAt), {
-                                addSuffix: true,
-                              })}
-                            </div>
+                          <div
+                            className={`px-3 py-1 rounded text-sm font-semibold ${
+                              gameResult === "win"
+                                ? "bg-green-500 text-white"
+                                : gameResult === "loss"
+                                ? "bg-red-500 text-white"
+                                : "bg-yellow-500 text-black"
+                            }`}
+                          >
+                            {gameResult === "win"
+                              ? "Won"
+                              : gameResult === "loss"
+                              ? "Lost"
+                              : "Draw"}
+                          </div>
+                        </div>
+
+                        <div className="text-sm text-foreground-muted space-y-1">
+                          <div>
+                            {game.resultReason || "Game completed"} •{" "}
+                            {game.moveCount || 0} moves
+                          </div>
+                          <div>
+                            Time control:{" "}
+                            {formatTimeControl(game.timeControl)}
+                          </div>
+                          <div>
+                            {formatDistanceToNow(new Date(game.createdAt), {
+                              addSuffix: true,
+                            })}
                           </div>
                         </div>
                       </div>

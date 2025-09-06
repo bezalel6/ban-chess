@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import GameThumbnail from "@/components/GameThumbnail";
+import StaticGameThumbnail from "@/components/game/StaticGameThumbnail";
 import { formatDistanceToNow } from "date-fns";
 
 interface GameRecord {
@@ -189,7 +189,7 @@ export default function ProfilePage() {
           </div>
         ) : (
           <>
-            <div className="grid gap-4">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {games.map((game) => {
                 const isWhite = game.whitePlayer.username === username;
                 const opponent = isWhite ? game.blackPlayer : game.whitePlayer;
@@ -198,51 +198,55 @@ export default function ProfilePage() {
                 return (
                   <div
                     key={game.id}
-                    className="bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors cursor-pointer"
+                    className="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-650 transition-all hover:shadow-xl cursor-pointer"
                     onClick={() => viewGame(game.id)}
                   >
-                    <div className="flex gap-4">
-                      {/* Game Thumbnail */}
-                      <div className="w-32 h-32 flex-shrink-0">
-                        <GameThumbnail 
-                          gameId={game.id}
-                          size={128}
-                          onClick={() => viewGame(game.id)}
+                    {/* Game Thumbnail */}
+                    <div className="aspect-square">
+                      {game.finalPosition ? (
+                        <StaticGameThumbnail
+                          fen={game.finalPosition}
+                          orientation={isWhite ? "white" : "black"}
+                          result={game.result}
                         />
-                      </div>
-                      
-                      {/* Game Info */}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <div className="font-semibold text-white">
-                              vs {opponent.username}
-                            </div>
-                            <div className="text-sm text-gray-400">
-                              {isWhite ? "Playing as White" : "Playing as Black"}
-                            </div>
+                      ) : (
+                        <div className="w-full h-full bg-gray-600 flex items-center justify-center">
+                          <span className="text-gray-400">No board data</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Game Info */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="font-semibold text-white text-lg">
+                            vs {opponent.username}
                           </div>
-                          
-                          <div className={`px-3 py-1 rounded text-sm font-semibold ${
-                            gameResult === "win" ? "bg-green-500 text-white" :
-                            gameResult === "loss" ? "bg-red-500 text-white" :
-                            "bg-yellow-500 text-black"
-                          }`}>
-                            {gameResult === "win" ? "Won" :
-                             gameResult === "loss" ? "Lost" : "Draw"}
+                          <div className="text-sm text-gray-400">
+                            {isWhite ? "Playing as White" : "Playing as Black"}
                           </div>
                         </div>
                         
-                        <div className="text-sm text-gray-400 space-y-1">
-                          <div>
-                            {game.resultReason || "Game completed"} • {game.moveCount || 0} moves
-                          </div>
-                          <div>
-                            Time control: {formatTimeControl(game.timeControl)}
-                          </div>
-                          <div>
-                            Played {formatDistanceToNow(new Date(game.createdAt), { addSuffix: true })}
-                          </div>
+                        <div className={`px-3 py-1 rounded text-sm font-semibold ${
+                          gameResult === "win" ? "bg-green-500 text-white" :
+                          gameResult === "loss" ? "bg-red-500 text-white" :
+                          "bg-yellow-500 text-black"
+                        }`}>
+                          {gameResult === "win" ? "Won" :
+                           gameResult === "loss" ? "Lost" : "Draw"}
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-gray-400 space-y-1">
+                        <div>
+                          {game.resultReason || "Game completed"} • {game.moveCount || 0} moves
+                        </div>
+                        <div>
+                          Time control: {formatTimeControl(game.timeControl)}
+                        </div>
+                        <div>
+                          {formatDistanceToNow(new Date(game.createdAt), { addSuffix: true })}
                         </div>
                       </div>
                     </div>
