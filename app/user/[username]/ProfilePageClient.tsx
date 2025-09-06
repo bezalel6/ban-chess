@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { User, Edit2, Info } from "lucide-react";
 import UsernameChangeModal from "@/components/UsernameChangeModal";
-import StaticGameThumbnail from "@/components/game/StaticGameThumbnail";
+import LazyGameThumbnail from "@/components/game/LazyGameThumbnail";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import type { User as AuthUser } from "@/types/auth";
@@ -260,7 +260,7 @@ export default function ProfilePageClient({
                       {/* Game Thumbnail */}
                       <div className="aspect-square">
                         {game.finalPosition ? (
-                          <StaticGameThumbnail
+                          <LazyGameThumbnail
                             fen={game.finalPosition}
                             orientation={isWhite ? "white" : "black"}
                             result={game.result}

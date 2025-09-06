@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import StaticGameThumbnail from "@/components/game/StaticGameThumbnail";
+import LazyGameThumbnail from "@/components/game/LazyGameThumbnail";
 import { formatDistanceToNow } from "date-fns";
 
 interface GameRecord {
@@ -204,7 +204,7 @@ export default function ProfilePage() {
                     {/* Game Thumbnail */}
                     <div className="aspect-square">
                       {game.finalPosition ? (
-                        <StaticGameThumbnail
+                        <LazyGameThumbnail
                           fen={game.finalPosition}
                           orientation={isWhite ? "white" : "black"}
                           result={game.result}
