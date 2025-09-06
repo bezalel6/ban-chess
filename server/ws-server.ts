@@ -954,7 +954,12 @@ async function broadcastGameState(gameId: string) {
   } as SimpleServerMsg & { messageId: string };
 
   // Create a content hash WITHOUT the messageId for deduplication
-  const contentForHash = { ...stateMsg };
+  // Include gameOver state in the hash to ensure game-ending states are always sent
+  const contentForHash = { 
+    ...stateMsg,
+    // Force inclusion of gameOver state in hash
+    gameOverState: gameState.gameOver ? `${gameState.gameOver}-${gameState.result}` : 'playing'
+  };
   delete (contentForHash as { messageId?: string }).messageId;
   const stateHash = JSON.stringify(contentForHash);
 
