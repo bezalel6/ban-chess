@@ -948,6 +948,9 @@ async function broadcastGameState(gameId: string) {
       clocks: timeManager ? timeManager.getClocks() : gameState.finalClocks,
       startTime: gameState.startTime,
     }),
+    ...(gameState.drawOfferedBy && {
+      drawOfferedBy: gameState.drawOfferedBy,
+    }),
   } as SimpleServerMsg & { messageId: string };
 
   // Create a content hash WITHOUT the messageId for deduplication
@@ -1937,6 +1940,8 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           // Broadcast game over state
           console.log(`[resign] Broadcasting resignation for game ${gameId}`);
+          // Clear the broadcast cache to ensure game over state is sent
+          lastBroadcastStates.delete(gameId);
           await broadcastGameState(gameId);
 
           console.log(
@@ -2022,7 +2027,11 @@ wss.on("connection", (ws: WebSocket, request) => {
             gameState.drawOfferedBy = playerColor;
             await saveGameState(gameId, gameState);
             
-            // Broadcast draw offer to all players in the game
+            // Clear cache and broadcast the updated state with draw offer
+            lastBroadcastStates.delete(gameId);
+            await broadcastGameState(gameId);
+            
+            // Also send draw offer notification to all players in the game
             const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
               (p) => p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId
             );
@@ -2175,7 +2184,11 @@ wss.on("connection", (ws: WebSocket, request) => {
           gameState.drawOfferedBy = null;
           await saveGameState(gameId, gameState);
           
-          // Broadcast draw declined to all players in the game
+          // Clear cache and broadcast the updated state without draw offer
+          lastBroadcastStates.delete(gameId);
+          await broadcastGameState(gameId);
+          
+          // Also send draw declined notification to all players in the game
           const connectedPlayers = Array.from(authenticatedPlayers.values()).filter(
             (p) => p.userId === gameState.whitePlayerId || p.userId === gameState.blackPlayerId
           );

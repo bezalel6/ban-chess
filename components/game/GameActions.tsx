@@ -50,23 +50,26 @@ export default function GameActions({
           </button>
         )}
 
-        {/* Draw Offer UI */}
+        {/* Draw Offer Icon Button */}
         {!hasDrawOffer && onOfferDraw && (
           <button
             onClick={onOfferDraw}
-            className="flex-1 px-3 py-2 rounded-md transition-colors font-medium text-sm bg-blue-500/10 text-blue-500 border border-blue-500/30 hover:bg-blue-500/20 flex items-center justify-center gap-2"
+            className="p-2 text-gray-400 hover:text-white hover:bg-blue-500/20 rounded-md transition-colors group"
+            title="Offer Draw"
           >
-            <Handshake className="w-4 h-4" />
-            <span>Offer Draw</span>
+            <Handshake className="w-5 h-5 group-hover:text-blue-400" />
           </button>
         )}
 
         {/* When you offered a draw */}
         {isMyDrawOffer && (
-          <div className="flex-1 px-3 py-2 rounded-md bg-gray-500/10 text-gray-500 border border-gray-500/30 text-sm font-medium flex items-center justify-center gap-2">
-            <Handshake className="w-4 h-4" />
-            <span>Draw Offered</span>
-          </div>
+          <button
+            disabled
+            className="p-2 text-gray-500 bg-gray-500/10 rounded-md cursor-not-allowed"
+            title="Draw Offered - Waiting for response"
+          >
+            <Handshake className="w-5 h-5" />
+          </button>
         )}
 
         {/* When opponent offered a draw */}
