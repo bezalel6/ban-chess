@@ -6,6 +6,7 @@ import type { Api } from "chessground/api";
 import "chessground/assets/chessground.base.css";
 import "chessground/assets/chessground.brown.css";
 import "chessground/assets/chessground.cburnett.css";
+import styles from "./StaticGameThumbnail.module.css";
 
 interface StaticGameThumbnailProps {
   fen: string;
@@ -50,11 +51,11 @@ export default function StaticGameThumbnail({
 
   return (
     <div
-      className="relative w-full h-full bg-gray-800 rounded-lg"
+      className={`${styles.boardContainer} static-thumbnail-board`}
       onClick={onClick}
     >
       <div
-        className="w-full h-full"
+        className={styles.boardWrapper}
         ref={boardRef}
       />
     </div>

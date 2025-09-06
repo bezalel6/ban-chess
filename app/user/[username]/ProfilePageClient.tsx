@@ -277,7 +277,7 @@ export default function ProfilePageClient({
                         </div>
 
                         {/* Center - Board */}
-                        <div className="w-80 h-80 flex-shrink-0">
+                        <div className="relative w-80 h-80 flex-shrink-0">
                           {game.finalPosition ? (
                             <LazyGameThumbnail
                               fen={game.finalPosition}
