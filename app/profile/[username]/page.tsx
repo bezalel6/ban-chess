@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
-import MiniBoard from "@/components/game/MiniBoard";
+import GameThumbnail from "@/components/GameThumbnail";
 import { formatDistanceToNow } from "date-fns";
 
 interface GameRecord {
@@ -202,18 +202,13 @@ export default function ProfilePage() {
                     onClick={() => viewGame(game.id)}
                   >
                     <div className="flex gap-4">
-                      {/* Mini Board */}
+                      {/* Game Thumbnail */}
                       <div className="w-32 h-32 flex-shrink-0">
-                        {game.finalPosition ? (
-                          <MiniBoard 
-                            fen={game.finalPosition}
-                            orientation={isWhite ? "white" : "black"}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-600 rounded flex items-center justify-center">
-                            <span className="text-gray-400 text-xs">No board data</span>
-                          </div>
-                        )}
+                        <GameThumbnail 
+                          gameId={game.id}
+                          size={128}
+                          onClick={() => viewGame(game.id)}
+                        />
                       </div>
                       
                       {/* Game Info */}

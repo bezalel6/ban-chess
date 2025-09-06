@@ -220,7 +220,6 @@ export default function CompactGameClient({
           refreshKey={0}
           orientation={boardOrientation}
           canInteract={false} // No interaction in thumbnail
-          size={thumbnailSize}
         />
         {gameState.gameOver && (
           <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 text-center">

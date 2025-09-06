@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { User, Edit2, Info } from "lucide-react";
 import UsernameChangeModal from "@/components/UsernameChangeModal";
-import MiniBoard from "@/components/game/MiniBoard";
+import GameThumbnail from "@/components/GameThumbnail";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import type { User as AuthUser } from "@/types/auth";
@@ -257,22 +257,14 @@ export default function ProfilePageClient({
                       className="bg-background-tertiary rounded-lg p-4 hover:bg-background transition-colors cursor-pointer"
                       onClick={() => viewGame(game.id)}
                     >
-                      <pre>{JSON.stringify(game, null, 2)}</pre>
                       <div className="flex gap-4">
-                        {/* Mini Board */}
+                        {/* Game Thumbnail */}
                         <div className="w-32 h-32 flex-shrink-0">
-                          {game.finalPosition ? (
-                            <MiniBoard
-                              fen={game.finalPosition}
-                              orientation={isWhite ? "white" : "black"}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-background-secondary rounded flex items-center justify-center">
-                              <span className="text-foreground-muted text-xs">
-                                No board data
-                              </span>
-                            </div>
-                          )}
+                          <GameThumbnail
+                            gameId={game.id}
+                            size={128}
+                            onClick={() => viewGame(game.id)}
+                          />
                         </div>
 
                         {/* Game Info */}
