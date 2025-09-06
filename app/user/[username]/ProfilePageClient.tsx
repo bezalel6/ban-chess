@@ -243,7 +243,7 @@ export default function ProfilePageClient({
             </div>
           ) : (
             <>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col gap-4 max-w-5xl mx-auto">
                 {games.map((game) => {
                   const isWhite = game.whitePlayer.username === username;
                   const opponent = isWhite
@@ -254,68 +254,60 @@ export default function ProfilePageClient({
                   return (
                     <div
                       key={game.id}
-                      className="bg-background-tertiary rounded-lg overflow-hidden hover:bg-background transition-all hover:shadow-xl cursor-pointer"
+                      className="bg-background-tertiary rounded-lg p-6 hover:bg-background transition-all hover:shadow-xl cursor-pointer"
                       onClick={() => viewGame(game.id)}
                     >
-                      {/* Game Thumbnail */}
-                      <div className="aspect-square">
-                        {game.finalPosition ? (
-                          <LazyGameThumbnail
-                            fen={game.finalPosition}
-                            orientation={isWhite ? "white" : "black"}
-                            result={game.result}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-background-secondary flex items-center justify-center">
-                            <span className="text-foreground-muted">No board data</span>
+                      <div className="flex flex-col lg:flex-row items-center gap-6">
+                        {/* Left Side - Player Info */}
+                        <div className="flex-1 w-full lg:w-auto text-center lg:text-right">
+                          <div className="font-bold text-xl text-foreground mb-2">
+                            {username}
                           </div>
-                        )}
-                      </div>
-
-                      {/* Game Info */}
-                      <div className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <div className="font-semibold text-foreground text-lg">
-                              vs {opponent.username}
-                            </div>
-                            <div className="text-sm text-foreground-muted">
-                              {isWhite
-                                ? "Playing as White"
-                                : "Playing as Black"}
-                            </div>
+                          <div className="text-sm text-foreground-muted mb-1">
+                            {isWhite ? "White" : "Black"}
                           </div>
-
-                          <div
-                            className={`px-3 py-1 rounded text-sm font-semibold ${
-                              gameResult === "win"
-                                ? "bg-green-500 text-white"
-                                : gameResult === "loss"
-                                ? "bg-red-500 text-white"
-                                : "bg-yellow-500 text-black"
-                            }`}
-                          >
-                            {gameResult === "win"
-                              ? "Won"
-                              : gameResult === "loss"
-                              ? "Lost"
-                              : "Draw"}
+                          <div className={`inline-block px-3 py-1 rounded text-sm font-semibold ${
+                            gameResult === "win" ? "bg-green-500 text-white" :
+                            gameResult === "loss" ? "bg-red-500 text-white" :
+                            "bg-yellow-500 text-black"
+                          }`}>
+                            {gameResult === "win" ? "Won" :
+                             gameResult === "loss" ? "Lost" : "Draw"}
                           </div>
                         </div>
 
-                        <div className="text-sm text-foreground-muted space-y-1">
-                          <div>
-                            {game.resultReason || "Game completed"} •{" "}
-                            {game.moveCount || 0} moves
+                        {/* Center - Board */}
+                        <div className="w-80 h-80 flex-shrink-0">
+                          {game.finalPosition ? (
+                            <LazyGameThumbnail
+                              fen={game.finalPosition}
+                              orientation={isWhite ? "white" : "black"}
+                              result={game.result}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-background-secondary rounded-lg flex items-center justify-center">
+                              <span className="text-foreground-muted">No board data</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Right Side - Opponent & Game Info */}
+                        <div className="flex-1 w-full lg:w-auto text-center lg:text-left">
+                          <div className="font-bold text-xl text-foreground mb-2">
+                            {opponent.username}
                           </div>
-                          <div>
-                            Time control:{" "}
-                            {formatTimeControl(game.timeControl)}
+                          <div className="text-sm text-foreground-muted mb-3">
+                            {isWhite ? "Black" : "White"}
                           </div>
-                          <div>
-                            {formatDistanceToNow(new Date(game.createdAt), {
-                              addSuffix: true,
-                            })}
+                          <div className="text-sm text-foreground-muted space-y-1">
+                            <div>{game.resultReason || "Game completed"}</div>
+                            <div>{game.moveCount || 0} moves</div>
+                            <div>{formatTimeControl(game.timeControl)}</div>
+                            <div className="text-xs">
+                              {formatDistanceToNow(new Date(game.createdAt), {
+                                addSuffix: true,
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
