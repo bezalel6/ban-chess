@@ -67,8 +67,7 @@ export interface ChessgroundBoardProps {
   // Ban mode theming (changes destination dots to red)
   actionType?: "move" | "ban";
   
-  // Size and styling
-  size?: number;
+  // Styling
   className?: string;
 }
 
