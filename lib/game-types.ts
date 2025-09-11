@@ -1,6 +1,57 @@
 // Simplified types that rely on FEN as the source of truth
 // Now with Ban Chess Notation (BCN) support for serialization
 
+// Game mode types
+export enum GameMode {
+  OFFLINE = "offline", // Client-side only, no server connection
+  SOLO = "solo",       // Server-tracked single player practice
+  ONLINE = "online"    // Server-tracked multiplayer with matchmaking
+}
+
+export interface GameModeFeatures {
+  requiresAuth: boolean;
+  requiresServer: boolean;
+  hasGameId: boolean;
+  saveToHistory: boolean;
+  hasTimeControl: boolean;
+  canPause: boolean;
+  canUndo: boolean;
+  hasSpectators: boolean;
+}
+
+export const GAME_MODE_FEATURES: Record<GameMode, GameModeFeatures> = {
+  [GameMode.OFFLINE]: {
+    requiresAuth: false,
+    requiresServer: false,
+    hasGameId: false,
+    saveToHistory: false,
+    hasTimeControl: false,
+    canPause: true,
+    canUndo: true,
+    hasSpectators: false,
+  },
+  [GameMode.SOLO]: {
+    requiresAuth: true,
+    requiresServer: true,
+    hasGameId: true,
+    saveToHistory: true,
+    hasTimeControl: true,
+    canPause: false,
+    canUndo: false,
+    hasSpectators: false,
+  },
+  [GameMode.ONLINE]: {
+    requiresAuth: true,
+    requiresServer: true,
+    hasGameId: true,
+    saveToHistory: true,
+    hasTimeControl: true,
+    canPause: false,
+    canUndo: false,
+    hasSpectators: true,
+  },
+};
+
 // Just use string for squares - the library handles validation
 export interface Move {
   from: string;

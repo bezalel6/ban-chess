@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 
-export default function PlayLocalPage() {
+export default function SoloPlayPage() {
   const { connected, createSoloGame } = useGameState();
   const gameCreatedRef = useRef(false);
 
@@ -15,7 +15,7 @@ export default function PlayLocalPage() {
     gameCreatedRef.current = true;
 
     // Create solo game immediately when connected
-    // The useGameState hook will handle the redirect when it receives solo-game-created
+    // The useGameState hook will handle the redirect when it receives game-created
     createSoloGame();
   }, [connected, createSoloGame]);
 
@@ -23,8 +23,10 @@ export default function PlayLocalPage() {
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
         <div className="loading-spinner mb-4"></div>
-        <h2 className="text-2xl font-bold mb-2">Creating Solo Game</h2>
-        <p className="text-foreground-muted">Setting up your practice game...</p>
+        <h2 className="text-2xl font-bold mb-2">Creating Solo Practice Game</h2>
+        <p className="text-foreground-muted">
+          Setting up your tracked practice game with full features...
+        </p>
       </div>
     </div>
   );

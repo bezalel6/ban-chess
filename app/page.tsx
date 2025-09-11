@@ -11,8 +11,12 @@ export default function HomePage() {
   const { connected, currentGameId, gameState, resignGame, isLocalGame } = useGameState();
   const router = useRouter();
 
-  const playLocal = () => {
-    router.push("/local");
+  const playOffline = () => {
+    router.push("/play/offline");
+  };
+
+  const playSolo = () => {
+    router.push("/play/solo");
   };
 
   const playOnline = () => {
@@ -44,12 +48,12 @@ export default function HomePage() {
               Choose how to play
             </h2>
             
-            {/* Local play option - no auth required */}
+            {/* Offline play option - no auth required */}
             <button
-              onClick={playLocal}
+              onClick={playOffline}
               className="w-full mb-4 px-6 py-3 bg-lichess-green-500 hover:bg-lichess-green-600 text-white rounded-lg transition-colors text-lg font-semibold"
             >
-              Play Locally (No Sign-in Required)
+              Play Offline (No Sign-in Required)
             </button>
             
             <div className="relative my-4">
@@ -69,7 +73,7 @@ export default function HomePage() {
 
         <div className="text-center text-sm text-muted-foreground max-w-md">
           <p>
-            Play locally to practice ban chess offline, or sign in to play against other players online.
+            Play offline to practice ban chess without a server, or sign in for tracked solo practice and online multiplayer.
           </p>
         </div>
       </div>
@@ -103,10 +107,17 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold mb-4">Play</h2>
             <div className="flex flex-col gap-4 w-full">
               <button
-                onClick={playLocal}
+                onClick={playOffline}
                 className="btn-secondary py-4 text-lg bg-lichess-green-500 hover:bg-lichess-green-600 text-white"
               >
-                Play Locally (Solo Practice)
+                Offline Practice (No Server)
+              </button>
+              <button
+                onClick={playSolo}
+                disabled={!connected}
+                className="btn-secondary py-4 text-lg bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Solo Practice (Tracked)
               </button>
               <button
                 onClick={playOnline}
