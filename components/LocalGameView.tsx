@@ -180,8 +180,8 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
   }
   
   return (
-    <div className="flex-grow flex justify-center items-center min-h-0">
-      <div className="flex gap-6 items-center justify-center w-full max-w-[1400px] p-4 h-full">
+    <div className="flex justify-center w-full min-h-0">
+      <div className="flex gap-6 justify-center w-full max-w-[1400px] p-4">
         {/* Left Panel - Status */}
         <div className="w-56 flex-shrink-0">
           <GameStatusPanel 
@@ -205,7 +205,7 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
         </div>
         
         {/* Center - Board */}
-        <div className="flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center">
           <ResizableBoard
             gameState={gameState.gameState}
             dests={gameState.dests}

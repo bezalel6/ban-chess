@@ -533,8 +533,8 @@ export default function GameViewer({
 
   // Desktop layout
   return (
-    <div className="flex-grow flex justify-center items-center min-h-0">
-      <div className="flex gap-6 items-center justify-center w-full max-w-[1400px] p-4 h-full">
+    <div className="flex justify-center w-full min-h-0">
+      <div className="flex gap-6 justify-center w-full max-w-[1400px] p-4">
         
         {/* Left Panel - Status */}
         {effectiveViewOptions.showControls && (
@@ -550,7 +550,7 @@ export default function GameViewer({
         )}
 
         {/* Center - Board */}
-        <div className="flex flex-col items-center justify-center gap-2">
+        <div className="flex flex-col items-center gap-2">
           <ResizableBoard
             gameState={{ ...effectiveGameState, fen: displayFen, inCheck: displayGame?.inCheck() || false }}
             dests={displayDests}
