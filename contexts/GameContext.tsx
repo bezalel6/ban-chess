@@ -26,38 +26,41 @@ export function GameProvider({ gameId, children }: { gameId?: string, children: 
 
   const manager = useMemo(() => new ClientGameManager(), []);
   const [gameState, setGameState] = useState<SimpleGameState | null>(manager.getGameState());
-  const connected = ws.readyState === ReadyState.OPEN && ws.isAuthenticated;
+  const connected = !!(ws && ws.readyState === ReadyState.OPEN && ws.isAuthenticated);
 
   useEffect(() => {
     const unsubscribe = manager.subscribe(setGameState);
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, [manager]);
 
   useEffect(() => {
-    if (ws.lastMessage) {
+    if (ws && ws.lastMessage) {
       try {
         const msg = JSON.parse(ws.lastMessage.data);
-        manager.handleMessage(msg, user, router, showToast);
+        const userWithId = user ? { ...user, id: user.userId } : null;
+        manager.handleMessage(msg, userWithId, router, showToast);
       } catch (e) {
         console.error("Failed to parse WebSocket message", e);
       }
     }
-  }, [ws.lastMessage, manager, user, router, showToast]);
+  }, [ws, ws?.lastMessage, manager, user, router, showToast]);
 
   const send = (message: SimpleClientMsg) => {
-      ws.sendMessage(JSON.stringify(message));
+      if (ws) {
+        ws.sendMessage(JSON.stringify(message));
+      }
   }
 
   useEffect(() => {
-    if (gameId && connected) {
+    if (gameId && connected && ws) {
       if (gameState?.gameId !== gameId) {
         const timer = setTimeout(() => {
-          send(manager.joinGameMsg(gameId));
+          ws.sendMessage(JSON.stringify(manager.joinGameMsg(gameId)));
         }, 100);
         return () => clearTimeout(timer);
       }
     }
-  }, [gameId, connected, gameState?.gameId, manager, send]);
+  }, [gameId, connected, gameState?.gameId, manager, ws]);
 
   const value = { manager, gameState, send, connected };
 

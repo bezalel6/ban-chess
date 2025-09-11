@@ -4,8 +4,9 @@ import { useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useGame } from "@/contexts/GameContext";
 import { useRouter } from "next/navigation";
+import { GameProviderWrapper } from "@/components/GameProviderWrapper";
 
-export default function OnlinePlayPage() {
+function OnlinePlayContent() {
   const { user } = useAuth();
   const { manager, send, connected } = useGame();
   const router = useRouter();
@@ -71,5 +72,13 @@ export default function OnlinePlayPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OnlinePlayPage() {
+  return (
+    <GameProviderWrapper>
+      <OnlinePlayContent />
+    </GameProviderWrapper>
   );
 }

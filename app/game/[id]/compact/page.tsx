@@ -1,23 +1,19 @@
+"use client";
+
+import { use } from "react";
 import GameViewer from "@/components/GameViewer";
+import { GameProviderWrapper } from "@/components/GameProviderWrapper";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function CompactGamePage({ params }: PageProps) {
-  const { id } = await params;
+export default function CompactGamePage({ params }: PageProps) {
+  const { id } = use(params);
   
   return (
-    <GameViewer 
-      gameId={id} 
-      mode="compact"
-      viewOptions={{
-        showSidebar: false,
-        showControls: true,
-        showHistory: false,
-        showStats: false,
-        showDebug: false
-      }}
-    />
+    <GameProviderWrapper gameId={id}>
+      <GameViewer gameId={id} />
+    </GameProviderWrapper>
   );
 }

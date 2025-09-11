@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import React from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { WebSocketProvider } from "@/contexts/WebSocketContext";
-import { GameProvider } from "@/contexts/GameContext";
 import { UserRoleProvider } from "@/contexts/UserRoleContext";
 import { ToastProvider } from "@/lib/toast/toast-context";
 import Header from "@/components/layout/Header";
@@ -51,18 +50,16 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             <WebSocketProvider>
-              <GameProvider>
-                <UserRoleProvider>
-                  <ConnectionStatusOverlay />
-                  <WebSocketStatusWidget />
-                  <Header />
-                  {/* Main content - flex-grow to fill available space */}
-                  <main className="flex-grow w-full flex flex-col">{children}</main>
+              <UserRoleProvider gameState={null}>
+                <ConnectionStatusOverlay />
+                <WebSocketStatusWidget />
+                <Header />
+                {/* Main content - flex-grow to fill available space */}
+                <main className="flex-grow w-full flex flex-col">{children}</main>
 
-                  {/* Toast notifications */}
-                  <ToastContainer />
-                </UserRoleProvider>
-              </GameProvider>
+                {/* Toast notifications */}
+                <ToastContainer />
+              </UserRoleProvider>
             </WebSocketProvider>
           </ToastProvider>
         </AuthProvider>

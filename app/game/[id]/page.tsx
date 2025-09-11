@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import dynamic from "next/dynamic";
+import { GameProviderWrapper } from "@/components/GameProviderWrapper";
 
 // Use the unified GameViewer component that handles both live and completed games
 const GameViewer = dynamic(() => import("@/components/GameViewer"), {
@@ -28,6 +29,10 @@ interface GamePageProps {
 export default function GamePage({ params }: GamePageProps) {
   const { id: gameId } = use(params);
 
-  // Simply render the unified GameViewer - it will handle everything
-  return <GameViewer gameId={gameId} />;
+  // Wrap GameViewer with the GameProvider context
+  return (
+    <GameProviderWrapper gameId={gameId}>
+      <GameViewer gameId={gameId} />
+    </GameProviderWrapper>
+  );
 }

@@ -52,7 +52,7 @@ export class ClientGameManager {
           this.currentGameId = msg.gameId;
           try {
             this.game = new BanChess(msg.fen);
-          } catch (e: unknown) {
+          } catch {
             this.error = { type: "game", message: "Failed to parse game state" };
           }
 

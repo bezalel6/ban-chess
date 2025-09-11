@@ -3,11 +3,11 @@
 import { useAuth } from "@/components/AuthProvider";
 import { useGame } from "@/contexts/GameContext";
 import { useRouter } from "next/navigation";
-
+import { GameProviderWrapper } from "@/components/GameProviderWrapper";
 import ActiveGameCard from "@/components/ActiveGameCard";
 import { useMemo } from "react";
 
-export default function HomePage() {
+function HomePageContent() {
   const { user, loading } = useAuth();
   const { manager, gameState, send, connected } = useGame();
   const router = useRouter();
@@ -114,5 +114,13 @@ export default function HomePage() {
         {/* ... same as before */}
       </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <GameProviderWrapper>
+      <HomePageContent />
+    </GameProviderWrapper>
   );
 }

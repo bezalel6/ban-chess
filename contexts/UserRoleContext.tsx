@@ -10,9 +10,9 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useGame } from "@/contexts/GameContext";
 import { getUserRole as computeUserRole } from "@/lib/game-utils";
 import type { UserRole } from "@/lib/game-utils";
+import type { SimpleGameState } from "@/lib/game-types";
 
 export type BanDifficulty = "easy" | "medium" | "hard";
 
@@ -28,9 +28,13 @@ interface UserRoleContextValue extends UserRole {
 
 const UserRoleContext = createContext<UserRoleContextValue | null>(null);
 
-export function UserRoleProvider({ children }: { children: ReactNode }) {
+interface UserRoleProviderProps {
+  children: ReactNode;
+  gameState?: SimpleGameState | null;
+}
+
+export function UserRoleProvider({ children, gameState }: UserRoleProviderProps) {
   const { user } = useAuth();
-  const { gameState } = useGame();
   const [spectatorOrientation, setSpectatorOrientation] = useState<"white" | "black">("white");
   const [autoFlipEnabled, setAutoFlipEnabled] = useState<boolean>(() => {
     // Load auto-flip preference from localStorage, default to true for local games
@@ -53,7 +57,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   });
 
   const userRole = useMemo(() => {
-    return computeUserRole(gameState, user?.userId);
+    return computeUserRole(gameState || null, user?.userId);
   }, [gameState, user?.userId]);
 
   const flipBoard = useCallback(() => {
@@ -125,18 +129,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
 export function useUserRole(): UserRoleContextValue {
   const context = useContext(UserRoleContext);
   if (!context) {
-    return {
-      role: null,
-      orientation: "white",
-      isLocalGame: false,
-      flipBoard: () => {},
-      autoFlipEnabled: true,
-      setAutoFlipEnabled: () => {},
-      manualOrientation: null,
-      setManualOrientation: () => {},
-      banDifficulty: 'medium',
-      setBanDifficulty: () => {},
-    };
+    throw new Error('useUserRole must be used within a UserRoleProvider');
   }
   return context;
 }

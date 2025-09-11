@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
+import { GameProviderWrapper } from '@/components/GameProviderWrapper';
 
-export default function SoloPlayPage() {
+function SoloPlayContent() {
   const { manager, send, connected } = useGame();
   const gameCreatedRef = useRef(false);
 
@@ -26,5 +27,13 @@ export default function SoloPlayPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SoloPlayPage() {
+  return (
+    <GameProviderWrapper>
+      <SoloPlayContent />
+    </GameProviderWrapper>
   );
 }
