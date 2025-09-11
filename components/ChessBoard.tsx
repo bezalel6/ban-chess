@@ -122,6 +122,7 @@ const ChessBoard = memo(function ChessBoard({
     }
   }, [currentBan]);
 
+
   // Handle move/ban from board
   const handleBoardMove = useCallback(
     (from: string, to: string) => {

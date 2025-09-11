@@ -15,6 +15,7 @@ interface MobileBoardProps {
   refreshKey?: number;
   orientation?: 'white' | 'black';
   canInteract?: boolean; // Pass through to ChessBoard
+  banDifficulty?: "easy" | "medium" | "hard";
 }
 
 const MobileBoard = memo(function MobileBoard({
@@ -27,6 +28,7 @@ const MobileBoard = memo(function MobileBoard({
   refreshKey: _refreshKey,
   orientation = 'white',
   canInteract = true,
+  banDifficulty = "medium",
 }: MobileBoardProps) {
   return (
     <div className="flex flex-col items-center w-full">
@@ -45,6 +47,7 @@ const MobileBoard = memo(function MobileBoard({
                 onBan={onBan}
                 orientation={orientation}
                 canInteract={canInteract}
+                banDifficulty={banDifficulty}
               />
             </ChessBoardErrorBoundary>
           </div>

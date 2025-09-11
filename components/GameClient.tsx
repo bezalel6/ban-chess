@@ -116,6 +116,7 @@ export default function GameClient({ gameId }: GameClientProps) {
     autoFlipEnabled,
     isLocalGame: isLocal,
     setAutoFlipEnabled,
+    banDifficulty,
   } = useUserRole();
   const [hasJoined, setHasJoined] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
@@ -411,6 +412,7 @@ export default function GameClient({ gameId }: GameClientProps) {
                   ? false
                   : isLocalGame || userColor === activePlayer
               }
+              banDifficulty={banDifficulty}
             />
           </div>
 
@@ -525,6 +527,7 @@ export default function GameClient({ gameId }: GameClientProps) {
                   ? false
                   : isLocalGame || userColor === activePlayer
               }
+              banDifficulty={banDifficulty}
             />
           </div>
 
