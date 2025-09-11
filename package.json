@@ -14,6 +14,7 @@
     "prestart": "npx prisma generate",
     "start": "next start",
     "ws-server": "portio --mine 3001 && tsx server/ws-server.ts",
+    "ws-server:prod": "node server/dist/ws-server.js",
     "type-check": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",

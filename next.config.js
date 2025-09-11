@@ -11,10 +11,8 @@ const nextConfig = {
   // Automatically transpile and bundle local packages
   transpilePackages: ['ban-chess.ts'],
   // Ensure public files are served correctly in standalone mode
-  experimental: {
-    outputFileTracingIncludes: {
-      '/': ['./public/**/*']
-    }
+  outputFileTracingIncludes: {
+    '/': ['./public/**/*']
   }
 }
 

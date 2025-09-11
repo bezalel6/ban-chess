@@ -1,4 +1,5 @@
 const esbuild = require('esbuild');
+const path = require('path');
 
 async function build() {
   try {
@@ -12,6 +13,10 @@ async function build() {
       minify: false, // Keep readable for debugging
       sourcemap: true,
       format: 'cjs',
+      // Add alias resolution for @/ paths
+      alias: {
+        '@': path.resolve(__dirname, '..')
+      }
     });
     
     console.log('✅ WebSocket server built successfully');
