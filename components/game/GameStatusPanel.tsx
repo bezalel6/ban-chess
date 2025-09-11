@@ -34,6 +34,9 @@ export default function GameStatusPanel({
   
   // Get ply info from gameState (server-provided)
   const ply = gameState?.ply || 0;
+  
+  // Check if this is a single-player game (practice/solo mode)
+  const isSinglePlayer = gameState.players.white?.id === gameState.players.black?.id;
 
   // Format time control display
   const formatTimeControl = () => {
@@ -171,59 +174,72 @@ export default function GameStatusPanel({
           </div>
         ) : (
           <>
-            {/* Current Turn Status - Prominent but compact */}
+            {/* Combined Turn Status and Ban Info */}
             <div
-              className={`rounded-md p-2 text-center min-w-0 ${
-                isMyTurn
-                  ? "bg-primary/20 border border-primary/30"
-                  : "bg-background-tertiary"
+              className={`rounded-md p-2 min-w-0 ${
+                nextAction === "ban" 
+                  ? "bg-yellow-900/20 border border-yellow-500/30"
+                  : currentBan
+                    ? "bg-red-900/20 border border-red-500/30"
+                    : isMyTurn
+                      ? "bg-primary/20 border border-primary/30"
+                      : "bg-background-tertiary"
               }`}
             >
+              {/* Main Status */}
               <div
-                className={`text-sm font-semibold truncate ${
-                  isMyTurn ? "text-primary" : "text-foreground-muted"
+                className={`text-sm font-semibold text-center ${
+                  nextAction === "ban"
+                    ? "text-yellow-500"
+                    : isMyTurn 
+                      ? "text-primary" 
+                      : "text-foreground-muted"
                 }`}
               >
-                {nextAction === "ban"
-                  ? `${currentActivePlayer.charAt(0).toUpperCase() + currentActivePlayer.slice(1)} is banning...`
-                  : isMyTurn
-                    ? "🎯 Your turn"
-                    : "⏳ Opponent's turn"}
+                {nextAction === "ban" ? (
+                  // Banning phase
+                  isSinglePlayer ? (
+                    `Choose a move to ban for ${currentActivePlayer}`
+                  ) : (
+                    isMyTurn ? "Choose a move to ban" : `${currentActivePlayer.charAt(0).toUpperCase() + currentActivePlayer.slice(1)} is banning...`
+                  )
+                ) : (
+                  // Moving phase
+                  isSinglePlayer ? (
+                    `🎯 ${currentActivePlayer.charAt(0).toUpperCase() + currentActivePlayer.slice(1)}'s turn`
+                  ) : (
+                    isMyTurn ? "🎯 Your turn" : "⏳ Opponent's turn"
+                  )
+                )}
               </div>
-            </div>
-
-            {/* Banned Move - Min height to prevent jarring changes */}
-            <div className={`rounded-md p-2 min-w-0 min-h-[44px] flex flex-col justify-center transition-colors ${
-              currentBan 
-                ? "bg-red-900/20 border border-red-500/30" 
-                : "bg-background-tertiary/50 border border-background-tertiary"
-            }`}>
-              {currentBan ? (
-                <>
+              
+              {/* Banned Move Display (if exists) */}
+              {currentBan && (
+                <div className="mt-2 pt-2 border-t border-red-500/20">
                   <div className="text-xs text-red-400">Banned Move</div>
-                  <div className="text-sm font-bold text-red-500 font-mono truncate">
+                  <div className="text-sm font-bold text-red-500 font-mono text-center">
                     {currentBan.from.toUpperCase()} → {currentBan.to.toUpperCase()}
                   </div>
-                </>
-              ) : (
-                <div className="text-xs text-foreground-muted/50 text-center">No banned move</div>
+                </div>
               )}
             </div>
           </>
         )}
       </div>
 
-      {/* GAME CHAT Section - Compact height */}
-      <div className="flex flex-col mt-3 min-w-0">
-        <h3 className="text-sm font-semibold text-foreground-muted mb-2">
-          GAME CHAT
-        </h3>
-        <div className="h-24 bg-background-tertiary rounded-md p-2 overflow-y-auto min-w-0">
-          <p className="text-xs text-foreground-muted italic truncate">
-            Chat coming soon...
-          </p>
+      {/* GAME CHAT Section - Only show in multiplayer */}
+      {!isSinglePlayer && (
+        <div className="flex flex-col mt-3 min-w-0">
+          <h3 className="text-sm font-semibold text-foreground-muted mb-2">
+            GAME CHAT
+          </h3>
+          <div className="h-24 bg-background-tertiary rounded-md p-2 overflow-y-auto min-w-0">
+            <p className="text-xs text-foreground-muted italic truncate">
+              Chat coming soon...
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
