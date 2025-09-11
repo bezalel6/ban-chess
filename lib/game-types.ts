@@ -3,8 +3,8 @@
 
 // Game mode types
 export enum GameMode {
-  OFFLINE = "offline", // Client-side only, no server connection
-  SOLO = "solo",       // Server-tracked single player practice
+  OFFLINE = "offline", // Practice mode - client-side only, no server connection
+  SOLO = "solo",       // Practice Online - test server flow by playing both sides
   ONLINE = "online"    // Server-tracked multiplayer with matchmaking
 }
 

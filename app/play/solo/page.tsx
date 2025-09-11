@@ -23,9 +23,9 @@ export default function SoloPlayPage() {
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
         <div className="loading-spinner mb-4"></div>
-        <h2 className="text-2xl font-bold mb-2">Creating Solo Practice Game</h2>
+        <h2 className="text-2xl font-bold mb-2">Creating Online Practice Game</h2>
         <p className="text-foreground-muted">
-          Setting up your tracked practice game with full features...
+          Testing server game flow - play both sides online...
         </p>
       </div>
     </div>

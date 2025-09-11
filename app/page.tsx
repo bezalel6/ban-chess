@@ -12,7 +12,7 @@ export default function HomePage() {
   const router = useRouter();
 
   const playOffline = () => {
-    router.push("/play/offline");
+    router.push("/play/practice");
   };
 
   const playSolo = () => {
@@ -48,12 +48,12 @@ export default function HomePage() {
               Choose how to play
             </h2>
             
-            {/* Offline play option - no auth required */}
+            {/* Practice option - no auth required */}
             <button
               onClick={playOffline}
               className="w-full mb-4 px-6 py-3 bg-lichess-green-500 hover:bg-lichess-green-600 text-white rounded-lg transition-colors text-lg font-semibold"
             >
-              Play Offline (No Sign-in Required)
+              Start Practice (No Sign-in Required)
             </button>
             
             <div className="relative my-4">
@@ -73,7 +73,7 @@ export default function HomePage() {
 
         <div className="text-center text-sm text-muted-foreground max-w-md">
           <p>
-            Play offline to practice ban chess without a server, or sign in for tracked solo practice and online multiplayer.
+            Practice ban chess locally by playing both sides, or sign in to find online opponents.
           </p>
         </div>
       </div>
@@ -108,16 +108,9 @@ export default function HomePage() {
             <div className="flex flex-col gap-4 w-full">
               <button
                 onClick={playOffline}
-                className="btn-secondary py-4 text-lg bg-lichess-green-500 hover:bg-lichess-green-600 text-white"
+                className="btn-primary py-4 text-lg bg-lichess-green-500 hover:bg-lichess-green-600 text-white"
               >
-                Offline Practice (No Server)
-              </button>
-              <button
-                onClick={playSolo}
-                disabled={!connected}
-                className="btn-secondary py-4 text-lg bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Solo Practice (Tracked)
+                Practice Locally
               </button>
               <button
                 onClick={playOnline}
@@ -126,6 +119,20 @@ export default function HomePage() {
               >
                 Find Online Opponent
               </button>
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm text-foreground-muted hover:text-foreground transition-colors">
+                  Test server mode
+                </summary>
+                <div className="mt-3">
+                  <button
+                    onClick={playSolo}
+                    disabled={!connected}
+                    className="btn-secondary py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white w-full"
+                  >
+                    Practice Online (test server flow)
+                  </button>
+                </div>
+              </details>
             </div>
             {!connected && (
               <div className="text-center pt-4">

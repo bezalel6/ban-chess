@@ -9,7 +9,6 @@ interface GameModeCardProps {
   title: string;
   description: string;
   icon: string;
-  features: string[];
   requiresAuth: boolean;
   isAuthenticated: boolean;
   onSelect: (mode: GameMode) => void;
@@ -20,7 +19,6 @@ function GameModeCard({
   title,
   description,
   icon,
-  features,
   requiresAuth,
   isAuthenticated,
   onSelect,
@@ -31,16 +29,7 @@ function GameModeCard({
     <div className="bg-background-secondary rounded-lg p-6 shadow-lg border border-border hover:border-primary/50 transition-all">
       <div className="text-4xl mb-4 text-center">{icon}</div>
       <h3 className="text-xl font-bold mb-2">{title}</h3>
-      <p className="text-foreground-muted mb-4">{description}</p>
-      
-      <ul className="space-y-2 mb-6">
-        {features.map((feature, i) => (
-          <li key={i} className="flex items-start">
-            <span className="text-lichess-green-500 mr-2">✓</span>
-            <span className="text-sm">{feature}</span>
-          </li>
-        ))}
-      </ul>
+      <p className="text-foreground-muted mb-6">{description}</p>
 
       <button
         onClick={() => onSelect(mode)}
@@ -55,7 +44,7 @@ function GameModeCard({
             : "bg-lichess-orange-500 hover:bg-lichess-orange-600 text-white"
         }`}
       >
-        {disabled ? "Sign in required" : "Play " + title}
+        {disabled ? "Sign in required" : title}
       </button>
       
       {requiresAuth && !isAuthenticated && (
@@ -75,7 +64,7 @@ export default function PlayPage() {
     // Navigate to the appropriate route
     switch (mode) {
       case GameMode.OFFLINE:
-        router.push("/play/offline");
+        router.push("/play/practice");
         break;
       case GameMode.SOLO:
         router.push("/play/solo");
@@ -98,58 +87,45 @@ export default function PlayPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           <GameModeCard
             mode={GameMode.OFFLINE}
-            title="Offline Practice"
-            description="Learn ban chess without any server connection"
+            title="Practice"
+            description="Play both sides locally. No server required."
             icon="🎯"
-            features={[
-              "No internet required",
-              "Instant play",
-              "Undo moves",
-              "No time pressure",
-              "Perfect for learning",
-            ]}
             requiresAuth={false}
             isAuthenticated={!!user}
             onSelect={handleModeSelect}
           />
 
           <GameModeCard
-            mode={GameMode.SOLO}
-            title="Solo Practice"
-            description="Practice with full game features and tracking"
-            icon="🏋️"
-            features={[
-              "Saved to game history",
-              "Time controls",
-              "Track your progress",
-              "Full rule enforcement",
-              "Server validation",
-            ]}
-            requiresAuth={true}
-            isAuthenticated={!!user}
-            onSelect={handleModeSelect}
-          />
-
-          <GameModeCard
             mode={GameMode.ONLINE}
-            title="Online Match"
-            description="Compete against other players in real-time"
+            title="Find Opponent"
+            description="Play against real players online."
             icon="🌐"
-            features={[
-              "Real opponents",
-              "Matchmaking system",
-              "Competitive play",
-              "Live game updates",
-              "Spectator support",
-            ]}
             requiresAuth={true}
             isAuthenticated={!!user}
             onSelect={handleModeSelect}
           />
         </div>
+        
+        {/* Solo mode as a less prominent option */}
+        <details className="mt-6 max-w-2xl mx-auto">
+          <summary className="cursor-pointer text-sm text-foreground-muted hover:text-foreground transition-colors text-center">
+            Test server mode
+          </summary>
+          <div className="mt-4 max-w-md mx-auto">
+            <GameModeCard
+              mode={GameMode.SOLO}
+              title="Practice Online"
+              description="Test the full game flow with the server. Play both sides online."
+              icon="🧪"
+              requiresAuth={true}
+              isAuthenticated={!!user}
+              onSelect={handleModeSelect}
+            />
+          </div>
+        </details>
 
         <div className="mt-8 text-center">
           <button

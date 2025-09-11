@@ -14,14 +14,9 @@ const menuSections: MobileMenuSection[] = [
     title: "Play",
     items: [
       {
-        label: "Offline Practice",
-        href: "/play/offline",
-        description: "Practice without server",
-      },
-      {
-        label: "Solo Practice",
-        href: "/play/solo",
-        description: "Tracked practice game",
+        label: "Practice",
+        href: "/play/practice",
+        description: "Play both sides locally",
       },
       {
         label: "Find Opponent",

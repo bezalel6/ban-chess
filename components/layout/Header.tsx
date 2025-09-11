@@ -210,16 +210,10 @@ export default function Header() {
               Play
             </Link>
             <Link
-              href="/play/offline"
+              href="/play/practice"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
-              Offline
-            </Link>
-            <Link
-              href="/play/solo"
-              className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
-            >
-              Solo
+              Practice
             </Link>
             <Link
               href="/play/online"
