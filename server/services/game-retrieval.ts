@@ -77,7 +77,7 @@ export async function getGameSource(gameId: string): Promise<GameSource | null> 
     const moveTimes = await getMoveTimes(gameId);
     
     const timeControl = redisGameState.timeControl 
-      ? `${redisGameState.timeControl.initial}+${redisGameState.timeControl.increment}`
+      ? `${Math.floor(redisGameState.timeControl.initial / 1000)}+${Math.floor(redisGameState.timeControl.increment / 1000)}`
       : undefined;
     
     // For active games, try to get usernames from Redis sessions or fallback to IDs

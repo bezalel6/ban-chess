@@ -1,13 +1,10 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use } from "react";
 import dynamic from "next/dynamic";
 
-const GameClient = dynamic(() => import("@/components/GameClient"), {
-  ssr: false,
-});
-
-const CompletedGameViewer = dynamic(() => import("@/components/CompletedGameViewer"), {
+// Use the unified GameViewer component that handles both live and completed games
+const GameViewer = dynamic(() => import("@/components/GameViewer"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -23,53 +20,14 @@ interface GamePageProps {
   params: Promise<{ id: string }>;
 }
 
+/**
+ * Game page that uses the unified GameViewer component.
+ * The GameViewer handles both live and completed games seamlessly,
+ * transitioning between states without requiring a page refresh.
+ */
 export default function GamePage({ params }: GamePageProps) {
   const { id: gameId } = use(params);
-  const [isCompletedGame, setIsCompletedGame] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check if the game exists in the database (completed game)
-    const checkGameStatus = async () => {
-      try {
-        const response = await fetch(`/api/game/${gameId}`);
-        if (response.ok) {
-          // Game exists in database - it's a completed game
-          setIsCompletedGame(true);
-        } else if (response.status === 404) {
-          // Game not in database - try WebSocket for live game
-          setIsCompletedGame(false);
-        } else {
-          // Some other error - default to WebSocket
-          setIsCompletedGame(false);
-        }
-      } catch (error) {
-        console.error("Error checking game status:", error);
-        // Default to WebSocket on error
-        setIsCompletedGame(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkGameStatus();
-  }, [gameId]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="loading-spinner mb-4"></div>
-          <p>Loading game...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Render appropriate component based on game status
-  if (isCompletedGame) {
-    return <CompletedGameViewer gameId={gameId} />;
-  } else {
-    return <GameClient gameId={gameId} />;
-  }
+  // Simply render the unified GameViewer - it will handle everything
+  return <GameViewer gameId={gameId} />;
 }

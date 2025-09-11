@@ -8,7 +8,7 @@ import ActiveGameCard from "@/components/ActiveGameCard";
 
 export default function HomePage() {
   const { user, loading } = useAuth();
-  const { connected, currentGameId, gameState, resignGame, isLocalGame } = useGameState();
+  const { connected, currentGameId, gameState, resignGame, isLocalGame } = useGameState(undefined);
   const router = useRouter();
 
   const playOffline = () => {

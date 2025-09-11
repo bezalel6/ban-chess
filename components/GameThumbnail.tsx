@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-const CompactGameClient = dynamic(
-  () => import("@/components/CompactGameClient"),
+const GameViewer = dynamic(
+  () => import("@/components/GameViewer"),
   { 
     ssr: false,
     loading: () => (
@@ -35,9 +35,9 @@ export default function GameThumbnail({
 
   return (
     <div className="inline-block">
-      <CompactGameClient
+      <GameViewer
         gameId={gameId}
-        thumbnailMode={true}
+        mode="thumbnail"
         thumbnailSize={size}
         onThumbnailClick={handleClick}
       />

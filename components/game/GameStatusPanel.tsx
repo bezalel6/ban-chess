@@ -21,7 +21,7 @@ export default function GameStatusPanel({
   onNewGame,
 }: GameStatusPanelProps) {
   // For offline games, use props directly. For online games, use the hook
-  const hookData = useGameState({ disableToasts: true });
+  const hookData = useGameState(undefined, { disableToasts: true });
   const activePlayer = isOfflineGame ? propActivePlayer : hookData.activePlayer;
   const actionType = isOfflineGame ? propActionType : hookData.actionType;
   
@@ -38,9 +38,22 @@ export default function GameStatusPanel({
   // Format time control display
   const formatTimeControl = () => {
     if (!gameState.timeControl) return "Unlimited";
-    const { initial, increment } = gameState.timeControl;
-    const minutes = Math.floor(initial / 60);
-    return `${minutes}+${increment}`;
+    
+    // Handle both object format (from WebSocket) and string format (from database)
+    if (typeof gameState.timeControl === 'string') {
+      // Database format: "900+10" or "unlimited"
+      if (gameState.timeControl === 'unlimited') return "Unlimited";
+      return (gameState.timeControl as string).replace(/(\d+)\+/, (_, seconds) => {
+        const minutes = Math.floor(parseInt(seconds) / 60);
+        return `${minutes}+`;
+      });
+    } else if (gameState.timeControl && typeof gameState.timeControl === 'object') {
+      // WebSocket format: { initial: 900, increment: 10 }
+      const { initial, increment } = gameState.timeControl;
+      const minutes = Math.floor(initial / 60);
+      return `${minutes}+${increment}`;
+    }
+    return "Unlimited";
   };
 
   // Determine game mode based on whether the same user is playing both sides

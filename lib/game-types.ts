@@ -230,7 +230,14 @@ export type SimpleServerMsg =
   | { type: "actions-since"; gameId: string; actions: SerializedAction[] }
   | { type: "draw-offered"; gameId: string; offeredBy: "white" | "black" }
   | { type: "draw-accepted"; gameId: string }
-  | { type: "draw-declined"; gameId: string; declinedBy: "white" | "black" };
+  | { type: "draw-declined"; gameId: string; declinedBy: "white" | "black" }
+  | { 
+      type: "game-ended"; 
+      gameId: string; 
+      result: string; 
+      reason: string;
+      messageId?: string;
+    };
 
 // Client messages - simplified
 export type SimpleClientMsg =

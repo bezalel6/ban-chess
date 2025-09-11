@@ -30,7 +30,7 @@ const UserRoleContext = createContext<UserRoleContextValue | null>(null);
 
 export function UserRoleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { gameState } = useGameState({ disableToasts: true });
+  const { gameState } = useGameState(undefined, { disableToasts: true });
   const [spectatorOrientation, setSpectatorOrientation] = useState<"white" | "black">("white");
   const [autoFlipEnabled, setAutoFlipEnabled] = useState<boolean>(() => {
     // Load auto-flip preference from localStorage, default to true for local games

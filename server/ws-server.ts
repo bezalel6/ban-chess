@@ -84,9 +84,14 @@ async function handleGameEnd(
     finalClocks = timeManager.getClocks();
   }
   
+  // Determine the result reason before saving
+  const game = new BanChess(gameState.fen);
+  const resultReason = determineResultReason(game, gameState);
+  
   // Update game state with final clocks
   gameState.gameOver = true;
   gameState.result = result;
+  // Note: resultReason is passed separately to saveCompletedGame, not stored in Redis
   if (finalClocks) {
     gameState.finalClocks = finalClocks;
   }
@@ -161,25 +166,42 @@ async function handleGameEnd(
     }
   } else {
     console.log(`[GameEnd] Skipping database save for local game ${gameId}`);
-    // For games not saved to database, keep in Redis briefly then clean up
-    setTimeout(async () => {
-      try {
-        const pipeline = redis.pipeline();
-        pipeline.del(KEYS.GAME_STATE(gameId));
-        pipeline.del(KEYS.GAME_ACTIONS(gameId));
-        pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
-        await pipeline.exec();
-        console.log(
-          `[GameEnd] Cleaned up unsaved game ${gameId} from Redis after 1 minute`
-        );
-      } catch (error) {
-        console.error(
-          `[GameEnd] Failed to clean up unsaved game ${gameId}:`,
-          error
-        );
-      }
-    }, 60 * 1000); // 1 minute delay for unsaved games
+    // Clean up Redis immediately for unsaved games too - no reason to keep them
+    try {
+      const pipeline = redis.pipeline();
+      pipeline.del(KEYS.GAME_STATE(gameId));
+      pipeline.del(KEYS.GAME_ACTIONS(gameId));
+      pipeline.del(KEYS.GAME_MOVE_TIMES(gameId));
+      await pipeline.exec();
+      console.log(
+        `[GameEnd] Cleaned up unsaved game ${gameId} from Redis immediately`
+      );
+    } catch (error) {
+      console.error(
+        `[GameEnd] Failed to clean up unsaved game ${gameId}:`,
+        error
+      );
+    }
   }
+
+  // Broadcast game-ended message to all connected clients for smooth transition
+  const gameEndedMsg: SimpleServerMsg = {
+    type: "game-ended",
+    gameId,
+    result,
+    reason: resultReason,
+    messageId: `game-ended-${gameId}-${++messageIdCounter}`,
+  };
+
+  // Publish to Redis for all servers
+  await redisPub.publish(
+    KEYS.CHANNELS.GAME_STATE(gameId),
+    JSON.stringify(gameEndedMsg)
+  );
+  
+  console.log(
+    `[handleGameEnd] Broadcast game-ended message for game ${gameId}: ${result} (${resultReason})`
+  );
 }
 
 interface Player {
@@ -1460,6 +1482,20 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           // Subscribe to game channel
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+          
+          // Ensure the game is fully saved and retrievable
+          await redis.pipeline().exec();
+          
+          // Verify the game is retrievable before sending game-created
+          const verifyGame = await getGameState(gameId);
+          if (!verifyGame) {
+            console.error(`[create-solo-game] Failed to verify game ${gameId} was saved`);
+            sendMessage(ws, {
+              type: "error",
+              message: "Failed to create game",
+            } as SimpleServerMsg);
+            return;
+          }
 
           const gameCreatedMsg = {
             type: "game-created",
@@ -1501,7 +1537,9 @@ wss.on("connection", (ws: WebSocket, request) => {
           }
 
           const { gameId } = msg;
-          // Check both Redis and database for the game
+          console.log(`[join-game] Player ${currentPlayer.username} attempting to join game ${gameId}`);
+          
+          // Check both Redis and database for the game (Lichess pattern: unified retrieval)
           const gameSource = await getGameSource(gameId);
 
           if (!gameSource) {

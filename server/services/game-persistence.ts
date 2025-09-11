@@ -44,9 +44,9 @@ export async function saveCompletedGame(gameId: string): Promise<void> {
     const moveTimes = await getMoveTimes(gameId);
     console.log(`[GamePersistence] ✅ Move times retrieved: ${moveTimes.length} entries`);
     
-    // Extract time control
+    // Extract time control - convert from milliseconds to seconds for database storage
     const timeControl = gameState.timeControl 
-      ? `${gameState.timeControl.initial}+${gameState.timeControl.increment}`
+      ? `${Math.floor(gameState.timeControl.initial / 1000)}+${Math.floor(gameState.timeControl.increment / 1000)}`
       : "unlimited";
 
     // Determine result
@@ -134,28 +134,31 @@ export async function saveCompletedGame(gameId: string): Promise<void> {
     const finalPosition = finalGame.fen(); // This includes the ban state in the 7th field
     const moveCount = bcn.filter(action => action.startsWith('m:')).length;
     
-    // Determine result reason based on game state and standardized result
+    // Determine the result reason from game state
     let resultReason = 'unknown';
     
-    // Check the actual game state to determine the reason
-    if (finalGame.inCheckmate()) {
-      resultReason = 'checkmate';
-    } else if (finalGame.inStalemate()) {
-      resultReason = 'stalemate';
-    } else if (gameState.resigned) {
-      resultReason = 'resignation';
-    } else if (gameState.timedOut) {
-      resultReason = 'timeout';
-    } else if (result === '1/2-1/2') {
-      resultReason = 'draw';
-    }
-    
-    // If we still don't know the reason but have a decisive result,
-    // check if it was a timeout (common case)
-    if (resultReason === 'unknown' && (result === '1-0' || result === '0-1')) {
-      // Most likely a timeout if game isn't in checkmate
-      if (!finalGame.inCheckmate()) {
+    // If not available in gameState, determine it from game state
+    if (resultReason === 'unknown') {
+      // Check the actual game state to determine the reason
+      if (finalGame.inCheckmate()) {
+        resultReason = 'checkmate';
+      } else if (finalGame.inStalemate()) {
+        resultReason = 'stalemate';
+      } else if (gameState.resigned) {
+        resultReason = 'resignation';
+      } else if (gameState.timedOut) {
         resultReason = 'timeout';
+      } else if (result === '1/2-1/2') {
+        resultReason = 'draw';
+      }
+      
+      // If we still don't know the reason but have a decisive result,
+      // check if it was a timeout (common case)
+      if (resultReason === 'unknown' && (result === '1-0' || result === '0-1')) {
+        // Most likely a timeout if game isn't in checkmate
+        if (!finalGame.inCheckmate()) {
+          resultReason = 'timeout';
+        }
       }
     }
 

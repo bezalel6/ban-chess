@@ -18,7 +18,7 @@ import {
 export default function WebSocketStatusWidget() {
   const { user } = useAuth();
   const wsContext = useGameWebSocket();
-  const { isAuthenticated, currentGameId, gameState } = useGameState({ disableToasts: true });
+  const { isAuthenticated, currentGameId, gameState } = useGameState(undefined, { disableToasts: true });
   const [isExpanded, setIsExpanded] = useState(false);
   const [latency, setLatency] = useState<number | null>(null);
   const [lastPingTime, setLastPingTime] = useState<Date | null>(null);

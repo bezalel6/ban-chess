@@ -42,7 +42,7 @@ export default function GameSidebar({
   isViewingHistory = false,
   onReturnToLive,
 }: GameSidebarProps) {
-  const { activePlayer } = useGameState({ disableToasts: true });
+  const { activePlayer } = useGameState(undefined, { disableToasts: true });
   const { role, orientation } = useUserRole();
   const isPlayer = role !== null;
   const { turn } = parseFEN(gameState.fen);

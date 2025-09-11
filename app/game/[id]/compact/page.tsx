@@ -1,4 +1,4 @@
-import CompactGameClient from "@/components/CompactGameClient";
+import GameViewer from "@/components/GameViewer";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -7,5 +7,17 @@ interface PageProps {
 export default async function CompactGamePage({ params }: PageProps) {
   const { id } = await params;
   
-  return <CompactGameClient gameId={id} />;
+  return (
+    <GameViewer 
+      gameId={id} 
+      mode="compact"
+      viewOptions={{
+        showSidebar: false,
+        showControls: true,
+        showHistory: false,
+        showStats: false,
+        showDebug: false
+      }}
+    />
+  );
 }

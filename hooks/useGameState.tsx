@@ -19,7 +19,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/lib/toast/toast-context";
 
 // Add option to disable toasts to prevent duplicates when multiple components use this hook
-export function useGameState(options: { disableToasts?: boolean } = {}) {
+export function useGameState(gameId?: string, options: { disableToasts?: boolean } = {}) {
   const router = useRouter();
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -358,8 +358,9 @@ export function useGameState(options: { disableToasts?: boolean } = {}) {
 
         case "game-created":
           console.log("[GameState] Game created:", msg.gameId);
-          // Don't set currentGameId here - let GameClient handle it when joining
-          // Navigate immediately - the game page will handle joining
+          // Following Lichess pattern: navigate to the game page
+          // The game page will handle joining via the auto-join effect
+          // Don't set currentGameId here - let the "joined" message handle it
           router.push(`/game/${msg.gameId}`);
           showNotification(`Game created: ${msg.gameId}`, "success");
           break;
@@ -396,6 +397,34 @@ export function useGameState(options: { disableToasts?: boolean } = {}) {
         case "queued":
           console.log("[GameState] Queued, position:", msg.position);
           break;
+
+        case "game-ended": {
+          // Handle explicit game ending message for smooth transitions
+          console.log("[GameState] Game ended:", msg.result, msg.reason);
+          
+          // Update game state to reflect the game has ended
+          setGameState(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              gameOver: true,
+              result: msg.result,
+              resultReason: msg.reason,
+            };
+          });
+          
+          // Play end game sound
+          const userRole = getUserRole(gameState, user?.userId);
+          soundManager.playEvent("game-end", {
+            result: msg.result,
+            playerRole: userRole?.role,
+          });
+          
+          // Show notification about game ending
+          const reasonText = msg.reason ? ` by ${msg.reason}` : '';
+          showNotification(`Game Over: ${msg.result}${reasonText}`, "info");
+          break;
+        }
 
         case "clock-update":
           // Update only the clocks in the current game state
@@ -707,6 +736,23 @@ export function useGameState(options: { disableToasts?: boolean } = {}) {
       );
     }
   }, [currentGameId, connected, send]);
+
+  // Auto-join game if gameId is provided (following Lichess pattern)
+  // Lichess pattern: When navigating to /game/{id}, automatically join that game
+  // This is client-initiated based on URL, not server-pushed
+  useEffect(() => {
+    if (gameId && connected) {
+      // Only join if we're not already in this game
+      if (currentGameId !== gameId) {
+        console.log(`[GameState] Auto-joining game ${gameId} (Lichess pattern: URL-based join)`);
+        // Small delay to ensure WebSocket is fully ready after navigation
+        const timer = setTimeout(() => {
+          joinGame(gameId);
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [gameId, connected, currentGameId, joinGame]);
 
   return {
     // State

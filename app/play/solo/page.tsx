@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 
 export default function SoloPlayPage() {
-  const { connected, createSoloGame } = useGameState();
+  const { connected, createSoloGame } = useGameState(undefined);
   const gameCreatedRef = useRef(false);
 
   useEffect(() => {

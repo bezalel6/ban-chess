@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 
 export default function ConnectionStatusOverlay() {
   const { user } = useAuth();
-  const { readyState, isAuthenticated } = useGameState({ disableToasts: true });
+  const { readyState, isAuthenticated } = useGameState(undefined, { disableToasts: true });
   const [showOverlay, setShowOverlay] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
 

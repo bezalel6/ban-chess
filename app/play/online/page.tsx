@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 
 export default function OnlinePlayPage() {
   const { user } = useAuth();
-  const { connected, joinQueue, leaveQueue } = useGameState();
+  const { connected, joinQueue, leaveQueue } = useGameState(undefined);
   const router = useRouter();
 
   useEffect(() => {
