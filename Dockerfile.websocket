@@ -29,8 +29,8 @@ COPY tsconfig.json ./
 # Copy type definitions (changes less frequently)
 COPY types ./types
 
-# Copy shared game types (changes occasionally)
-COPY lib/game-types.ts ./lib/
+# Copy lib folder (needed for prisma client and game types)
+COPY lib ./lib
 
 # Copy server code last (changes most frequently)
 COPY server ./server
