@@ -153,7 +153,10 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
         {/* Left Panel - Status */}
         <div className="w-56 flex-shrink-0">
           <GameStatusPanel 
-            gameState={gameState.gameState} 
+            gameState={gameState.gameState}
+            activePlayer={gameState.activePlayer}
+            actionType={gameState.actionType}
+            isOfflineGame={true}
             onNewGame={handleNewGame}
           />
           
