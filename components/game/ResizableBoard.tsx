@@ -106,7 +106,6 @@ const ResizableBoard = memo(function ResizableBoard({
   const startPosRef = useRef({ x: 0, y: 0 });
   const saveTimeoutRef = useRef<number | undefined>(undefined);
   const rafRef = useRef<number | undefined>(undefined);
-  const throttleRef = useRef<number | undefined>(undefined);
 
   // Recalculate optimal size on window resize if no saved preference
   useEffect(() => {
@@ -136,25 +135,23 @@ const ResizableBoard = memo(function ResizableBoard({
     }, 300); // Save after 300ms of no changes
   }, []);
 
-  // Throttled resize handler for smooth performance
+  // Resize handler for smooth performance
   const handleResize = useCallback(
     (newSize: number) => {
       // Clamp size to valid range
       const clampedSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, newSize));
       const gridAlignedSize = roundToGrid(clampedSize);
 
-      // Update visual size immediately for smooth feedback (no throttling)
+      // Update visual size immediately for smooth feedback
       setVisualSize(gridAlignedSize);
-
-      // Throttle actual board updates to prevent excessive re-renders
-      if (throttleRef.current) {
-        clearTimeout(throttleRef.current);
-      }
-
-      throttleRef.current = window.setTimeout(() => {
-        setBoardSize(gridAlignedSize);
-        debouncedSave(gridAlignedSize);
-      }, 16); // ~60fps throttling for board updates
+      
+      // Also update board size immediately during resize
+      // Since we're using visualSize for the actual board rendering during resize,
+      // we can update boardSize without throttling for better state consistency
+      setBoardSize(gridAlignedSize);
+      
+      // Debounced save to localStorage
+      debouncedSave(gridAlignedSize);
     },
     [roundToGrid, debouncedSave],
   );
@@ -287,7 +284,6 @@ const ResizableBoard = memo(function ResizableBoard({
   useEffect(() => {
     const saveTimeout = saveTimeoutRef.current;
     const rafId = rafRef.current;
-    const throttleId = throttleRef.current;
 
     return () => {
       if (saveTimeout) {
@@ -295,9 +291,6 @@ const ResizableBoard = memo(function ResizableBoard({
       }
       if (rafId) {
         cancelAnimationFrame(rafId);
-      }
-      if (throttleId) {
-        clearTimeout(throttleId);
       }
     };
   }, []);
@@ -331,7 +324,7 @@ const ResizableBoard = memo(function ResizableBoard({
             onBan={onBan}
             orientation={orientation}
             canInteract={canInteract}
-            size={boardSize - PADDING} // Pass the inner board size to ChessBoard
+            size={(isResizing ? visualSize : boardSize) - PADDING} // Use visualSize during resize for immediate feedback
             banDifficulty={banDifficulty}
           />
         </ChessBoardErrorBoundary>
