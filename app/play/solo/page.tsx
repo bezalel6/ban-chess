@@ -1,23 +1,20 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useGameState } from '@/hooks/useGameState';
+import { useGame } from '@/contexts/GameContext';
 
 export default function SoloPlayPage() {
-  const { connected, createSoloGame } = useGameState(undefined);
+  const { manager, send, connected } = useGame();
   const gameCreatedRef = useRef(false);
 
   useEffect(() => {
     if (!connected) return;
     
-    // Prevent multiple game creation
     if (gameCreatedRef.current) return;
     gameCreatedRef.current = true;
 
-    // Create solo game immediately when connected
-    // The useGameState hook will handle the redirect when it receives game-created
-    createSoloGame();
-  }, [connected, createSoloGame]);
+    send(manager.createSoloGameMsg());
+  }, [connected, manager, send]);
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">

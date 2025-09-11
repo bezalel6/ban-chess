@@ -2,30 +2,27 @@
 
 import { useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useGameState } from "@/hooks/useGameState";
+import { useGame } from "@/contexts/GameContext";
 import { useRouter } from "next/navigation";
 
 export default function OnlinePlayPage() {
   const { user } = useAuth();
-  const { connected, joinQueue, leaveQueue } = useGameState(undefined);
+  const { manager, send, connected } = useGame();
   const router = useRouter();
 
   useEffect(() => {
     if (!connected) return;
 
-    // Join matchmaking queue immediately when connected
-    // The useGameState hook will handle the redirect when matched
-    joinQueue();
+    send(manager.joinQueueMsg());
 
-    // Leave queue when component unmounts
     return () => {
-      leaveQueue();
+      send(manager.leaveQueueMsg());
     };
-  }, [connected, joinQueue, leaveQueue]);
+  }, [connected, manager, send]);
 
   const handleCancel = () => {
-    leaveQueue();
-    router.push("/"); // Navigate to home page
+    send(manager.leaveQueueMsg());
+    router.push("/");
   };
 
   if (!user) {

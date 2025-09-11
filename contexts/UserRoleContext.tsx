@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useGameState } from "@/hooks/useGameState";
+import { useGame } from "@/contexts/GameContext";
 import { getUserRole as computeUserRole } from "@/lib/game-utils";
 import type { UserRole } from "@/lib/game-utils";
 
@@ -30,7 +30,7 @@ const UserRoleContext = createContext<UserRoleContextValue | null>(null);
 
 export function UserRoleProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const { gameState } = useGameState(undefined, { disableToasts: true });
+  const { gameState } = useGame();
   const [spectatorOrientation, setSpectatorOrientation] = useState<"white" | "black">("white");
   const [autoFlipEnabled, setAutoFlipEnabled] = useState<boolean>(() => {
     // Load auto-flip preference from localStorage, default to true for local games

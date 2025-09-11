@@ -3,7 +3,7 @@
 import type { SimpleGameState } from "@/lib/game-types";
 import { getCurrentBan } from "@/lib/game-types";
 import { useUserRole } from "@/contexts/UserRoleContext";
-import { useGameState } from "@/hooks/useGameState";
+
 
 interface GameStatusPanelProps {
   gameState: SimpleGameState;
@@ -21,9 +21,8 @@ export default function GameStatusPanel({
   onNewGame,
 }: GameStatusPanelProps) {
   // For offline games, use props directly. For online games, use the hook
-  const hookData = useGameState(undefined, { disableToasts: true });
-  const activePlayer = isOfflineGame ? propActivePlayer : hookData.activePlayer;
-  const actionType = isOfflineGame ? propActionType : hookData.actionType;
+    const activePlayer = propActivePlayer;
+  const actionType = propActionType;
   
   const { role } = useUserRole();
   const isPlayer = role !== null && !isOfflineGame; // Offline games don't use role

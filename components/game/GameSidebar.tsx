@@ -3,7 +3,7 @@
 import type { SimpleGameState } from "@/lib/game-types";
 import { parseFEN } from "@/lib/game-types";
 import { useUserRole } from "@/contexts/UserRoleContext";
-import { useGameState } from "@/hooks/useGameState";
+
 import PlayerInfo from "./PlayerInfo";
 import MoveList from "./MoveList";
 import GameActions from "./GameActions";
@@ -42,8 +42,7 @@ export default function GameSidebar({
   isViewingHistory = false,
   onReturnToLive,
 }: GameSidebarProps) {
-  const { activePlayer } = useGameState(undefined, { disableToasts: true });
-  const { role, orientation } = useUserRole();
+    const { role, orientation } = useUserRole();
   const isPlayer = role !== null;
   const { turn } = parseFEN(gameState.fen);
 
@@ -51,7 +50,7 @@ export default function GameSidebar({
   const blackPlayer = gameState.players.black?.username || "Waiting...";
 
   // Use activePlayer from BanChess instance to determine who is active
-  const activeColor = activePlayer || turn;
+  const activeColor = gameState.activePlayer || turn;
 
   // For players, show active color based on the game state
   // For spectators, default behavior applies

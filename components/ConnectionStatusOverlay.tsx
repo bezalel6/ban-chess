@@ -1,15 +1,18 @@
 'use client';
 
-import { useGameState } from '@/hooks/useGameState';
+import { useGameWebSocket } from '@/contexts/WebSocketContext';
 import { useAuth } from '@/components/AuthProvider';
 import { ReadyState } from 'react-use-websocket';
 import { useState, useEffect } from 'react';
 
 export default function ConnectionStatusOverlay() {
   const { user } = useAuth();
-  const { readyState, isAuthenticated } = useGameState(undefined, { disableToasts: true });
+  const ws = useGameWebSocket();
   const [showOverlay, setShowOverlay] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
+
+  const readyState = ws?.readyState ?? ReadyState.UNINSTANTIATED;
+  const isAuthenticated = ws?.isAuthenticated ?? false;
 
   useEffect(() => {
     // Only show overlay after a delay to avoid flashing during normal reconnects
@@ -38,6 +41,10 @@ export default function ConnectionStatusOverlay() {
       setReconnectAttempt(prev => prev + 1);
     }
   }, [readyState, showOverlay]);
+
+  if (!ws) {
+    return null;
+  }
 
   // Don't show overlay if no user or not needed
   if (!user || !showOverlay) {
