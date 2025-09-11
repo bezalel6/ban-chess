@@ -41,17 +41,12 @@ const ResizableBoard = memo(function ResizableBoard({
   const MIN_SIZE = 400;
   const MAX_SIZE = 900;
   const DEFAULT_SIZE = 600;
-  const PADDING = 32; // Total padding in chess-board-outer (16px each side)
   const GRID_SIZE = 8; // Grid alignment for smooth resizing
 
-  // Helper to ensure the INNER board (after padding) is divisible by 8
+  // Helper to ensure the board size is divisible by 8 for perfect square alignment
   const roundToGrid = useCallback((size: number) => {
-    // Calculate what the inner size would be
-    const innerSize = size - PADDING;
-    // Round inner size to nearest multiple of 8
-    const roundedInner = Math.round(innerSize / GRID_SIZE) * GRID_SIZE;
-    // Add padding back to get the total size
-    return roundedInner + PADDING;
+    // Round size to nearest multiple of 8
+    return Math.round(size / GRID_SIZE) * GRID_SIZE;
   }, []);
 
   // Calculate optimal board size based on viewport
@@ -165,8 +160,9 @@ const ResizableBoard = memo(function ResizableBoard({
       startSizeRef.current = boardSize;
       startPosRef.current = { x: e.clientX, y: e.clientY };
 
-      // Add cursor style to body during resize
+      // Add cursor style and class to body during resize
       document.body.style.cursor = "nwse-resize";
+      document.body.classList.add("resizing");
     },
     [boardSize],
   );
@@ -208,8 +204,9 @@ const ResizableBoard = memo(function ResizableBoard({
 
     const handleEnd = () => {
       setIsResizing(false);
-      // Restore cursor
+      // Restore cursor and remove class
       document.body.style.cursor = "";
+      document.body.classList.remove("resizing");
       // Ensure visual size matches actual size
       setVisualSize(boardSize);
 
@@ -242,8 +239,9 @@ const ResizableBoard = memo(function ResizableBoard({
       document.removeEventListener("mouseup", handleEnd);
       document.removeEventListener("touchmove", handleTouchMove);
       document.removeEventListener("touchend", handleEnd);
-      // Restore cursor on cleanup
+      // Restore cursor and class on cleanup
       document.body.style.cursor = "";
+      document.body.classList.remove("resizing");
     };
   }, [isResizing, handleResize, boardSize]);
 
@@ -311,9 +309,9 @@ const ResizableBoard = memo(function ResizableBoard({
   );
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center">
       {/* Board Container with dynamic size and resize handle */}
-      <div ref={boardRef} className={containerClassName} style={containerStyle}>
+      <div ref={boardRef} className={`${containerClassName} relative`} style={containerStyle}>
         <ChessBoardErrorBoundary>
           <ChessBoard 
             gameState={gameState} 
@@ -324,41 +322,24 @@ const ResizableBoard = memo(function ResizableBoard({
             onBan={onBan}
             orientation={orientation}
             canInteract={canInteract}
-            size={(isResizing ? visualSize : boardSize) - PADDING} // Use visualSize during resize for immediate feedback
+            size={isResizing ? visualSize : boardSize} // Use visualSize during resize for immediate feedback
             banDifficulty={banDifficulty}
           />
         </ChessBoardErrorBoundary>
 
-        {/* Resize handle - Lichess style corner grip */}
+        {/* Resize handle - Lichess style diagonal grip */}
         <div
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          className={`resize-handle absolute bottom-0 right-0 w-8 h-8 cursor-nwse-resize
-                     ${isResizing ? "opacity-100" : "opacity-60 hover:opacity-100"}`}
+          className={`resize-handle-lichess absolute cursor-nwse-resize z-10 rounded-full transition-colors
+                     ${isResizing ? "bg-background-secondary/50" : "hover:bg-lichess-orange-500/20"}`}
           style={{
-            background: `linear-gradient(135deg, transparent 40%, rgba(255, 140, 0, 0.5) 40%, rgba(255, 140, 0, 0.5) 60%, transparent 60%),
-                        linear-gradient(135deg, transparent 65%, rgba(255, 140, 0, 0.5) 65%, rgba(255, 140, 0, 0.5) 85%, transparent 85%)`,
+            right: '-9px',
+            bottom: '-9px',
+            width: '22px',
+            height: '22px',
           }}
-        >
-          {/* Visual indicator */}
-          <div className="absolute bottom-1 right-1">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              className="text-lichess-orange-500"
-            >
-              <path
-                d="M1 11L11 1M6 11L11 6"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                opacity="0.7"
-              />
-            </svg>
-          </div>
-        </div>
+        />
       </div>
     </div>
   );

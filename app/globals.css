@@ -374,6 +374,39 @@ a {
     opacity: 1 !important;
   }
 
+  /* Lichess-style resize handle with diagonal lines */
+  .resize-handle-lichess::before,
+  .resize-handle-lichess::after {
+    content: "";
+    position: absolute;
+    background: #b58863;
+    height: 2px;
+    left: 0;
+  }
+
+  .resize-handle-lichess::before {
+    width: 5px;
+    transform: translate(7px, 8px) rotate(-45deg);
+  }
+
+  .resize-handle-lichess::after {
+    width: 12px;
+    transform: translate(1px, 6px) rotate(-45deg);
+  }
+
+  /* Hide resize handle on mobile */
+  @media (max-width: 799px) {
+    .resize-handle-lichess {
+      display: none;
+    }
+  }
+
+  /* Prevent text selection during resize */
+  body.resizing {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
   /* Prevent board interaction during resize */
   .resizable-board-container.resizing .chess-board-outer {
     pointer-events: none;

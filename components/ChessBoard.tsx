@@ -232,7 +232,7 @@ const ChessBoard = memo(function ChessBoard({
   }
 
   return (
-    <div className="chess-board-container">
+    <div className="relative w-full h-full">
       <ChessgroundBoard
         fen={gameState.fen}
         orientation={orientation}
