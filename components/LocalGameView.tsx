@@ -1,13 +1,42 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Fragment } from "react";
+import dynamic from "next/dynamic";
+import { Dialog, Transition } from "@headlessui/react";
 import { LocalGameController } from "@/lib/controllers/LocalGameController";
 import type { GameControllerState } from "@/lib/controllers/IGameController";
 import type { Move, Ban } from "@/lib/game-types";
-import ChessBoard from "./ChessBoard";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 import { useRouter } from "next/navigation";
+
+const ResizableBoard = dynamic(() => import("@/components/game/ResizableBoard"), {
+  ssr: false,
+  loading: () => {
+    const DEFAULT_SIZE = 600;
+    const savedSize = typeof window !== "undefined" 
+      ? localStorage.getItem("boardSize") 
+      : null;
+    const boardSize = savedSize ? parseInt(savedSize, 10) : DEFAULT_SIZE;
+    
+    return (
+      <div className="chess-board-wrapper">
+        <div 
+          className="chess-board-container flex items-center justify-center"
+          style={{ 
+            width: `${boardSize}px`, 
+            height: `${boardSize}px`,
+            background: 'var(--background-tertiary)',
+            borderRadius: '1rem',
+            padding: '16px'
+          }}
+        >
+          <div className="loading-spinner" />
+        </div>
+      </div>
+    );
+  },
+});
 
 /**
  * LocalGameView - Component for playing ban chess locally
@@ -32,6 +61,7 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
   const [autoFlip, setAutoFlip] = useState(true);
   const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   // Subscribe to controller state changes
   useEffect(() => {
@@ -148,8 +178,8 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
   }
   
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-10rem)] p-4">
-      <div className="flex gap-6 items-center justify-center w-full max-w-[1400px]">
+    <div className="flex-grow flex justify-center items-center min-h-0">
+      <div className="flex gap-6 items-center justify-center w-full max-w-[1400px] p-4 h-full">
         {/* Left Panel - Status */}
         <div className="w-56 flex-shrink-0">
           <GameStatusPanel 
@@ -160,46 +190,21 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
             onNewGame={handleNewGame}
           />
           
-          {/* Local Game Controls */}
-          <div className="mt-4 bg-background-secondary rounded-xl p-4">
-            <h3 className="text-sm font-semibold mb-3">Local Game</h3>
-            
-            <div className="space-y-2">
-              <button
-                onClick={handleUndo}
-                className="w-full px-3 py-2 bg-background-tertiary hover:bg-background-accent rounded-lg text-sm transition-colors"
-                disabled={!gameState.gameState.actionHistory || gameState.gameState.actionHistory.length === 0}
-              >
-                Undo Move
-              </button>
-              
-              <button
-                onClick={handleSaveGame}
-                className="w-full px-3 py-2 bg-background-tertiary hover:bg-background-accent rounded-lg text-sm transition-colors"
-              >
-                Save Game
-              </button>
-              
-              <button
-                onClick={handleLoadGame}
-                className="w-full px-3 py-2 bg-background-tertiary hover:bg-background-accent rounded-lg text-sm transition-colors"
-              >
-                Load Game
-              </button>
-              
-              <button
-                onClick={() => router.push("/")}
-                className="w-full px-3 py-2 bg-lichess-orange-500 hover:bg-lichess-orange-600 text-white rounded-lg text-sm transition-colors"
-              >
-                Back to Menu
-              </button>
-            </div>
-          </div>
+          {/* Local Game Options Button */}
+          <button
+            onClick={() => setIsDialogOpen(true)}
+            className="mt-4 w-full px-3 py-2 bg-background-secondary hover:bg-background-tertiary rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Game Options
+          </button>
         </div>
         
         {/* Center - Board */}
-        <div className="flex flex-col items-center justify-center" style={{ width: '600px', height: '600px' }}>
-          <ChessBoard
+        <div className="flex flex-col items-center justify-center">
+          <ResizableBoard
             gameState={gameState.gameState}
             dests={gameState.dests}
             activePlayer={gameState.activePlayer}
@@ -207,31 +212,8 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
             onMove={handleMove}
             onBan={handleBan}
             orientation={orientation}
-            viewOnly={isNavigating}
-            banDifficulty="medium"
+            canInteract={!isNavigating}
           />
-          
-          {/* Board controls */}
-          <div className="mt-4 flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={autoFlip}
-                onChange={(e) => setAutoFlip(e.target.checked)}
-                className="rounded"
-              />
-              Auto-flip board
-            </label>
-            
-            {!autoFlip && (
-              <button
-                onClick={() => setOrientation(o => o === "white" ? "black" : "white")}
-                className="px-3 py-1 bg-background-secondary hover:bg-background-tertiary rounded-lg text-sm transition-colors"
-              >
-                Flip Board
-              </button>
-            )}
-          </div>
         </div>
         
         {/* Right Panel - Sidebar */}
@@ -249,6 +231,105 @@ export default function LocalGameView({ initialFen }: LocalGameViewProps) {
           />
         </div>
       </div>
+
+      {/* Game Options Dialog */}
+      <Transition appear show={isDialogOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setIsDialogOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-50" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-background-secondary p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-foreground mb-4"
+                  >
+                    Game Options
+                  </Dialog.Title>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        handleUndo();
+                        setIsDialogOpen(false);
+                      }}
+                      className="w-full px-4 py-2 bg-background-tertiary hover:bg-background-accent rounded-lg text-sm transition-colors text-left"
+                      disabled={!gameState.gameState.actionHistory || gameState.gameState.actionHistory.length === 0}
+                    >
+                      <div className="font-medium">Undo Move</div>
+                      <div className="text-xs text-foreground-muted">Take back the last action</div>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        handleSaveGame();
+                        setIsDialogOpen(false);
+                      }}
+                      className="w-full px-4 py-2 bg-background-tertiary hover:bg-background-accent rounded-lg text-sm transition-colors text-left"
+                    >
+                      <div className="font-medium">Save Game</div>
+                      <div className="text-xs text-foreground-muted">Download game as JSON</div>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        handleLoadGame();
+                        setIsDialogOpen(false);
+                      }}
+                      className="w-full px-4 py-2 bg-background-tertiary hover:bg-background-accent rounded-lg text-sm transition-colors text-left"
+                    >
+                      <div className="font-medium">Load Game</div>
+                      <div className="text-xs text-foreground-muted">Load a previously saved game</div>
+                    </button>
+                    
+                    <hr className="border-background-tertiary" />
+                    
+                    <button
+                      onClick={() => {
+                        setIsDialogOpen(false);
+                        router.push("/");
+                      }}
+                      className="w-full px-4 py-2 bg-red-900/20 hover:bg-red-900/30 text-red-400 rounded-lg text-sm transition-colors text-left"
+                    >
+                      <div className="font-medium">Exit to Menu</div>
+                      <div className="text-xs opacity-80">Leave the current game</div>
+                    </button>
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <button
+                      type="button"
+                      className="px-4 py-2 text-sm font-medium text-foreground-muted hover:text-foreground transition-colors"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   );
 }

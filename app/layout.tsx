@@ -46,7 +46,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="bg-background text-foreground min-h-screen">
+      <body className="bg-background text-foreground min-h-screen flex flex-col">
         <AuthProvider>
           <ToastProvider>
             <WebSocketProvider>
@@ -54,8 +54,8 @@ export default function RootLayout({
                 <ConnectionStatusOverlay />
                 <WebSocketStatusWidget />
                 <Header />
-                {/* Main content */}
-                <main className="w-full">{children}</main>
+                {/* Main content - flex-grow to fill available space */}
+                <main className="flex-grow w-full flex flex-col">{children}</main>
 
                 {/* Toast notifications */}
                 <ToastContainer />

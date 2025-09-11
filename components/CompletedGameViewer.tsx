@@ -212,7 +212,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-10rem)]">
+      <div className="flex justify-center items-center h-full p-8">
         <div className="text-gray-500">
           <div className="loading-spinner mb-4"></div>
           Loading game...
@@ -223,7 +223,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
 
   if (error || !gameData) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-[calc(100vh-10rem)]">
+      <div className="flex flex-col justify-center items-center h-full p-8">
         <div className="text-red-500 mb-4">{error}</div>
         <button
           onClick={() => router.push("/")}
@@ -238,8 +238,8 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
 
   // Use the same layout as GameClient
   return (
-    <div className="flex justify-center items-center min-h-[calc(100vh-10rem)] p-4">
-      <div className="flex gap-6 items-center justify-center w-full max-w-[1400px]">
+    <div className="flex-grow flex justify-center items-center min-h-0">
+      <div className="flex gap-6 items-center justify-center w-full max-w-[1400px] p-4 h-full">
         
         {/* Left Panel - Status (matches GameClient) */}
         <div className="w-56 flex-shrink-0">

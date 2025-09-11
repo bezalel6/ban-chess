@@ -267,8 +267,9 @@ a {
   .chess-board-container {
     position: relative;
     width: 100%;
-    max-width: 600px;
+    /* Removed max-width constraint to allow ResizableBoard to use its calculated size */
     aspect-ratio: 1;
+    contain: layout style;
   }
   
   /* Inner container - this is what chessground sees */

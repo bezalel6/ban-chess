@@ -37,7 +37,7 @@ const ResizableBoard = memo(function ResizableBoard({
 }: ResizableBoardProps) {
   // Default board size in pixels - use multiples of 8 for perfect square alignment
   const MIN_SIZE = 400;
-  const MAX_SIZE = 800;
+  const MAX_SIZE = 900;
   const DEFAULT_SIZE = 600;
   const PADDING = 32; // Total padding in chess-board-outer (16px each side)
   const GRID_SIZE = 8; // Grid alignment for smooth resizing
@@ -52,12 +52,46 @@ const ResizableBoard = memo(function ResizableBoard({
     return roundedInner + PADDING;
   }, []);
 
+  // Calculate optimal board size based on viewport
+  const calculateOptimalSize = useCallback(() => {
+    if (typeof window === "undefined") return DEFAULT_SIZE;
+    
+    // Get viewport dimensions
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Account for header (~64px), padding, and other UI elements
+    const headerHeight = 64;
+    const uiPadding = 32;
+    const availableHeight = viewportHeight - headerHeight - uiPadding;
+    
+    // Account for sidebars (224px left + 320px right = 544px) and gaps  
+    const sidebarsWidth = 544;
+    const gaps = 48; // 24px gap on each side
+    const availableWidth = viewportWidth - sidebarsWidth - gaps - uiPadding;
+    
+    // Use the smaller dimension to maintain square aspect ratio
+    const maxAvailableSize = Math.min(availableHeight, availableWidth);
+    
+    // Clamp between MIN and MAX sizes
+    const optimalSize = Math.min(MAX_SIZE, Math.max(MIN_SIZE, maxAvailableSize));
+    
+    return roundToGrid(optimalSize);
+  }, [roundToGrid]);
+
   const [boardSize, setBoardSize] = useState(() => {
     // Load saved size from localStorage
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("boardSize");
-      const size = saved ? parseInt(saved, 10) : DEFAULT_SIZE;
-      return roundToGrid(size);
+      if (saved) {
+        const size = parseInt(saved, 10);
+        // Validate saved size is within bounds
+        if (size >= MIN_SIZE && size <= MAX_SIZE) {
+          return roundToGrid(size);
+        }
+      }
+      // If no saved size or invalid, calculate optimal
+      return calculateOptimalSize();
     }
     return roundToGrid(DEFAULT_SIZE);
   });
@@ -71,6 +105,22 @@ const ResizableBoard = memo(function ResizableBoard({
   const saveTimeoutRef = useRef<number | undefined>(undefined);
   const rafRef = useRef<number | undefined>(undefined);
   const throttleRef = useRef<number | undefined>(undefined);
+
+  // Recalculate optimal size on window resize if no saved preference
+  useEffect(() => {
+    const handleWindowResize = () => {
+      const saved = localStorage.getItem("boardSize");
+      if (!saved) {
+        // Only auto-adjust if user hasn't set a preferred size
+        const optimalSize = calculateOptimalSize();
+        setBoardSize(optimalSize);
+        setVisualSize(optimalSize);
+      }
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [calculateOptimalSize]);
 
   // Debounced save to localStorage
   const debouncedSave = useCallback((size: number) => {
@@ -279,6 +329,7 @@ const ResizableBoard = memo(function ResizableBoard({
             onBan={onBan}
             orientation={orientation}
             canInteract={canInteract}
+            size={boardSize - PADDING} // Pass the inner board size to ChessBoard
           />
         </ChessBoardErrorBoundary>
 

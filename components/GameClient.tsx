@@ -454,7 +454,7 @@ export default function GameClient({ gameId }: GameClientProps) {
     <>
       {/* Desktop Layout - Three column layout with centered board */}
       <div
-        className={`flex justify-center items-center min-h-[calc(100vh-10rem)] p-4 ${
+        className={`flex-grow flex justify-center items-center min-h-0 ${
           debugMode ? "border-4 border-red-500 relative" : ""
         }`}
       >
@@ -464,7 +464,7 @@ export default function GameClient({ gameId }: GameClientProps) {
           </div>
         )}
         <div
-          className={`flex gap-6 items-center justify-center w-full max-w-[1400px] ${
+          className={`flex gap-6 items-center justify-center w-full max-w-[1400px] p-4 h-full ${
             debugMode ? "border-4 border-blue-500 relative" : ""
           }`}
         >

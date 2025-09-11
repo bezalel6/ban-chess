@@ -45,6 +45,7 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
     "@bezalel6/react-chessground": "^2.0.3",
+    "@headlessui/react": "^2.2.7",
     "@prisma/client": "^6.15.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/ioredis": "^4.28.10",

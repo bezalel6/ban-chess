@@ -6,8 +6,8 @@ export default function GameLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Override the default padding from root layout for game pages
-    <div className="game-layout -mt-6 -mx-4 sm:-mx-6 lg:-mx-8">
+    // Game pages use flex layout without margin overrides
+    <div className="game-layout flex-grow flex flex-col">
       {children}
     </div>
   );

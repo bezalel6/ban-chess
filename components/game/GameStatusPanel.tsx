@@ -50,79 +50,78 @@ export default function GameStatusPanel({
       : "Game";
 
   return (
-    <div className="bg-background-secondary rounded-lg p-3 flex flex-col">
+    <div className="bg-background-secondary rounded-lg p-3 flex flex-col w-full min-w-0">
       {/* STATUS Section */}
-      <div className="flex flex-col">
-        <h3 className="text-sm font-semibold text-foreground-muted mb-2">
+      <div className="flex flex-col space-y-2">
+        <h3 className="text-sm font-semibold text-foreground-muted">
           STATUS
         </h3>
 
         {/* Game Info Grid - Compact 2-column layout */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-background-tertiary rounded-md p-2">
+        <div className="grid grid-cols-2 gap-2 min-w-0">
+          <div className="bg-background-tertiary rounded-md p-2 min-w-0">
             <div className="text-xs text-foreground-muted uppercase">Time</div>
-            <div className="text-sm font-semibold text-foreground">
+            <div className="text-sm font-semibold text-foreground truncate">
               {formatTimeControl()}
             </div>
           </div>
 
-          <div className="bg-background-tertiary rounded-md p-2">
+          <div className="bg-background-tertiary rounded-md p-2 min-w-0">
             <div className="text-xs text-foreground-muted uppercase">Mode</div>
-            <div className="text-sm font-semibold text-foreground">
+            <div className="text-sm font-semibold text-foreground truncate">
               {gameMode}
             </div>
           </div>
         </div>
         
-        {/* Data Source Indicator - Shows if game is from Redis or Database */}
+        {/* Data Source Indicator - Only show when present */}
         {gameState.dataSource && (
-          <div className="mb-3">
-            <div className={`rounded-md p-2 ${
+          <div className={`rounded-md p-2 min-w-0 ${
+            gameState.dataSource === 'active' 
+              ? 'bg-green-900/20 border border-green-500/30' 
+              : 'bg-purple-900/20 border border-purple-500/30'
+          }`}>
+            <div className={`text-xs uppercase ${
               gameState.dataSource === 'active' 
-                ? 'bg-green-900/20 border border-green-500/30' 
-                : 'bg-purple-900/20 border border-purple-500/30'
+                ? 'text-green-400' 
+                : 'text-purple-400'
             }`}>
-              <div className={`text-xs uppercase ${
-                gameState.dataSource === 'active' 
-                  ? 'text-green-400' 
-                  : 'text-purple-400'
-              }`}>
-                Data Source
-              </div>
-              <div className={`text-sm font-bold capitalize ${
-                gameState.dataSource === 'active' 
-                  ? 'text-green-500' 
-                  : 'text-purple-500'
-              }`}>
-                {gameState.dataSource === 'active' ? '🟢 Active (Redis)' : '💾 Completed (Database)'}
-              </div>
+              Data Source
+            </div>
+            <div className={`text-sm font-bold truncate ${
+              gameState.dataSource === 'active' 
+                ? 'text-green-500' 
+                : 'text-purple-500'
+            }`}>
+              {gameState.dataSource === 'active' ? '🟢 Active (Redis)' : '💾 Completed (Database)'}
             </div>
           </div>
         )}
         
         {/* Debug Ply Info - shows current game state */}
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2">
+        <div className="grid grid-cols-2 gap-2 min-w-0">
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2 min-w-0">
             <div className="text-xs text-blue-400 uppercase">Ply</div>
-            <div className="text-sm font-bold text-blue-500">
+            <div className="text-sm font-bold text-blue-500 truncate">
               {ply}
             </div>
           </div>
           
-          <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2">
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-md p-2 min-w-0">
             <div className="text-xs text-blue-400 uppercase">Active</div>
-            <div className="text-sm font-bold text-blue-500 capitalize">
+            <div className="text-sm font-bold text-blue-500 capitalize truncate">
               {currentActivePlayer}
             </div>
           </div>
         </div>
 
+        {/* Playing As - Only show when player */}
         {isPlayer && (
-          <div className="bg-background-tertiary rounded-md p-2 mb-3">
+          <div className="bg-background-tertiary rounded-md p-2 min-w-0">
             <div className="text-xs text-foreground-muted uppercase">
               Playing as
             </div>
-            <div className="text-sm font-semibold text-foreground capitalize">
+            <div className="text-sm font-semibold text-foreground capitalize truncate">
               {role}
             </div>
           </div>
@@ -161,14 +160,14 @@ export default function GameStatusPanel({
           <>
             {/* Current Turn Status - Prominent but compact */}
             <div
-              className={`rounded-md p-2 mb-3 text-center ${
+              className={`rounded-md p-2 text-center min-w-0 ${
                 isMyTurn
                   ? "bg-primary/20 border border-primary/30"
                   : "bg-background-tertiary"
               }`}
             >
               <div
-                className={`text-sm font-semibold ${
+                className={`text-sm font-semibold truncate ${
                   isMyTurn ? "text-primary" : "text-foreground-muted"
                 }`}
               >
@@ -180,27 +179,34 @@ export default function GameStatusPanel({
               </div>
             </div>
 
-            {/* Banned Move - Compact alert style */}
-            {currentBan && (
-              <div className="bg-red-900/20 border border-red-500/30 rounded-md p-2">
-                <div className="text-xs text-red-400">Banned Move</div>
-                <div className="text-sm font-bold text-red-500">
-                  {currentBan.from.toUpperCase()} →{" "}
-                  {currentBan.to.toUpperCase()}
-                </div>
-              </div>
-            )}
+            {/* Banned Move - Min height to prevent jarring changes */}
+            <div className={`rounded-md p-2 min-w-0 min-h-[44px] flex flex-col justify-center transition-colors ${
+              currentBan 
+                ? "bg-red-900/20 border border-red-500/30" 
+                : "bg-background-tertiary/50 border border-background-tertiary"
+            }`}>
+              {currentBan ? (
+                <>
+                  <div className="text-xs text-red-400">Banned Move</div>
+                  <div className="text-sm font-bold text-red-500 font-mono truncate">
+                    {currentBan.from.toUpperCase()} → {currentBan.to.toUpperCase()}
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-foreground-muted/50 text-center">No banned move</div>
+              )}
+            </div>
           </>
         )}
       </div>
 
       {/* GAME CHAT Section - Compact height */}
-      <div className="flex flex-col mt-3">
+      <div className="flex flex-col mt-3 min-w-0">
         <h3 className="text-sm font-semibold text-foreground-muted mb-2">
           GAME CHAT
         </h3>
-        <div className="h-24 bg-background-tertiary rounded-md p-2 overflow-y-auto">
-          <p className="text-xs text-foreground-muted italic">
+        <div className="h-24 bg-background-tertiary rounded-md p-2 overflow-y-auto min-w-0">
+          <p className="text-xs text-foreground-muted italic truncate">
             Chat coming soon...
           </p>
         </div>

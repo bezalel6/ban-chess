@@ -43,6 +43,9 @@ export interface ChessgroundBoardProps {
     showDests?: boolean; // Show dots on valid destinations
   };
   
+  // Layout
+  size?: number; // Board size in pixels
+  
   // Ban visualization (using drawable arrows)
   bannedMove?: {
     from: string;
@@ -222,10 +225,9 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       style.width = `${size}px`;
       style.height = `${size}px`;
     } else {
-      // Default size if not specified
+      // Default size if not specified - no max-width constraint
       style.width = '100%';
-      style.maxWidth = '600px';
-      style.aspectRatio = '1';
+      style.height = '100%';
     }
     return style;
   }, [size]);
