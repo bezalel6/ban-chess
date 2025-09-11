@@ -1080,13 +1080,22 @@ async function matchPlayers() {
     startTime: Date.now(),
   });
 
-  // Create time manager (local to this server for now)
+  // VERIFY game is saved before proceeding
+  const gameState = await getGameState(gameId);
+  if (!gameState) {
+    console.error(`[matchPlayers] FATAL: Game ${gameId} not found after saving!`);
+    // Put players back in queue
+    await addToQueue(player1.userId, player1.username);
+    await addToQueue(player2.userId, player2.username);
+    return;
+  }
+
+  // Create time manager
   const timeManager = new TimeManager(
     timeControl,
     (winner) => handleTimeout(gameId, winner),
     () => broadcastClockUpdate(gameId)
   );
-  // Use BanChess to determine who starts (should be Black at ply 1)
   const activePlayer = game.getActivePlayer();
   timeManager.start(activePlayer);
   timeManagers.set(gameId, timeManager);
@@ -1095,7 +1104,10 @@ async function matchPlayers() {
   await redis.set(KEYS.PLAYER_GAME(player1.userId), gameId);
   await redis.set(KEYS.PLAYER_GAME(player2.userId), gameId);
 
-  // Send match notifications
+  // Subscribe to game channel for both players
+  await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+
+  // Send full game state to both players
   const player1Connected = Array.from(authenticatedPlayers.values()).find(
     (p) => p.userId === player1.userId
   );
@@ -1104,31 +1116,15 @@ async function matchPlayers() {
   );
 
   if (player1Connected && player1Connected.ws.readyState === WebSocket.OPEN) {
-    player1Connected.ws.send(
-      JSON.stringify({
-        type: "matched",
-        gameId,
-        color: "white",
-        opponent: player2.username,
-        timeControl,
-      } as SimpleServerMsg)
-    );
+    await sendFullGameState(gameId, player1Connected.ws);
   }
 
   if (player2Connected && player2Connected.ws.readyState === WebSocket.OPEN) {
-    player2Connected.ws.send(
-      JSON.stringify({
-        type: "matched",
-        gameId,
-        color: "black",
-        opponent: player1.username,
-        timeControl,
-      } as SimpleServerMsg)
-    );
+    await sendFullGameState(gameId, player2Connected.ws);
   }
 
   console.log(
-    `Matched ${player1.username} vs ${player2.username} in game ${gameId} with time control ${timeControl.initial}+${timeControl.increment}`
+    `Matched ${player1.username} vs ${player2.username} in game ${gameId} and sent initial state.`
   );
 
   // Update queue positions for remaining players
@@ -1457,12 +1453,23 @@ wss.on("connection", (ws: WebSocket, request) => {
           // Save game state to Redis
           await saveGameState(gameId, {
             fen: game.fen(),
-            pgn: game.pgn(), // Initialize with empty PGN
+            pgn: game.pgn(),
             whitePlayerId: currentPlayer.userId,
             blackPlayerId: currentPlayer.userId,
             timeControl,
             startTime: Date.now(),
           });
+
+          // Verify game is saved
+          const gameState = await getGameState(gameId);
+          if (!gameState) {
+            console.error(`[create-solo-game] Failed to verify game ${gameId} was saved`);
+            sendMessage(ws, {
+              type: "error",
+              message: "Failed to create game",
+            } as SimpleServerMsg);
+            return;
+          }
 
           // Create time manager
           if (timeControl) {
@@ -1471,7 +1478,6 @@ wss.on("connection", (ws: WebSocket, request) => {
               (winner) => handleTimeout(gameId, winner),
               () => broadcastClockUpdate(gameId)
             );
-            // Use BanChess to determine who starts (should be Black at ply 1)
             const activePlayer = game.getActivePlayer();
             timeManager.start(activePlayer);
             timeManagers.set(gameId, timeManager);
@@ -1482,47 +1488,12 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           // Subscribe to game channel
           await redisSub.subscribe(KEYS.CHANNELS.GAME_STATE(gameId));
+
+          // Send full game state
+          await sendFullGameState(gameId, ws);
           
-          // Ensure the game is fully saved and retrievable
-          await redis.pipeline().exec();
-          
-          // Verify the game is retrievable before sending game-created
-          const verifyGame = await getGameState(gameId);
-          if (!verifyGame) {
-            console.error(`[create-solo-game] Failed to verify game ${gameId} was saved`);
-            sendMessage(ws, {
-              type: "error",
-              message: "Failed to create game",
-            } as SimpleServerMsg);
-            return;
-          }
-
-          const gameCreatedMsg = {
-            type: "game-created",
-            gameId,
-            timeControl,
-            messageId: `game-created-${++messageIdCounter}`,
-          } as SimpleServerMsg & { messageId: string };
-
-          if (!sentMessageIds.has(ws)) {
-            sentMessageIds.set(ws, new Set());
-          }
-
-          // Check if we've already sent this type of message for this game
-          const msgKey = `game-created-${gameId}`;
-          if (!sentMessageIds.get(ws)!.has(msgKey)) {
-            sentMessageIds.get(ws)!.add(msgKey);
-            ws.send(JSON.stringify(gameCreatedMsg));
-            console.log(
-              `[Game] Sent game-created with ID: ${gameCreatedMsg.messageId}`
-            );
-          } else {
-            console.log(
-              `[Game] Skipping duplicate game-created for game ${gameId}`
-            );
-          }
           console.log(
-            `Solo game ${gameId} created for ${currentPlayer.username} with time control ${timeControl.initial}+${timeControl.increment}`
+            `Solo game ${gameId} created for ${currentPlayer.username} and sent initial state.`
           );
           break;
         }
