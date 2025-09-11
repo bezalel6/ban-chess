@@ -39,9 +39,15 @@ COPY server ./server
 COPY package*.json ./
 COPY next.config.js ./
 
+# Copy Prisma schema for client generation
+COPY prisma ./prisma
+
 # Install dependencies needed for build
 RUN npm ci --only=production && \
     npm install --save-dev esbuild
+
+# Generate Prisma client before building
+RUN npx prisma generate
 
 # Build the WebSocket server
 RUN npm run build:ws
@@ -59,11 +65,11 @@ RUN addgroup -g 1001 -S nodejs && \
 # Install tsx in production stage (suppress npm notices)
 RUN npm install -g tsx --loglevel=error 2>/dev/null || npm install -g tsx
 
-# Copy dependencies from deps stage
-COPY --from=deps --chown=wsuser:nodejs /app/node_modules ./node_modules
-COPY --from=deps --chown=wsuser:nodejs /app/package*.json ./
+# Copy dependencies from builder stage (includes generated Prisma client)
+COPY --from=builder --chown=wsuser:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=wsuser:nodejs /app/package*.json ./
 # Copy Prisma schema to production (needed for runtime)
-COPY --from=deps --chown=wsuser:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=wsuser:nodejs /app/prisma ./prisma
 
 # Copy application code from builder stage
 COPY --from=builder --chown=wsuser:nodejs /app/tsconfig.json ./
