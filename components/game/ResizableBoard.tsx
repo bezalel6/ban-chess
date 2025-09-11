@@ -10,11 +10,11 @@ import React, {
 } from "react";
 import ChessBoard from "../ChessBoard";
 import ChessBoardErrorBoundary from "../ChessBoardWrapper";
-import type { SimpleGameState, Move, Ban, Square } from "@/lib/game-types";
+import type { SimpleGameState, Move, Ban } from "@/lib/game-types";
 
 interface ResizableBoardProps {
   gameState: SimpleGameState;
-  dests: Map<Square, Square[]>;
+  dests: Map<string, string[]>;
   activePlayer?: "white" | "black";
   actionType?: "ban" | "move";
   onMove: (move: Move) => void;

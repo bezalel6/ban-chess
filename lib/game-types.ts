@@ -1,9 +1,7 @@
 // Simplified types that rely on FEN as the source of truth
 // Now with Ban Chess Notation (BCN) support for serialization
 
-// Chess square type
-export type Square = string;
-
+// Just use string for squares - the library handles validation
 export interface Move {
   from: string;
   to: string;
@@ -42,8 +40,8 @@ export interface SyncState {
 
 // Time control configuration
 export interface TimeControl {
-  initial: number; // Initial time in seconds
-  increment: number; // Fischer increment in seconds
+  initial: number; // Initial time in milliseconds
+  increment: number; // Fischer increment in milliseconds
 }
 
 // Player clock state
@@ -88,12 +86,12 @@ export interface SimpleGameState {
     black?: { id: string; username: string };
   };
   // Server-provided state from new ban-chess.ts APIs:
-  activePlayer?: "white" | "black";  // Who acts now
-  ply?: number;  // Current ply number
-  inCheck?: boolean;  // Is the active player in check
+  activePlayer?: "white" | "black"; // Who acts now
+  ply?: number; // Current ply number
+  inCheck?: boolean; // Is the active player in check
   // These fields are ONLY for display/metadata, NOT game logic:
-  gameOver?: boolean;  // For UI display only
-  result?: string;     // Standardized result (1-0, 0-1, 1/2-1/2)
+  gameOver?: boolean; // For UI display only
+  result?: string; // Standardized result (1-0, 0-1, 1/2-1/2)
   resultReason?: string; // Reason for game ending (checkmate, resignation, timeout, stalemate)
   history?: HistoryEntry[] | string[]; // For move replay only
   actionHistory?: string[]; // BCN format actions for position reconstruction
@@ -103,7 +101,7 @@ export interface SimpleGameState {
     black: PlayerClock;
   };
   startTime?: number; // Game start timestamp
-  dataSource?: 'active' | 'completed';  // Indicates if game is from Redis (active) or database (completed)
+  dataSource?: "active" | "completed"; // Indicates if game is from Redis (active) or database (completed)
   drawOfferedBy?: "white" | "black"; // Track active draw offer
   // REMOVED: legalActions, nextAction, inCheck - these come from BanChess
 }
@@ -133,7 +131,7 @@ export type SimpleServerMsg =
       clocks?: { white: PlayerClock; black: PlayerClock };
       startTime?: number;
       events?: GameEvent[];
-      dataSource?: 'active' | 'completed';  // Indicates if game is from Redis (active) or database (completed)
+      dataSource?: "active" | "completed"; // Indicates if game is from Redis (active) or database (completed)
     }
   | {
       type: "joined";
@@ -215,10 +213,10 @@ export function parseFEN(fen: string) {
 export function getNextAction(fen: string): "move" | "ban" {
   const { banState } = parseFEN(fen);
   if (!banState) return "move";
-  
+
   // Extract ply number from ban state (it's either just a number like "1" or "number:move" like "2:e2e4")
   const ply = parseInt(banState.split(":")[0]);
-  
+
   // Odd plies are ban phases, even plies are move phases
   return ply % 2 === 1 ? "ban" : "move";
 }
@@ -227,13 +225,13 @@ export function getNextAction(fen: string): "move" | "ban" {
 export function getWhoBans(fen: string): "white" | "black" | null {
   const { banState } = parseFEN(fen);
   if (!banState) return null;
-  
+
   // Extract ply number
   const ply = parseInt(banState.split(":")[0]);
-  
+
   // Only odd plies are ban phases
   if (ply % 2 !== 1) return null;
-  
+
   // Ply 1,5,9... = Black bans
   // Ply 3,7,11... = White bans
   return ((ply - 1) / 2) % 2 === 0 ? "black" : "white";

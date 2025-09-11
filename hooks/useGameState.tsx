@@ -12,7 +12,6 @@ import type {
   Action,
   HistoryEntry,
   GameEvent,
-  Square,
 } from "@/lib/game-types";
 import soundManager from "@/lib/sound-manager";
 import { getUserRole } from "@/lib/game-utils";
@@ -63,7 +62,7 @@ export function useGameState(options: { disableToasts?: boolean } = {}) {
   
   // Convert legal actions to dests map for Chessground
   const dests = useMemo(() => {
-    const destsMap = new Map<Square, Square[]>();
+    const destsMap = new Map<string, string[]>();
     if (!game) return destsMap;
     
     const actions = game.getLegalActions();
@@ -75,8 +74,8 @@ export function useGameState(options: { disableToasts?: boolean } = {}) {
       if (parts.length === 2) {
         const moveStr = parts[1]; // e.g., "e2e4"
         if (moveStr.length >= 4) {
-          const from = moveStr.substring(0, 2) as Square;
-          const to = moveStr.substring(2, 4) as Square;
+          const from = moveStr.substring(0, 2);
+          const to = moveStr.substring(2, 4);
           
           if (!destsMap.has(from)) {
             destsMap.set(from, []);

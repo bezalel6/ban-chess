@@ -21,6 +21,7 @@
     "db:reset": "npx prisma migrate reset --force",
     "db:seed": "npx prisma db seed",
     "db:fix-results": "npx tsx scripts/fix-game-results.ts",
+    "db:migrate-time": "npx tsx scripts/migrate-time-to-milliseconds.ts",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
