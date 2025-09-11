@@ -204,16 +204,28 @@ export default function Header() {
           {/* Main Navigation - Desktop - Absolutely centered */}
           <nav className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 items-center space-x-2">
             <Link
-              href="/play/local"
+              href="/play"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
-              Play Solo
+              Play
+            </Link>
+            <Link
+              href="/play/offline"
+              className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
+            >
+              Offline
+            </Link>
+            <Link
+              href="/play/solo"
+              className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
+            >
+              Solo
             </Link>
             <Link
               href="/play/online"
               className="px-4 py-2 text-sm font-medium text-foreground hover:text-lichess-orange-500 hover:bg-background-secondary rounded-lg transition-all"
             >
-              Play Online
+              Online
             </Link>
           </nav>
 

@@ -198,7 +198,7 @@ export default function CompletedGameViewer({ gameId }: CompletedGameViewerProps
   };
 
   const handleNewGame = () => {
-    router.push("/play/local");
+    router.push("/play/solo");
   };
 
 
