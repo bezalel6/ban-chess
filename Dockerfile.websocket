@@ -35,6 +35,17 @@ COPY lib/game-types.ts ./lib/
 # Copy server code last (changes most frequently)
 COPY server ./server
 
+# Copy package files and next.config for build
+COPY package*.json ./
+COPY next.config.js ./
+
+# Install dependencies needed for build
+RUN npm ci --only=production && \
+    npm install --save-dev esbuild
+
+# Build the WebSocket server
+RUN npm run build:ws
+
 # ===== Production Stage =====
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -60,6 +71,9 @@ COPY --from=builder --chown=wsuser:nodejs /app/types ./types
 COPY --from=builder --chown=wsuser:nodejs /app/lib ./lib
 COPY --from=builder --chown=wsuser:nodejs /app/server ./server
 
+# Copy the built WebSocket server from builder stage
+COPY --from=builder --chown=wsuser:nodejs /app/server/dist ./server/dist
+
 USER wsuser
 
 EXPOSE 3001
@@ -68,9 +82,6 @@ EXPOSE 3001
 # Note: The WebSocket server itself is on 3001, health check endpoint on 3002
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3002/health', (r) => {r.statusCode === 200 ? process.exit(0) : process.exit(1)})" || exit 1
-
-# Build the WebSocket server first
-RUN npm run build:ws
 
 # Run the built WebSocket server
 CMD ["node", "server/dist/ws-server.js"]
