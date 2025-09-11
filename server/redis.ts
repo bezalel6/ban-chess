@@ -1,5 +1,5 @@
 import Redis from "ioredis";
-import type { TimeControl, GameEvent } from "../lib/game-types";
+import type { TimeControl, GameEvent } from "@/lib/game-types";
 
 // Type definitions for Redis data structures
 export interface GameStateData {

@@ -14,7 +14,7 @@ import type {
   TimeControl,
   GameEvent,
   PlayerClock,
-} from "../lib/game-types";
+} from "@/lib/game-types";
 import { v4 as uuidv4 } from "uuid";
 import { TimeManager } from "./time-manager";
 import { validateNextAuthToken } from "./auth-validation";

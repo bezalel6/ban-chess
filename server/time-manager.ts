@@ -1,4 +1,4 @@
-import type { TimeControl, PlayerClock } from '../lib/game-types';
+import type { TimeControl, PlayerClock } from '@/lib/game-types';
 
 export class TimeManager {
   private timeControl: TimeControl;

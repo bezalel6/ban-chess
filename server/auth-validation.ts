@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'http';
-import type { AuthProvider } from '../types/auth';
+import type { AuthProvider } from '@/types/auth';
 import { decode } from 'next-auth/jwt';
-import prisma from '../lib/prisma';
+import prisma from '@/lib/prisma';
 
 interface AuthToken {
   username: string;
