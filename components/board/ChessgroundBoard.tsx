@@ -51,7 +51,6 @@ export interface ChessgroundBoardProps {
   // Events
   onMove?: (from: string, to: string) => void;
   onPremove?: (from: string, to: string) => void;
-  onSelect?: (square: string | null) => void; // Called when a square is selected
 
   // Visual configuration
   coordinates?: boolean;
@@ -79,7 +78,6 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
   bannedMove,
   onMove,
   onPremove,
-  onSelect,
   coordinates = false,
   animation = true,
   highlight = { lastMove: true, check: true },
@@ -102,32 +100,17 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
   const autoShapes = useMemo(() => {
     const shapes: Array<DrawShape> = [];
 
-    // Add banned move as a red arrow with label
+    // Add banned move as a red arrow
     if (bannedMove) {
       shapes.push({
         orig: bannedMove.from as Key,
         dest: bannedMove.to as Key,
         brush: "red",
       });
-      
-      // Add label on the from square during ban mode
-      if (actionType === "ban" && bannedMove.from) {
-        shapes.push({
-          orig: bannedMove.from as Key,
-          brush: "red",
-          label: {
-            text: `Banning ${bannedMove.from}→${bannedMove.to}`,
-            fill: "#ffffff", // White text
-          },
-          modifiers: {
-            hilite: true,
-          },
-        });
-      }
     }
 
     return shapes;
-  }, [bannedMove, actionType]);
+  }, [bannedMove]);
 
   // Configure drawable brushes for different visualizations
   const drawableBrushes: DrawBrushes = useMemo(
@@ -150,13 +133,8 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       highlights.set(bannedMove.to as Key, "banned-square");
     }
     
-    // During ban phase, highlight the from square being hovered
-    if (actionType === "ban" && bannedMove?.from && bannedMove?.to) {
-      highlights.set(bannedMove.from as Key, "ban-from-square");
-    }
-    
     return highlights;
-  }, [actionType, bannedMove?.to, bannedMove?.from]);
+  }, [actionType, bannedMove?.to]);
 
   // Chessground configuration - using ALL its features
   const config = useMemo<Config>(() => {
@@ -226,13 +204,6 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
         brushes: drawableBrushes,
         autoShapes: autoShapes,
       },
-
-      // Events for selection tracking
-      events: onSelect ? {
-        select: (key: Key) => {
-          onSelect(key);
-        },
-      } : undefined,
     };
 
     return baseConfig;
@@ -251,7 +222,6 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     dests,
     onMove,
     onPremove,
-    onSelect,
     drawableBrushes,
     autoShapes,
     customHighlight,

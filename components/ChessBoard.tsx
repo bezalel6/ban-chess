@@ -58,7 +58,6 @@ const ChessBoard = memo(function ChessBoard({
 }: ChessBoardProps) {
   const [bannedMoveAlert, setBannedMoveAlert] = useState<boolean>(false);
   const [boardKey, setBoardKey] = useState(0); // Force board re-render on banned move
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null); // Track selected square for ban hover
 
   /**
    * Determines which king is in check based on Ban Chess rules.
@@ -123,14 +122,6 @@ const ChessBoard = memo(function ChessBoard({
       setVisibleBan(null);
     }
   }, [currentBan]);
-
-  // Handle square selection for ban hover visualization
-  const handleSquareSelect = useCallback((square: string | null) => {
-    // Only track selection in ban mode
-    if (actionType === "ban") {
-      setSelectedSquare(square);
-    }
-  }, [actionType]);
 
 
   // Handle move/ban from board
@@ -259,13 +250,8 @@ const ChessBoard = memo(function ChessBoard({
           dests: effectiveDests,
           showDests: true,
         }}
-        bannedMove={
-          actionType === "ban" && selectedSquare && visibleBan
-            ? { from: selectedSquare, to: visibleBan.to }
-            : visibleBan || undefined
-        }
+        bannedMove={visibleBan || undefined}
         onMove={handleBoardMove}
-        onSelect={handleSquareSelect}
         actionType={actionType}
         size={size}
         className={className}
