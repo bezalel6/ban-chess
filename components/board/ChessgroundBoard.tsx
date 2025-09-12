@@ -30,6 +30,7 @@ export interface ChessgroundBoardProps {
   turn?: "white" | "black";
   check?: "white" | "black"; // Color of king in check
   lastMove?: [string, string]; // [from, to]
+  selected?: string; // Currently selected square
 
   // Interaction
   viewOnly?: boolean; // Completely disable interaction
@@ -73,6 +74,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
   turn = "white",
   check,
   lastMove,
+  selected,
   viewOnly = false,
   movable,
   bannedMove,
@@ -109,8 +111,20 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       });
     }
 
+    // Add label on selected square during ban mode
+    if (actionType === "ban" && selected) {
+      shapes.push({
+        orig: selected as Key,
+        brush: "green",
+        label: {
+          text: selected.toUpperCase(),
+          fill: "#ffffff",
+        },
+      });
+    }
+
     return shapes;
-  }, [bannedMove]);
+  }, [bannedMove, actionType, selected]);
 
   // Configure drawable brushes for different visualizations
   const drawableBrushes: DrawBrushes = useMemo(

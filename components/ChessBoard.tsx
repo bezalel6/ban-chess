@@ -58,6 +58,7 @@ const ChessBoard = memo(function ChessBoard({
 }: ChessBoardProps) {
   const [bannedMoveAlert, setBannedMoveAlert] = useState<boolean>(false);
   const [boardKey, setBoardKey] = useState(0); // Force board re-render on banned move
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
   /**
    * Determines which king is in check based on Ban Chess rules.
@@ -124,12 +125,26 @@ const ChessBoard = memo(function ChessBoard({
   }, [currentBan]);
 
 
+  // Handle square selection during ban mode
+  useEffect(() => {
+    // Track the selected square based on Chessground's internal selection
+    // This will be used to show the square label
+    if (actionType === "ban") {
+      // We'll update this through the board's internal state
+      // For now, just reset when not in ban mode
+    } else {
+      setSelectedSquare(null);
+    }
+  }, [actionType]);
+
   // Handle move/ban from board
   const handleBoardMove = useCallback(
     (from: string, to: string) => {
       if (!gameState) return;
 
+      // Track selected square for ban mode
       if (actionType === "ban") {
+        setSelectedSquare(from);
         onBan({ from, to });
       } else {
         // Check if this move is banned
@@ -244,6 +259,7 @@ const ChessBoard = memo(function ChessBoard({
         turn={activePlayer}
         check={checkedKing}
         lastMove={lastMove}
+        selected={selectedSquare || undefined}
         viewOnly={viewOnly}
         movable={{
           color: movableColor,
