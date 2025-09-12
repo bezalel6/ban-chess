@@ -22,8 +22,11 @@ export function useGame(gameId: string) {
   // Subscribe to game state updates
   useEffect(() => {
     if (!gameId) return;
+    
+    console.log('[useGame] Setting up subscriptions for game:', gameId);
 
     const unsubscribeGame = gameStore.subscribeToGame(gameId, (state) => {
+      console.log('[useGame] Received game state update for:', gameId, 'state:', !!state);
       setGameState(state);
       
       // Update BanChess instance
