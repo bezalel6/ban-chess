@@ -30,6 +30,31 @@ When changing ANY existing functionality:
 
 ---
 
+## 🎯 AUTHENTICATION PHILOSOPHY - ANONYMOUS-FIRST APPROACH 🎯
+**Following Lichess's User-Friendly Model**
+
+This project implements a **Lichess-style anonymous-first authentication system**:
+- **All visitors are immediately playable**: No sign-in barriers or authentication requirements
+- **Automatic anonymous IDs**: Every visitor gets a persistent guest ID stored in localStorage
+- **No "Continue as Guest" buttons**: Users are already guests, no action required
+- **Optional authentication**: OAuth sign-in is available but never required for gameplay
+- **Seamless experience**: Users can play immediately without any authentication decisions
+
+### Key Implementation Details:
+- `AuthProvider.tsx`: Automatically generates anonymous IDs on mount
+- `middleware.ts`: Allows all routes for anonymous users (no protection needed)
+- `ws-server.ts`: Accepts anonymous WebSocket connections without authentication
+- Anonymous users have `provider: 'guest'` in their user object
+- Guest IDs persist across sessions via localStorage
+
+### What NOT to do:
+- ❌ Don't add authentication barriers to any gameplay features
+- ❌ Don't create "Sign in to continue" flows
+- ❌ Don't require authentication for matchmaking or online play
+- ❌ Don't show "Continue as Guest" buttons - users are already guests
+
+---
+
 ## Other Critical Instructions:
 1. If you discover any **misalignment or contradiction** between this document and the actual codebase (e.g., outdated patterns, different dependencies, conflicting conventions), **immediately halt the task you are working on** and **alert the team**. Do not proceed until the discrepancy is resolved.
 

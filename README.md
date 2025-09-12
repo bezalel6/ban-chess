@@ -10,9 +10,9 @@ Built with:
 - [@bezalel6/react-chessground](https://www.npmjs.com/package/@bezalel6/react-chessground) — interactive chessboard
 - [ban-chess.ts v3.0.0](https://github.com/bezalel6/ban-chess.ts) — variant engine
 - [WebSockets](https://www.npmjs.com/package/ws) — real-time sync between players
-- [NextAuth.js](https://next-auth.js.org/) — authentication with Google, Lichess & Guest login
+- [NextAuth.js](https://next-auth.js.org/) — optional authentication with Google & Lichess OAuth
 
-This platform features comprehensive authentication, real-time multiplayer, sound effects, and extensive testing.
+This platform features anonymous-first gameplay inspired by Lichess, real-time multiplayer, sound effects, and extensive testing.
 
 ---
 
@@ -28,11 +28,11 @@ This platform features comprehensive authentication, real-time multiplayer, soun
 - Game sound effects for moves, captures, bans, and game events
 
 ### Authentication & User Management
-- **Multiple login options**: Google OAuth, Lichess OAuth, or Guest mode
-- Automatic unique username generation for all auth types
-- Session management with NextAuth.js and JWT tokens
-- User profiles and username customization
-- Secure authentication flow with proper error handling
+- **Anonymous-first experience**: Play immediately without any sign-in requirements
+- **Automatic guest IDs**: Every visitor gets a persistent anonymous identity
+- **Optional authentication**: Sign in with Google or Lichess OAuth if desired
+- **Seamless transition**: Keep your games when transitioning from anonymous to authenticated
+- **No barriers**: Following Lichess's philosophy - authentication never blocks gameplay
 
 ### User Experience
 - Active game detection on home page with continue/resign options
@@ -167,9 +167,9 @@ Runs both servers concurrently, but logs are mixed and harder to analyze.
 
 > 📖 **For detailed development setup, debugging tips, and best practices, see [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)**
 
-### 3. Authentication Setup (Optional)
+### 3. Authentication Setup (Completely Optional)
 
-For OAuth providers, set up environment variables:
+Authentication is never required to play. If you want to enable optional OAuth sign-in, set up environment variables:
 
 ```bash
 # Google OAuth (optional)
@@ -209,7 +209,7 @@ npm run analyze
 ## 🎮 Usage
 
 1. **Visit the app**: Open [http://localhost:3000](http://localhost:3000)
-2. **Sign in**: Choose from Google OAuth, Lichess OAuth, or Guest mode
+2. **Start playing immediately**: You're automatically assigned an anonymous ID
 3. **Create/Join game**: 
    - **Solo Practice**: Click "Play Local" for single-player against the engine
    - **Online Multiplayer**: Click "Play Online" to create a game room
@@ -318,7 +318,7 @@ The board is rendered using [react-chessground](https://github.com/ruilisi/react
 ## ✅ Current Status & Future Plans
 
 ### ✅ Completed Features
-- ✅ **Authentication**: Multiple OAuth providers + Guest mode
+- ✅ **Anonymous-first gameplay**: Lichess-style instant play without authentication
 - ✅ **Real-time multiplayer**: WebSocket-based gameplay
 - ✅ **Sound system**: Game audio and sound controls
 - ✅ **Comprehensive testing**: E2E test coverage with Playwright
