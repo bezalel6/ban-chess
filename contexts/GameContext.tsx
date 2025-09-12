@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, ReactNode, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { useToast } from '@/lib/toast/toast-context';
@@ -45,11 +45,11 @@ export function GameProvider({ gameId, children }: { gameId?: string, children: 
     }
   }, [ws, ws?.lastMessage, manager, user, router, showToast]);
 
-  const send = (message: SimpleClientMsg) => {
+  const send = useCallback((message: SimpleClientMsg) => {
       if (ws) {
         ws.sendMessage(JSON.stringify(message));
       }
-  }
+  }, [ws]);
 
   useEffect(() => {
     if (gameId && connected && ws) {

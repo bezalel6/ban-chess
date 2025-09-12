@@ -5,7 +5,7 @@ import { useGame } from '@/contexts/GameContext';
 import { GameProviderWrapper } from '@/components/GameProviderWrapper';
 
 function SoloPlayContent() {
-  const { manager, send, connected } = useGame();
+  const { send, connected } = useGame();
   const gameCreatedRef = useRef(false);
 
   useEffect(() => {
@@ -14,8 +14,9 @@ function SoloPlayContent() {
     if (gameCreatedRef.current) return;
     gameCreatedRef.current = true;
 
-    send(manager.createSoloGameMsg());
-  }, [connected, manager, send]);
+    const createSoloMsg = { type: 'create-solo-game' } as const;
+    send(createSoloMsg);
+  }, [connected, send]);
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">

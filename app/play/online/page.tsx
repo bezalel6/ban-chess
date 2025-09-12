@@ -8,21 +8,26 @@ import { GameProviderWrapper } from "@/components/GameProviderWrapper";
 
 function OnlinePlayContent() {
   const { user } = useAuth();
-  const { manager, send, connected } = useGame();
+  const { send, connected } = useGame();
   const router = useRouter();
 
   useEffect(() => {
     if (!connected) return;
 
-    send(manager.joinQueueMsg());
+    // Only join queue once when connected
+    const joinMsg = { type: 'join-queue' } as const;
+    send(joinMsg);
 
+    // Cleanup: leave queue when component unmounts or connection lost
     return () => {
-      send(manager.leaveQueueMsg());
+      const leaveMsg = { type: 'leave-queue' } as const;
+      send(leaveMsg);
     };
-  }, [connected, manager, send]);
+  }, [connected, send]); // send is now stable due to useCallback in GameContext
 
   const handleCancel = () => {
-    send(manager.leaveQueueMsg());
+    const leaveMsg = { type: 'leave-queue' } as const;
+    send(leaveMsg);
     router.push("/");
   };
 
