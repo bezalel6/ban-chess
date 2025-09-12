@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useGameStore } from "@/contexts/GameContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
@@ -11,29 +11,35 @@ function OnlinePlayContent() {
   const gameStore = useGameStore();
   const { isReady } = useWebSocket();
   const router = useRouter();
-  const hasJoinedRef = useRef(false);
 
-  // Handle joining the queue when connected
   useEffect(() => {
-    if (isReady && !hasJoinedRef.current) {
-      gameStore.joinQueue();
-      hasJoinedRef.current = true;
+    if (!user) {
+      // Redirect to sign in if not authenticated
+      router.push('/sign-in?redirect=/play/online');
+      return;
     }
-  }, [isReady, gameStore]);
 
-  // Handle cleanup when component unmounts
-  useEffect(() => {
-    return () => {
-      // Only leave queue if we actually joined
-      if (hasJoinedRef.current) {
-        gameStore.leaveQueue();
+    if (!isReady) return;
+
+    // Join the matchmaking queue
+    gameStore.joinQueue();
+
+    // Listen for game creation from matchmaking
+    const unsubscribe = gameStore.subscribeToAll((state) => {
+      if (state && state.gameId && state.players?.white && state.players?.black) {
+        // Game has been created by matchmaking
+        router.push(`/game/${state.gameId}`);
       }
+    });
+
+    return () => {
+      gameStore.leaveQueue();
+      unsubscribe();
     };
-  }, [gameStore]);
+  }, [user, isReady, gameStore, router]);
 
   const handleCancel = () => {
     gameStore.leaveQueue();
-    hasJoinedRef.current = false;
     router.push("/");
   };
 

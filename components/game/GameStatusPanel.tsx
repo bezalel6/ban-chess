@@ -196,9 +196,9 @@ export default function GameStatusPanel({
                 }`}
               >
                 {nextAction === "ban" ? (
-                  // Banning phase
+                  // Banning phase - the active player bans for the opponent
                   isSinglePlayer ? (
-                    `Choose a move to ban for ${currentActivePlayer}`
+                    `Choose a move to ban for ${currentActivePlayer === 'white' ? 'Black' : 'White'}`
                   ) : (
                     isMyTurn ? "Choose a move to ban" : `${currentActivePlayer.charAt(0).toUpperCase() + currentActivePlayer.slice(1)} is banning...`
                   )

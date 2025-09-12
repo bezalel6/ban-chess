@@ -13,7 +13,6 @@ interface GameViewerProps {
 }
 
 export default function GameViewer({ gameId }: GameViewerProps) {
-  console.log('[GameViewer] Rendering with gameId:', gameId);
   const router = useRouter();
   const {
     gameState,
@@ -37,6 +36,15 @@ export default function GameViewer({ gameId }: GameViewerProps) {
     if (!gameState || !gameState.players) return false;
     return gameState.players.white?.id === gameState.players.black?.id;
   }, [gameState]);
+
+  // For solo games, orientation should follow the active player
+  // For online games, use the player's perspective
+  const boardOrientation = useMemo(() => {
+    if (isLocalGame && activePlayer) {
+      return activePlayer;
+    }
+    return orientation;
+  }, [isLocalGame, activePlayer, orientation]);
 
   // Track game completion state
   useEffect(() => {
@@ -133,7 +141,7 @@ export default function GameViewer({ gameId }: GameViewerProps) {
       <div className="flex-1 min-w-0">
         <ResizableBoard
           gameState={effectiveGameState!}
-          orientation={orientation}
+          orientation={boardOrientation}
           dests={dests}
           activePlayer={activePlayer}
           actionType={actionType}

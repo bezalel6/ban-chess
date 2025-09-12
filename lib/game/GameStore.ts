@@ -114,7 +114,6 @@ export class GameStore {
   private handleGameState(msg: SimpleServerMsg): void {
     if (msg.type !== 'state') return;
     
-    console.log('[GameStore] Received state message:', msg.type, 'gameId:', msg.gameId);
     
     const gameId = msg.gameId;
     const state: SimpleGameState = {
@@ -140,13 +139,11 @@ export class GameStore {
     
     // Store game state
     this.games.set(gameId, state);
-    console.log('[GameStore] Stored game state for', gameId, 'total games:', this.games.size);
     
     // Handle sounds
     this.handleGameSounds(gameId, state);
     
     // Notify listeners
-    console.log('[GameStore] Notifying listeners for game', gameId, 'listeners:', this.gameListeners.get(gameId)?.size || 0);
     this.notifyGameListeners(gameId, state);
     this.notifyRoleListeners(gameId);
     this.notifyGlobalListeners(state);
@@ -306,24 +303,16 @@ export class GameStore {
    * Subscribe to a specific game
    */
   public subscribeToGame(gameId: string, listener: GameListener): () => void {
-    console.log('[GameStore] subscribeToGame called for:', gameId);
-    console.log('[GameStore] Current games in store:', Array.from(this.games.keys()));
-    
     if (!this.gameListeners.has(gameId)) {
       this.gameListeners.set(gameId, new Set());
     }
     
     this.gameListeners.get(gameId)!.add(listener);
-    console.log('[GameStore] Added listener for game', gameId, 'total listeners:', this.gameListeners.get(gameId)!.size);
     
     // Send current state if available
     const game = this.games.get(gameId);
-    console.log('[GameStore] Checking for existing state for game', gameId, '- found:', !!game);
     if (game) {
-      console.log('[GameStore] Sending existing state to new subscriber for game', gameId);
       listener(game);
-    } else {
-      console.log('[GameStore] No existing state for game', gameId, '- subscriber will wait for state');
     }
     
     return () => {
@@ -421,27 +410,24 @@ export class GameStore {
    * Join a game
    */
   public joinGame(gameId: string): void {
-    console.log('[GameStore] Joining game:', gameId);
     this.currentGameId = gameId;
-    
-    // Check if we already have state for this game
-    const existingState = this.games.get(gameId);
-    if (existingState) {
-      console.log('[GameStore] Already have state for game', gameId, 'notifying listeners immediately');
-      // Notify any waiting listeners immediately
-      setTimeout(() => {
-        this.notifyGameListeners(gameId, existingState);
-      }, 0);
-    }
     
     // Always send join message to server to ensure we get latest state
     const message: SimpleClientMsg = {
       type: 'join-game',
       gameId
     };
-    
-    console.log('[GameStore] Sending join-game message for:', gameId);
     wsManager.send(message);
+    
+    // Check if we already have state for this game
+    const existingState = this.games.get(gameId);
+    if (existingState) {
+      // Small delay to allow subscriptions to be set up
+      setTimeout(() => {
+        this.notifyGameListeners(gameId, existingState);
+        this.notifyRoleListeners(gameId);
+      }, 100);
+    }
   }
 
   /**

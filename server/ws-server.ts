@@ -1526,7 +1526,7 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           // Reconstruct the game to check if it's over
           const game = reconstructGameFromBCN(gameSource.bcn);
-          const isGameOver = game.gameOver() || !!gameSource.result;
+          const isGameOver = game.gameOver() || (gameSource.result && gameSource.result !== "*");
 
           console.log(
             `[join-game] Game ${gameId}: storage=${gameSource.type}, gameOver=${isGameOver}`

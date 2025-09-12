@@ -48,9 +48,11 @@ export async function getGameSource(gameId: string): Promise<GameSource | null> 
     });
     
     if (dbGame) {
-      // Game found in database - this is the authoritative source for completed games
+      // Check if game is actually completed or still in progress
+      const isCompleted = dbGame.result !== "*";
+      
       return {
-        type: 'completed',
+        type: isCompleted ? 'completed' : 'active',
         gameId: dbGame.id,
         bcn: dbGame.bcn,
         moveTimes: dbGame.moveTimes,  // Already in milliseconds
