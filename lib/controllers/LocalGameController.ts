@@ -50,6 +50,35 @@ export class LocalGameController implements IGameController {
     this.subscribers.forEach(callback => callback(state));
   }
   
+  /**
+   * Helper method to check if the game is actually over, including cases
+   * where ban-chess.ts may not properly detect checkmate (especially mate-by-ban)
+   */
+  private isGameActuallyOver(): boolean {
+    // First check the library's gameOver method
+    if (this.game.gameOver()) {
+      return true;
+    }
+    
+    // Workaround for ban-chess.ts checkmate detection bug
+    // If player is in check with 0 legal moves, it's checkmate
+    const inCheck = this.game.inCheck();
+    const legalActions = this.game.getLegalActions();
+    
+    if (inCheck && legalActions.length === 0) {
+      debugLog(`Checkmate detected via workaround: inCheck=${inCheck}, legalActions=0`);
+      return true;
+    }
+    
+    // Check for stalemate (not in check but no legal moves)
+    if (!inCheck && legalActions.length === 0) {
+      debugLog(`Stalemate detected via workaround: inCheck=${inCheck}, legalActions=0`);
+      return true;
+    }
+    
+    return false;
+  }
+
   private createGameState(): SimpleGameState {
     // ALWAYS create history from the full action history, not the current game
     // This ensures the move list always shows all moves
@@ -80,6 +109,9 @@ export class LocalGameController implements IGameController {
       username: "You"
     };
     
+    // Use our enhanced game over detection
+    const isGameOver = this.isGameActuallyOver();
+    
     return {
       gameId: this.currentGameId,
       fen: this.game.fen(),
@@ -90,29 +122,37 @@ export class LocalGameController implements IGameController {
       activePlayer: this.game.getActivePlayer(),
       ply: this.game.getPly(),
       inCheck: this.game.inCheck(),
-      gameOver: this.game.gameOver(),
-      result: this.game.gameOver() ? this.getGameResult() : undefined,
-      resultReason: this.game.gameOver() ? this.getResultReason() : undefined,
+      gameOver: isGameOver,
+      result: isGameOver ? this.getGameResult() : undefined,
+      resultReason: isGameOver ? this.getResultReason() : undefined,
       history: history,
       actionHistory: this.fullActionHistory, // Always return full history
     };
   }
   
   private getGameResult(): string {
-    if (this.game.inCheckmate()) {
+    // Check for checkmate (including workaround for ban-chess.ts bug)
+    const inCheck = this.game.inCheck();
+    const legalActions = this.game.getLegalActions();
+    
+    if (this.game.inCheckmate() || (inCheck && legalActions.length === 0)) {
       return this.game.getActivePlayer() === "white" ? "0-1" : "1-0";
     }
-    if (this.game.inStalemate()) {
+    if (this.game.inStalemate() || (!inCheck && legalActions.length === 0)) {
       return "1/2-1/2";
     }
     return "1/2-1/2"; // Draw
   }
   
   private getResultReason(): string {
-    if (this.game.inCheckmate()) {
+    // Check for checkmate (including workaround for ban-chess.ts bug)
+    const inCheck = this.game.inCheck();
+    const legalActions = this.game.getLegalActions();
+    
+    if (this.game.inCheckmate() || (inCheck && legalActions.length === 0)) {
       return "checkmate";
     }
-    if (this.game.inStalemate()) {
+    if (this.game.inStalemate() || (!inCheck && legalActions.length === 0)) {
       return "stalemate";
     }
     return "draw";
@@ -139,6 +179,9 @@ export class LocalGameController implements IGameController {
       }
     });
     
+    // Use our enhanced game over detection
+    const isGameOver = this.isGameActuallyOver();
+    
     return {
       gameState: this.createGameState(),
       ply: this.game.getPly(),
@@ -146,7 +189,7 @@ export class LocalGameController implements IGameController {
       actionType: this.game.getActionType(),
       dests,
       inCheck: this.game.inCheck(),
-      gameOver: this.game.gameOver(),
+      gameOver: isGameOver,
       connected: true, // Always "connected" for local games
       events: this.events,
       error: null,
@@ -195,12 +238,12 @@ export class LocalGameController implements IGameController {
     }
     
     // Log state after successful action
-    const gameOver = this.game.gameOver();
+    const gameOver = this.isGameActuallyOver(); // Use our enhanced detection
     const inCheck = this.game.inCheck();
     const inCheckmate = this.game.inCheckmate();
     const legalMoves = this.game.getLegalActions().length;
     
-    // Always log after bans to track the issue
+    // Log after bans for debugging
     if (actionType === 'ban') {
       const afterState = {
         ply: this.game.getPly(),
@@ -214,25 +257,9 @@ export class LocalGameController implements IGameController {
       debugLog(`After ${actionStr}:`, afterState);
     }
     
-    if (inCheck && legalMoves === 0 && !gameOver) {
-      debugLog(`⚠️ BUG DETECTED: King in check with 0 legal moves but gameOver()=false`);
-      debugLog(`This should be checkmate! ban-chess.ts v${BanChess.VERSION} is not detecting it.`);
-      debugLog(`Full state:`, {
-        ply: this.game.getPly(),
-        activePlayer: this.game.getActivePlayer(),
-        inCheck: this.game.inCheck(),
-        inCheckmate: this.game.inCheckmate(),
-        inStalemate: this.game.inStalemate(),
-        gameOver: this.game.gameOver(),
-        legalActions: this.game.getLegalActions().length,
-        currentBan: this.game.currentBannedMove,
-        fen: this.game.fen(),
-        actionHistory: this.game.getActionHistory().slice(-3),
-      });
-    }
-    
-    if (gameOver && inCheckmate) {
-      debugLog(`✓ Checkmate properly detected after ${actionStr}`);
+    // Log successful checkmate detection (including workaround cases)
+    if (gameOver && (inCheckmate || (inCheck && legalMoves === 0))) {
+      debugLog(`✓ Checkmate detected after ${actionStr} (library=${inCheckmate}, workaround=${!inCheckmate && inCheck && legalMoves === 0})`);
     }
     
     if (result.success) {
@@ -253,19 +280,21 @@ export class LocalGameController implements IGameController {
           : { ban: (action as { ban: Ban }).ban },
       });
       
-      // Check for game end
-      if (this.game.gameOver()) {
+      // Check for game end (using our enhanced detection)
+      if (this.isGameActuallyOver()) {
         let eventType: GameEvent['type'] = 'draw';
-        if (this.game.inCheckmate()) {
+        const resultReason = this.getResultReason();
+        
+        if (resultReason === 'checkmate') {
           eventType = 'checkmate';
-        } else if (this.game.inStalemate()) {
+        } else if (resultReason === 'stalemate') {
           eventType = 'stalemate';
         }
         
         this.addEvent({
           timestamp: Date.now(),
           type: eventType,
-          message: `Game ended: ${this.getResultReason()}`,
+          message: `Game ended: ${resultReason}`,
           metadata: {
             result: this.getGameResult(),
           },
