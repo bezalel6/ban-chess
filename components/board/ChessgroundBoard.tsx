@@ -85,15 +85,6 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
   size,
   className = "",
 }: ChessgroundBoardProps) {
-  // Track selected square for ban mode labels
-  const [selectedSquare, setSelectedSquare] = React.useState<string | null>(null);
-
-  // Clear selection when not in ban mode
-  React.useEffect(() => {
-    if (actionType !== "ban") {
-      setSelectedSquare(null);
-    }
-  }, [actionType]);
   // Convert destinations to Chessground format
   const dests: Dests = useMemo(() => {
     const destsMap = new Map<Key, Key[]>();
@@ -118,20 +109,11 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       });
     }
 
-    // Add label on selected square during ban mode
-    if (actionType === "ban" && selectedSquare) {
-      shapes.push({
-        orig: selectedSquare as Key,
-        brush: "green",
-        label: {
-          text: selectedSquare.toUpperCase(),
-          fill: "#ffffff",
-        },
-      });
-    }
+    // Labels for selected squares are handled via CSS pseudo-elements
+    // See .ban-mode .cg-wrap square.selected::after in globals.css
 
     return shapes;
-  }, [bannedMove, actionType, selectedSquare]);
+  }, [bannedMove]);
 
   // Configure drawable brushes for different visualizations
   const drawableBrushes: DrawBrushes = useMemo(
@@ -225,16 +207,6 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
         brushes: drawableBrushes,
         autoShapes: autoShapes,
       },
-
-      // Events to track selection
-      events: {
-        select: (key: Key) => {
-          // Track selected square for ban mode labels
-          if (actionType === "ban") {
-            setSelectedSquare(key);
-          }
-        },
-      },
     };
 
     return baseConfig;
@@ -253,7 +225,6 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     dests,
     onMove,
     onPremove,
-    actionType,
     drawableBrushes,
     autoShapes,
     customHighlight,
