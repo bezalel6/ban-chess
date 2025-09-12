@@ -1,7 +1,7 @@
 "use client";
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import React, { memo, useMemo, useEffect, useRef } from "react";
+import React, { memo, useMemo } from "react";
 import type { Config } from "chessground/config";
 import type { DrawShape, DrawBrushes } from "chessground/draw";
 import type { Color, Key, Dests } from "chessground/types";
@@ -124,6 +124,18 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     []
   );
 
+  // Use custom highlighting for banned square
+  const customHighlight = useMemo(() => {
+    const highlights = new Map<Key, string>();
+    
+    // During move phase, highlight the banned destination square
+    if (actionType === "move" && bannedMove?.to) {
+      highlights.set(bannedMove.to as Key, "banned-square");
+    }
+    
+    return highlights;
+  }, [actionType, bannedMove?.to]);
+
   // Chessground configuration - using ALL its features
   const config = useMemo<Config>(() => {
     const baseConfig: Config = {
@@ -144,6 +156,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       highlight: {
         lastMove: highlight.lastMove ?? true,
         check: highlight.check ?? true,
+        custom: customHighlight,
       },
       lastMove: lastMove as [Key, Key] | undefined,
       check: check && highlight.check ? (check as Color | boolean) : undefined,
@@ -211,6 +224,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     onPremove,
     drawableBrushes,
     autoShapes,
+    customHighlight,
   ]);
 
   // Board container styles
@@ -243,80 +257,8 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     return style as React.CSSProperties;
   }, [actionType, containerStyle]);
 
-  const boardRef = useRef<HTMLDivElement>(null);
-
-  // Add class to banned destination square
-  useEffect(() => {
-    // Helper to convert square name (e.g., "e4") to board coordinates
-    const squareToCoords = (square: string): { x: number; y: number } => {
-      const file = square.charCodeAt(0) - 97; // a=0, b=1, etc.
-      const rank = parseInt(square[1]) - 1; // 1=0, 2=1, etc.
-
-      // Adjust for orientation
-      const x = orientation === "white" ? file : 7 - file;
-      const y = orientation === "white" ? 7 - rank : rank;
-
-      return { x, y };
-    };
-
-    const currentBoardRef = boardRef.current; // Capture ref value for cleanup
-
-    if (actionType === "move" && bannedMove?.to && currentBoardRef) {
-      const boardContainer = currentBoardRef.querySelector(".cg-wrap");
-      if (!boardContainer) return;
-
-      // Calculate position of the banned square
-      const { x, y } = squareToCoords(bannedMove.to);
-
-      // Find all move-dest squares
-      const destSquares = boardContainer.querySelectorAll("square.move-dest");
-
-      // Find the square at the banned position by checking transform values
-      destSquares.forEach((square) => {
-        const transform = (square as HTMLElement).style.transform;
-        if (transform) {
-          // Parse the transform to get position
-          const match = transform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
-          if (match) {
-            const squareX = parseFloat(match[1]);
-            const squareY = parseFloat(match[2]);
-
-            // Calculate expected position (assuming 8x8 grid)
-            const board = boardContainer.querySelector("cg-board");
-            if (board) {
-              const boardWidth = board.clientWidth;
-              const squareSize = boardWidth / 8;
-              const expectedX = x * squareSize;
-              const expectedY = y * squareSize;
-
-              // Check if this is the banned square (with small tolerance for rounding)
-              if (
-                Math.abs(squareX - expectedX) < 1 &&
-                Math.abs(squareY - expectedY) < 1
-              ) {
-                square.classList.add("banned-dest");
-              } else {
-                square.classList.remove("banned-dest");
-              }
-            }
-          }
-        }
-      });
-    }
-
-    // Cleanup function to remove the class
-    return () => {
-      if (currentBoardRef) {
-        const destSquares =
-          currentBoardRef.querySelectorAll("square.banned-dest");
-        destSquares.forEach((square) => square.classList.remove("banned-dest"));
-      }
-    };
-  }, [actionType, bannedMove?.to, orientation]);
-
   return (
     <div
-      ref={boardRef}
       className={`chessground-board ${
         actionType === "ban" ? "ban-mode" : ""
       } ${className}`}
