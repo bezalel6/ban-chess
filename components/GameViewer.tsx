@@ -13,6 +13,7 @@ interface GameViewerProps {
 }
 
 export default function GameViewer({ gameId }: GameViewerProps) {
+  console.log('[GameViewer] Rendering with gameId:', gameId);
   const router = useRouter();
   const {
     gameState,

@@ -424,19 +424,24 @@ export class GameStore {
     console.log('[GameStore] Joining game:', gameId);
     this.currentGameId = gameId;
     
+    // Check if we already have state for this game
+    const existingState = this.games.get(gameId);
+    if (existingState) {
+      console.log('[GameStore] Already have state for game', gameId, 'notifying listeners immediately');
+      // Notify any waiting listeners immediately
+      setTimeout(() => {
+        this.notifyGameListeners(gameId, existingState);
+      }, 0);
+    }
+    
+    // Always send join message to server to ensure we get latest state
     const message: SimpleClientMsg = {
       type: 'join-game',
       gameId
     };
     
+    console.log('[GameStore] Sending join-game message for:', gameId);
     wsManager.send(message);
-    
-    // Check if we already have state for this game
-    const existingState = this.games.get(gameId);
-    if (existingState) {
-      console.log('[GameStore] Already have state for game', gameId, 'notifying listeners');
-      this.notifyGameListeners(gameId, existingState);
-    }
   }
 
   /**
