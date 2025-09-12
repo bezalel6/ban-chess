@@ -1,11 +1,12 @@
 "use client";
 
 import type { SimpleGameState } from "@/lib/game-types";
-import { useUserRole } from "@/contexts/UserRoleContext";
+import { useGameRole } from "@/hooks/useGameRole";
 import { Flag, Handshake } from "lucide-react";
 
 interface GameActionsProps {
   gameState: SimpleGameState;
+  gameId?: string;
   onResign?: () => void;
   onOfferDraw?: () => void;
   onAcceptDraw?: () => void;
@@ -14,13 +15,14 @@ interface GameActionsProps {
 
 export default function GameActions({
   gameState,
+  gameId,
   onResign,
   onOfferDraw,
   onAcceptDraw,
   onDeclineDraw,
 }: GameActionsProps) {
-  const { role } = useUserRole();
-  const isPlayer = role !== null;
+  const { role } = useGameRole(gameId || null);
+  const isPlayer = role !== 'spectator';
 
   // Only show actions if game is not over and user is a player
   if (gameState.gameOver || !isPlayer) {

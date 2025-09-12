@@ -3,6 +3,7 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { SessionProvider, useSession } from 'next-auth/react';
 import type { AuthProvider as AuthProviderType } from '../types/auth';
+import { gameStore } from '@/lib/game/GameStore';
 
 interface User {
   userId: string;
@@ -72,6 +73,15 @@ function AuthContextProvider({ children }: { children: ReactNode }) {
   
   // Use authenticated user if available, otherwise use anonymous user
   const user = authenticatedUser || anonymousUser;
+
+  // Update gameStore with user info
+  useEffect(() => {
+    if (user) {
+      gameStore.setUser(user.userId, user.username);
+    } else {
+      gameStore.setUser(null, null);
+    }
+  }, [user]);
   
   // Never show loading after initial check - always have a user (authenticated or anonymous)
   const loading = status === 'loading' && !anonymousUser;

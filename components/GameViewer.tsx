@@ -154,6 +154,7 @@ export default function GameViewer({ gameId }: GameViewerProps) {
         <div className="mt-4">
           <GameStatusPanel
             gameState={effectiveGameState!}
+            gameId={gameId}
             activePlayer={activePlayer}
             actionType={actionType}
             isOfflineGame={isLocalGame}
@@ -165,6 +166,7 @@ export default function GameViewer({ gameId }: GameViewerProps) {
       <div className="lg:w-80">
         <GameSidebar
           gameState={effectiveGameState!}
+          gameId={gameId}
           isLocalGame={isLocalGame}
           onResign={!isGameOver && !isLocalGame ? handleResign : undefined}
         />

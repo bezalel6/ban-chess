@@ -2,7 +2,7 @@
 
 import type { SimpleGameState } from "@/lib/game-types";
 import { parseFEN } from "@/lib/game-types";
-import { useUserRole } from "@/contexts/UserRoleContext";
+import { useGameRole } from "@/hooks/useGameRole";
 
 import PlayerInfo from "./PlayerInfo";
 import MoveList from "./MoveList";
@@ -11,6 +11,7 @@ import CompactNavigation from "./CompactNavigation";
 
 interface GameSidebarProps {
   gameState: SimpleGameState;
+  gameId?: string;
   onGiveTime?: () => void;
   onResign?: () => void;
   onOfferDraw?: () => void;
@@ -28,6 +29,7 @@ interface GameSidebarProps {
 
 export default function GameSidebar({
   gameState,
+  gameId,
   onGiveTime,
   onResign,
   onOfferDraw,
@@ -42,8 +44,8 @@ export default function GameSidebar({
   isViewingHistory = false,
   onReturnToLive,
 }: GameSidebarProps) {
-    const { role, orientation } = useUserRole();
-  const isPlayer = role !== null;
+  const { role, orientation } = useGameRole(gameId || null);
+  const isPlayer = role !== 'spectator';
   const { turn } = parseFEN(gameState.fen);
 
   const whitePlayer = gameState.players.white?.username || "Waiting...";
@@ -131,6 +133,7 @@ export default function GameSidebar({
       <div className="mb-2">
         <GameActions 
           gameState={gameState}
+          gameId={gameId}
           onResign={onResign}
           onOfferDraw={onOfferDraw}
           onAcceptDraw={onAcceptDraw}

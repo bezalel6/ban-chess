@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "next-auth/react";
 import MobileMenu from "./MobileMenu";
 import Image from "next/image";
-import { useUserRole } from "@/contexts/UserRoleContext";
+import { useBanDifficulty } from "@/hooks/useBanDifficulty";
 import VolumeControl from "./VolumeControl";
 import HeadsetMode from "./HeadsetMode";
 
@@ -16,7 +16,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string; provid
   const [showDifficultySubmenu, setShowDifficultySubmenu] = useState(false);
   const [isPending, startTransition] = useTransition();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { banDifficulty, setBanDifficulty } = useUserRole();
+  const { banDifficulty, setBanDifficulty } = useBanDifficulty();
   const isAnonymous = user?.provider === 'guest';
 
   const handleSignOut = () => {

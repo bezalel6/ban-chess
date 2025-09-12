@@ -1,5 +1,12 @@
 import { config } from '@/lib/config';
 
+// Augment the global Window interface
+declare global {
+  interface Window {
+    wsManager: WebSocketManager;
+  }
+}
+
 type MessageHandler<T = unknown> = (message: T) => void;
 type ConnectionStateHandler = (state: ConnectionState) => void;
 
@@ -13,6 +20,7 @@ export interface ConnectionState {
 export interface WebSocketMessage {
   type: string;
   messageId?: string;
+  userId?: string;
   [key: string]: unknown;
 }
 
@@ -36,12 +44,13 @@ export class WebSocketManager {
   };
   private messageQueue: WebSocketMessage[] = [];
   private authData?: { userId: string; username: string };
+  private userId?: string;
 
   private constructor() {
     // Private constructor for singleton pattern
     if (typeof window !== 'undefined') {
       // Make available for debugging
-      (window as unknown as { wsManager: WebSocketManager }).wsManager = this;
+      window.wsManager = this;
     }
   }
 
@@ -62,6 +71,7 @@ export class WebSocketManager {
     // Store auth data for reconnection
     if (authData) {
       this.authData = authData;
+      this.userId = authData.userId;
     }
 
     // If already connected and authenticated, do nothing
@@ -252,14 +262,18 @@ export class WebSocketManager {
   /**
    * Send message through WebSocket
    */
-  public send(message: unknown): void {
-    const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+  public send(message: Record<string, unknown>): void {
+    const messageWithUser = {
+      ...message,
+      userId: this.userId,
+    };
+    const messageStr = JSON.stringify(messageWithUser);
     
     if (this.connection?.readyState === WebSocket.OPEN) {
       this.connection.send(messageStr);
     } else {
       console.warn('[WSManager] Not connected, queueing message');
-      this.messageQueue.push(message as WebSocketMessage);
+      this.messageQueue.push(messageWithUser as WebSocketMessage);
     }
   }
 

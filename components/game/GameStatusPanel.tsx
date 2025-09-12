@@ -2,11 +2,12 @@
 
 import type { SimpleGameState } from "@/lib/game-types";
 import { getCurrentBan } from "@/lib/game-types";
-import { useUserRole } from "@/contexts/UserRoleContext";
+import { useGameRole } from "@/hooks/useGameRole";
 
 
 interface GameStatusPanelProps {
   gameState: SimpleGameState;
+  gameId?: string;
   activePlayer?: "white" | "black";
   actionType?: "move" | "ban";
   isOfflineGame?: boolean;
@@ -15,6 +16,7 @@ interface GameStatusPanelProps {
 
 export default function GameStatusPanel({
   gameState,
+  gameId,
   activePlayer: propActivePlayer,
   actionType: propActionType,
   isOfflineGame = false,
@@ -24,8 +26,8 @@ export default function GameStatusPanel({
     const activePlayer = propActivePlayer;
   const actionType = propActionType;
   
-  const { role } = useUserRole();
-  const isPlayer = role !== null && !isOfflineGame; // Offline games don't use role
+  const { role } = useGameRole(gameId || null);
+  const isPlayer = role !== 'spectator' && !isOfflineGame; // Offline games don't use role
   const currentActivePlayer = activePlayer || gameState?.activePlayer || "white";
   const isMyTurn = isPlayer && role === currentActivePlayer && !gameState?.gameOver;
   const currentBan = getCurrentBan(gameState.fen);

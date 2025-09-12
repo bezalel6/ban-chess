@@ -10,7 +10,6 @@ import {
 } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { wsManager, type ConnectionState } from "@/lib/websocket/WebSocketManager";
-import { gameStore } from "@/lib/game/GameStore";
 
 interface WebSocketContextType {
   connectionState: ConnectionState;
@@ -37,36 +36,31 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     wsManager.getConnectionState()
   );
 
-  // Connect when user is available
+  // Connect when user is available (including anonymous users)
   useEffect(() => {
     if (user?.userId && user?.username) {
-      // Connect with auth data
+      // Connect with auth data (works for both anonymous and authenticated users)
       wsManager.connect({
         userId: user.userId,
         username: user.username,
       });
 
-      // Update GameStore with user info
-      gameStore.setUser(user.userId, user.username);
-
       // Send authentication message once connected
+      // Anonymous users have provider: 'guest'
       const unsubscribe = wsManager.subscribeToConnectionState((state) => {
         if (state.connected && !state.authenticated) {
           wsManager.send({
             type: "authenticate",
             userId: user.userId,
             username: user.username,
-            provider: user.provider || "credentials",
+            provider: user.provider || "guest", // Default to guest for anonymous users
           });
         }
       });
 
       return unsubscribe;
-    } else {
-      // Disconnect if no user
-      wsManager.disconnect();
-      gameStore.setUser(null, null);
     }
+    // Note: We don't disconnect if no user - anonymous users are created automatically
   }, [user]);
 
   // Subscribe to connection state changes
@@ -88,18 +82,4 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       {children}
     </WebSocketContext.Provider>
   );
-}
-
-// Temporary compatibility shim for existing code
-export function useGameWebSocket() {
-  const context = useWebSocket();
-  
-  // Return a compatibility object that mimics the old interface
-  // This will be removed once all components are migrated
-  return {
-    sendMessage: (message: string) => wsManager.send(JSON.parse(message)),
-    lastMessage: null, // Components should use GameStore instead
-    readyState: context.connectionState.connected ? 1 : 0, // WebSocket.OPEN = 1
-    isAuthenticated: context.connectionState.authenticated,
-  };
 }
