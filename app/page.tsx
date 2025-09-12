@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useGameStore } from "@/contexts/GameContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import ActiveGameCard from "@/components/ActiveGameCard";
@@ -59,39 +58,7 @@ function HomePageContent() {
     return null;
   }
 
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-        <div className="text-center">
-          <h1 className="text-6xl font-bold mb-4">
-            <span className="text-lichess-orange-500">Ban</span>
-            <span className="text-foreground">Chess</span>
-          </h1>
-          <p className="text-foreground-muted text-lg">
-            Play chess with a strategic twist
-          </p>
-        </div>
-
-        <div className="bg-background-secondary p-8 rounded-lg shadow-lg max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-4">Welcome!</h2>
-          <p className="text-foreground-muted mb-6">
-            Sign in to play online or practice locally without an account.
-          </p>
-          <div className="space-y-4">
-            <Link href="/api/auth/signin" className="btn-primary block text-center">
-              Sign In
-            </Link>
-            <button
-              onClick={playOffline}
-              className="btn-secondary w-full"
-            >
-              Practice Locally
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Now we always have a user (either authenticated or anonymous)
 
   return (
     <div className="space-y-8">
@@ -100,11 +67,15 @@ function HomePageContent() {
           <span className="text-lichess-orange-500">Ban</span>
           <span className="text-foreground">Chess</span>
         </h1>
-        <p className="text-foreground-muted">Playing as {user.username}</p>
+        <p className="text-foreground-muted">
+          {user?.provider === 'guest' 
+            ? 'Playing anonymously' 
+            : `Playing as ${user?.username || 'Anonymous'}`}
+        </p>
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
-        {currentGameId && currentGame && !currentGame.gameOver && !isLocalGame && (
+        {currentGameId && currentGame && !currentGame.gameOver && !isLocalGame && user && (
           <ActiveGameCard
             gameId={currentGameId}
             gameState={currentGame}

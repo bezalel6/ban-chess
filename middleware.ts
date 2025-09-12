@@ -1,32 +1,16 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default withAuth(
-  function middleware(_req) {
-    // This function is called after the authentication check
-    // Allow all authenticated users to proceed
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token }) => {
-        // Simply check if user has a valid session token
-        // This works for all auth providers: guest, Lichess, Google
-        return !!token;
-      },
-    },
-    pages: {
-      signIn: '/auth/signin',
-    },
-  }
-);
+export function middleware(_request: NextRequest) {
+  // With Lichess-style auth, all users (including anonymous) can access all routes
+  // No authentication required - everyone is welcome!
+  return NextResponse.next();
+}
 
-// Configure which routes to run middleware on
-// Only protect game routes that actually need authentication
+// Since we allow anonymous users everywhere, we don't need to protect any routes
+// The middleware is kept for potential future use (rate limiting, etc.)
 export const config = {
   matcher: [
-    // Only protect game and play routes
-    '/game/:path*',
-    '/play/:path*',
+    // Currently no routes need protection since anonymous users are allowed
   ],
 };

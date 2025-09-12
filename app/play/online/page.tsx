@@ -13,12 +13,7 @@ function OnlinePlayContent() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
-      // Redirect to sign in if not authenticated
-      router.push('/sign-in?redirect=/play/online');
-      return;
-    }
-
+    // Now we always have a user (either authenticated or anonymous)
     if (!isReady) return;
 
     // Join the matchmaking queue
@@ -43,18 +38,7 @@ function OnlinePlayContent() {
     router.push("/");
   };
 
-  if (!user) {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-background-secondary rounded-xl p-8 shadow-2xl border border-border max-w-sm w-full mx-4">
-          <div className="text-center">
-            <div className="loading-spinner mb-4"></div>
-            <p className="text-foreground-muted">Redirecting to sign in...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // No need to check for user - we always have one (authenticated or anonymous)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
