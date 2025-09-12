@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useGame } from "@/contexts/GameContext";
 import { useRouter } from "next/navigation";
@@ -10,24 +10,32 @@ function OnlinePlayContent() {
   const { user } = useAuth();
   const { send, connected } = useGame();
   const router = useRouter();
+  const hasJoinedRef = useRef(false);
 
+  // Handle joining the queue when connected
   useEffect(() => {
-    if (!connected) return;
+    if (connected && !hasJoinedRef.current) {
+      const joinMsg = { type: 'join-queue' } as const;
+      send(joinMsg);
+      hasJoinedRef.current = true;
+    }
+  }, [connected, send]);
 
-    // Only join queue once when connected
-    const joinMsg = { type: 'join-queue' } as const;
-    send(joinMsg);
-
-    // Cleanup: leave queue when component unmounts or connection lost
+  // Handle cleanup when component unmounts
+  useEffect(() => {
     return () => {
-      const leaveMsg = { type: 'leave-queue' } as const;
-      send(leaveMsg);
+      // Only leave queue if we actually joined
+      if (hasJoinedRef.current) {
+        const leaveMsg = { type: 'leave-queue' } as const;
+        send(leaveMsg);
+      }
     };
-  }, [connected, send]); // send is now stable due to useCallback in GameContext
+  }, [send]);
 
   const handleCancel = () => {
     const leaveMsg = { type: 'leave-queue' } as const;
     send(leaveMsg);
+    hasJoinedRef.current = false;
     router.push("/");
   };
 

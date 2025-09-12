@@ -26,7 +26,12 @@ export function GameProvider({ gameId, children }: { gameId?: string, children: 
 
   const manager = useMemo(() => new ClientGameManager(), []);
   const [gameState, setGameState] = useState<SimpleGameState | null>(manager.getGameState());
-  const connected = !!(ws && ws.readyState === ReadyState.OPEN && ws.isAuthenticated);
+  
+  // Memoize connected state to prevent unnecessary re-renders
+  // Only consider truly connected when both WebSocket is open AND authenticated
+  const connected = useMemo(() => {
+    return !!(ws && ws.readyState === ReadyState.OPEN && ws.isAuthenticated);
+  }, [ws]);
 
   useEffect(() => {
     const unsubscribe = manager.subscribe(setGameState);
