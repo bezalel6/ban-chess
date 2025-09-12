@@ -1,26 +1,45 @@
 "use client";
 
 import { useAuth } from "@/components/AuthProvider";
-import { useGame } from "@/contexts/GameContext";
 import { useRouter } from "next/navigation";
-import { GameProviderWrapper } from "@/components/GameProviderWrapper";
+import Link from "next/link";
+import { useGameStore } from "@/contexts/GameContext";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import ActiveGameCard from "@/components/ActiveGameCard";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
+import type { SimpleGameState } from "@/lib/game-types";
 
 function HomePageContent() {
   const { user, loading } = useAuth();
-  const { manager, gameState, send, connected } = useGame();
+  const gameStore = useGameStore();
+  const { isReady } = useWebSocket();
   const router = useRouter();
+  const [currentGame, setCurrentGame] = useState<SimpleGameState | null>(null);
 
-  const currentGameId = gameState?.gameId;
+  // Get current game if any
+  useEffect(() => {
+    const gameId = gameStore.getCurrentGameId();
+    if (gameId) {
+      const unsubscribe = gameStore.subscribeToGame(gameId, (state) => {
+        setCurrentGame(state);
+      });
+      return unsubscribe;
+    } else {
+      setCurrentGame(null);
+    }
+  }, [gameStore]);
+
+  const currentGameId = currentGame?.gameId;
   const isLocalGame = useMemo(() => {
-    if (!gameState || !gameState.players) return false;
-    return gameState.players.white?.id === gameState.players.black?.id;
-  }, [gameState]);
+    if (!currentGame || !currentGame.players) return false;
+    return currentGame.players.white?.id === currentGame.players.black?.id;
+  }, [currentGame]);
 
   const resignGame = () => {
     if (currentGameId) {
-      send(manager.resignGameMsg(currentGameId));
+      // Resign is a special action - we'll need to handle this differently
+      // For now, just leave the game which effectively resigns
+      gameStore.leaveGame();
     }
   };
 
@@ -43,7 +62,33 @@ function HomePageContent() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-        {/* ... same as before */}
+        <div className="text-center">
+          <h1 className="text-6xl font-bold mb-4">
+            <span className="text-lichess-orange-500">Ban</span>
+            <span className="text-foreground">Chess</span>
+          </h1>
+          <p className="text-foreground-muted text-lg">
+            Play chess with a strategic twist
+          </p>
+        </div>
+
+        <div className="bg-background-secondary p-8 rounded-lg shadow-lg max-w-md w-full">
+          <h2 className="text-2xl font-bold mb-4">Welcome!</h2>
+          <p className="text-foreground-muted mb-6">
+            Sign in to play online or practice locally without an account.
+          </p>
+          <div className="space-y-4">
+            <Link href="/api/auth/signin" className="btn-primary block text-center">
+              Sign In
+            </Link>
+            <button
+              onClick={playOffline}
+              className="btn-secondary w-full"
+            >
+              Practice Locally
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -59,16 +104,16 @@ function HomePageContent() {
       </div>
 
       <div className="max-w-4xl mx-auto space-y-6">
-        {currentGameId && gameState && !gameState.gameOver && !isLocalGame && (
+        {currentGameId && currentGame && !currentGame.gameOver && !isLocalGame && (
           <ActiveGameCard
             gameId={currentGameId}
-            gameState={gameState}
+            gameState={currentGame}
             userId={user.userId}
             onResign={resignGame}
           />
         )}
 
-        {(!currentGameId || !gameState || gameState.gameOver || isLocalGame) && (
+        {(!currentGameId || !currentGame || currentGame.gameOver || isLocalGame) && (
           <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-4">Play</h2>
             <div className="flex flex-col gap-4 w-full">
@@ -80,7 +125,7 @@ function HomePageContent() {
               </button>
               <button
                 onClick={playOnline}
-                disabled={!connected}
+                disabled={!isReady}
                 className="btn-primary py-4 text-lg"
               >
                 Find Online Opponent
@@ -92,7 +137,7 @@ function HomePageContent() {
                 <div className="mt-3">
                   <button
                     onClick={playSolo}
-                    disabled={!connected}
+                    disabled={!isReady}
                     className="btn-secondary py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white w-full"
                   >
                     Practice Online (test server flow)
@@ -100,7 +145,7 @@ function HomePageContent() {
                 </div>
               </details>
             </div>
-            {!connected && (
+            {!isReady && (
               <div className="text-center pt-4">
                 <div className="loading-spinner mb-4"></div>
                 <p className="text-foreground-muted">
@@ -111,16 +156,31 @@ function HomePageContent() {
           </div>
         )}
 
-        {/* ... same as before */}
+        <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-4">How to Play</h2>
+          <div className="space-y-3 text-foreground-muted">
+            <p>BanChess adds a unique twist to traditional chess:</p>
+            <ul className="list-disc list-inside space-y-2">
+              <li>
+                <strong className="text-foreground">Ban Phase:</strong> Before
+                each move, ban a square your opponent cannot move to
+              </li>
+              <li>
+                <strong className="text-foreground">Strategic Depth:</strong>{" "}
+                Control the board by limiting your opponent&apos;s options
+              </li>
+              <li>
+                <strong className="text-foreground">New Tactics:</strong> Create
+                unique checkmate patterns with banned squares
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 export default function HomePage() {
-  return (
-    <GameProviderWrapper>
-      <HomePageContent />
-    </GameProviderWrapper>
-  );
+  return <HomePageContent />;
 }

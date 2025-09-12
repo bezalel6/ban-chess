@@ -1,73 +1,25 @@
 "use client";
 
-import { createContext, useContext, ReactNode, useState, useEffect, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
-import { useToast } from '@/lib/toast/toast-context';
-import { ClientGameManager } from '@/lib/client-game-manager';
-import { useGameWebSocket } from './WebSocketContext';
-import { SimpleGameState, SimpleClientMsg } from '@/lib/game-types';
-import { ReadyState } from 'react-use-websocket';
+import { createContext, useContext, ReactNode } from 'react';
+import { gameStore } from '@/lib/game/GameStore';
+import type { GameStore } from '@/lib/game/GameStore';
 
 interface GameContextValue {
-  manager: ClientGameManager;
-  gameState: SimpleGameState | null;
-  send: (message: SimpleClientMsg) => void;
-  connected: boolean;
+  gameStore: GameStore;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
 
-export function GameProvider({ gameId, children }: { gameId?: string, children: ReactNode }) {
-  const ws = useGameWebSocket();
-  const router = useRouter();
-  const { user } = useAuth();
-  const { showToast } = useToast();
-
-  const manager = useMemo(() => new ClientGameManager(), []);
-  const [gameState, setGameState] = useState<SimpleGameState | null>(manager.getGameState());
-  
-  // Memoize connected state to prevent unnecessary re-renders
-  // Only consider truly connected when both WebSocket is open AND authenticated
-  const connected = useMemo(() => {
-    return !!(ws && ws.readyState === ReadyState.OPEN && ws.isAuthenticated);
-  }, [ws]);
-
-  useEffect(() => {
-    const unsubscribe = manager.subscribe(setGameState);
-    return () => { unsubscribe(); };
-  }, [manager]);
-
-  useEffect(() => {
-    if (ws && ws.lastMessage) {
-      try {
-        const msg = JSON.parse(ws.lastMessage.data);
-        const userWithId = user ? { ...user, id: user.userId } : null;
-        manager.handleMessage(msg, userWithId, router, showToast);
-      } catch (e) {
-        console.error("Failed to parse WebSocket message", e);
-      }
-    }
-  }, [ws, ws?.lastMessage, manager, user, router, showToast]);
-
-  const send = useCallback((message: SimpleClientMsg) => {
-      if (ws) {
-        ws.sendMessage(JSON.stringify(message));
-      }
-  }, [ws]);
-
-  useEffect(() => {
-    if (gameId && connected && ws) {
-      if (gameState?.gameId !== gameId) {
-        const timer = setTimeout(() => {
-          ws.sendMessage(JSON.stringify(manager.joinGameMsg(gameId)));
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [gameId, connected, gameState?.gameId, manager, ws]);
-
-  const value = { manager, gameState, send, connected };
+/**
+ * GameProvider following Lichess pattern - single provider at app root.
+ * No longer per-page - this eliminates duplicate message processing.
+ */
+export function GameProvider({ children }: { children: ReactNode }) {
+  // Simply provide access to the singleton GameStore
+  // All game logic is handled within GameStore
+  const value: GameContextValue = {
+    gameStore
+  };
 
   return (
     <GameContext.Provider value={value}>
@@ -76,10 +28,13 @@ export function GameProvider({ gameId, children }: { gameId?: string, children: 
   );
 }
 
-export function useGame() {
+/**
+ * Hook to access the game store
+ */
+export function useGameStore(): GameStore {
   const context = useContext(GameContext);
   if (!context) {
-    throw new Error('useGame must be used within a GameProvider');
+    throw new Error('useGameStore must be used within a GameProvider');
   }
-  return context;
+  return context.gameStore;
 }

@@ -2,39 +2,37 @@
 
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useGame } from "@/contexts/GameContext";
+import { useGameStore } from "@/contexts/GameContext";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { useRouter } from "next/navigation";
-import { GameProviderWrapper } from "@/components/GameProviderWrapper";
 
 function OnlinePlayContent() {
   const { user } = useAuth();
-  const { send, connected } = useGame();
+  const gameStore = useGameStore();
+  const { isReady } = useWebSocket();
   const router = useRouter();
   const hasJoinedRef = useRef(false);
 
   // Handle joining the queue when connected
   useEffect(() => {
-    if (connected && !hasJoinedRef.current) {
-      const joinMsg = { type: 'join-queue' } as const;
-      send(joinMsg);
+    if (isReady && !hasJoinedRef.current) {
+      gameStore.joinQueue();
       hasJoinedRef.current = true;
     }
-  }, [connected, send]);
+  }, [isReady, gameStore]);
 
   // Handle cleanup when component unmounts
   useEffect(() => {
     return () => {
       // Only leave queue if we actually joined
       if (hasJoinedRef.current) {
-        const leaveMsg = { type: 'leave-queue' } as const;
-        send(leaveMsg);
+        gameStore.leaveQueue();
       }
     };
-  }, [send]);
+  }, [gameStore]);
 
   const handleCancel = () => {
-    const leaveMsg = { type: 'leave-queue' } as const;
-    send(leaveMsg);
+    gameStore.leaveQueue();
     hasJoinedRef.current = false;
     router.push("/");
   };
@@ -66,7 +64,7 @@ function OnlinePlayContent() {
           <div className="bg-background/50 rounded-lg p-6 border border-border/50 mb-6">
             <div className="loading-spinner mb-4"></div>
             <p className="text-foreground font-medium">
-              {connected
+              {isReady
                 ? "In queue for an online game..."
                 : "Connecting to server..."}
             </p>
@@ -89,9 +87,5 @@ function OnlinePlayContent() {
 }
 
 export default function OnlinePlayPage() {
-  return (
-    <GameProviderWrapper>
-      <OnlinePlayContent />
-    </GameProviderWrapper>
-  );
+  return <OnlinePlayContent />;
 }

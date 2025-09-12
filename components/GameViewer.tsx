@@ -2,10 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useGame } from "@/contexts/GameContext";
-import { useUserRole } from "@/contexts/UserRoleContext";
-import { useAuth } from "@/components/AuthProvider";
-import { getUserRole } from "@/lib/game-utils";
+import { useGame } from "@/hooks/useGame";
 import ResizableBoard from "@/components/game/ResizableBoard";
 import GameStatusPanel from "@/components/game/GameStatusPanel";
 import GameSidebar from "@/components/game/GameSidebar";
@@ -16,130 +13,153 @@ interface GameViewerProps {
 }
 
 export default function GameViewer({ gameId }: GameViewerProps) {
-  const { manager, gameState, send, connected } = useGame();
-  const game = manager.getGame();
+  const router = useRouter();
+  const {
+    gameState,
+    dests,
+    orientation,
+    isMyTurn,
+    isGameOver,
+    activePlayer,
+    actionType,
+    makeMove,
+    makeBan,
+    resign
+  } = useGame(gameId);
 
+  const [initiallyCompleted, setInitiallyCompleted] = useState(false);
+  const gameEndedRef = useRef(false);
+  const [fullHistory, setFullHistory] = useState<HistoryEntry[]>([]);
+
+  // Check if this is a local/solo game
   const isLocalGame = useMemo(() => {
     if (!gameState || !gameState.players) return false;
     return gameState.players.white?.id === gameState.players.black?.id;
   }, [gameState]);
 
-  useRouter();
-  const { user } = useAuth();
-  const { role: contextRole } = useUserRole();
-  
-  const [initiallyCompleted, setInitiallyCompleted] = useState(false);
-  const gameEndedRef = useRef(false);
-  
-  const [fullHistory, setFullHistory] = useState<HistoryEntry[]>([]);
-  
+  // Track game completion state
+  useEffect(() => {
+    if (gameState && !initiallyCompleted) {
+      if (isGameOver || (gameState as unknown as Record<string, unknown>).dataSource === 'completed') {
+        setInitiallyCompleted(true);
+      }
+    }
+    
+    // Update history if available
+    if (gameState?.history && gameState.history.length > 0) {
+      if (typeof gameState.history[0] !== 'string') {
+        setFullHistory(gameState.history as HistoryEntry[]);
+      }
+    }
+  }, [gameState, isGameOver, initiallyCompleted]);
+
+  // Handle game end
+  useEffect(() => {
+    if (isGameOver && !gameEndedRef.current && !initiallyCompleted) {
+      gameEndedRef.current = true;
+      // Could add game end handling here (redirect, notifications, etc.)
+    }
+  }, [isGameOver, initiallyCompleted]);
+
+  // Merge full history with game state
   const effectiveGameState = useMemo(() => {
     if (!gameState) return null;
-    if (fullHistory.length > 0 && gameState.gameOver) {
+    if (fullHistory.length > 0 && isGameOver) {
       return {
         ...gameState,
         history: fullHistory
       };
     }
     return gameState;
-  }, [gameState, fullHistory]);
+  }, [gameState, fullHistory, isGameOver]);
 
-  useEffect(() => {
-    if (gameState && !initiallyCompleted) {
-      if (gameState.gameOver || gameState.dataSource === 'completed') {
-        setInitiallyCompleted(true);
-      }
-    }
-    if (gameState?.history && gameState.history.length > 0) {
-      if (typeof gameState.history[0] !== 'string') {
-        setFullHistory(gameState.history as HistoryEntry[]);
-      }
-    }
-  }, [gameState, initiallyCompleted]);
-
-  useEffect(() => {
-    if (gameState?.gameOver && !gameEndedRef.current && !initiallyCompleted) {
-      gameEndedRef.current = true;
-    }
-  }, [gameState?.gameOver, gameState?.result, initiallyCompleted]);
-
-  const isGameLive = effectiveGameState && !effectiveGameState.gameOver;
-
-  const userRole = user && effectiveGameState ? getUserRole(effectiveGameState, user.userId) : null;
-  const userColor = userRole?.role;
-  const activePlayer = game?.getActivePlayer();
-
-  // All hooks must be called before any conditional returns
-  const dests = useMemo(() => {
-    if (!game || !isGameLive) return new Map();
-    if (!isLocalGame && userColor !== activePlayer) return new Map();
-    
-    const actionType = game.getActionType();
-    const legalActions = game.getLegalActions();
-    const destsMap = new Map<string, string[]>();
-    
-    legalActions.forEach((action) => {
-      if (actionType === 'ban' && 'ban' in action) {
-        const ban = action.ban;
-        // For bans, we just need the squares that can be banned
-        destsMap.set(`${ban.from}-${ban.to}`, []);
-      } else if (actionType === 'move' && 'move' in action) {
-        const move = action.move;
-        if (!destsMap.has(move.from)) {
-          destsMap.set(move.from, []);
-        }
-        destsMap.get(move.from)!.push(move.to);
-      }
-    });
-    
-    return destsMap;
-  }, [game, isGameLive, isLocalGame, userColor, activePlayer]);
-
+  // Handle moves and bans
   const handleMove = (move: Move) => {
-    if (!isGameLive) return;
-    if (isLocalGame || userColor === activePlayer) {
-      send(manager.sendActionMsg(gameId, { move }));
+    if (isGameOver) return;
+    if (isLocalGame || isMyTurn) {
+      makeMove(move.from, move.to);
     }
   };
 
   const handleBan = (ban: Ban) => {
-    if (!isGameLive) return;
-    if (isLocalGame || userColor === activePlayer) {
-      send(manager.sendActionMsg(gameId, { ban }));
+    if (isGameOver) return;
+    if (isLocalGame || isMyTurn) {
+      // Convert ban to square notation
+      const square = `${ban.from}${ban.to}`;
+      makeBan(square);
     }
   };
 
-  // Conditional returns come after all hooks
-  if (!connected && !initiallyCompleted) {
-    return <div>Connecting...</div>;
+  const handleResign = () => {
+    resign();
+  };
+
+  // Loading state
+  if (!gameState) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="loading-spinner mb-4"></div>
+          <h2 className="text-xl font-semibold">Loading game...</h2>
+        </div>
+      </div>
+    );
   }
 
-  if (!effectiveGameState) {
-    return <div>Loading game...</div>;
+  // Game not found
+  if ((gameState as unknown as Record<string, unknown>)?.error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Game Not Found</h2>
+          <p className="text-foreground-muted mb-4">
+            The game you&apos;re looking for doesn&apos;t exist or has been deleted.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="btn-primary"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)] gap-4 p-4">
-      {/* Main game area */}
-      <div className="flex-1 flex flex-col gap-4">
-        <GameStatusPanel gameState={effectiveGameState} />
-        <div className="flex-1 flex items-center justify-center">
-          <ResizableBoard
-            gameState={effectiveGameState}
-            dests={dests}
+    <div className="flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] mx-auto">
+      {/* Main Board Area */}
+      <div className="flex-1 min-w-0">
+        <ResizableBoard
+          gameState={effectiveGameState!}
+          orientation={orientation}
+          dests={dests}
+          activePlayer={activePlayer}
+          actionType={actionType}
+          canInteract={!isGameOver && (isLocalGame || isMyTurn)}
+          onMove={handleMove}
+          onBan={handleBan}
+        />
+
+        {/* Game Status Panel */}
+        <div className="mt-4">
+          <GameStatusPanel
+            gameState={effectiveGameState!}
             activePlayer={activePlayer}
-            actionType={game?.getActionType()}
-            onMove={handleMove}
-            onBan={handleBan}
-            orientation={contextRole === "black" ? "black" : "white"}
-            canInteract={!!isGameLive && (isLocalGame || userColor === activePlayer)}
-            banDifficulty={contextRole === "black" ? "medium" : "medium"}
+            actionType={actionType}
+            isOfflineGame={isLocalGame}
           />
         </div>
       </div>
 
       {/* Sidebar */}
-      <GameSidebar gameState={effectiveGameState} />
+      <div className="lg:w-80">
+        <GameSidebar
+          gameState={effectiveGameState!}
+          isLocalGame={isLocalGame}
+          onResign={!isGameOver && !isLocalGame ? handleResign : undefined}
+        />
+      </div>
     </div>
   );
 }

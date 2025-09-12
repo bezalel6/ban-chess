@@ -1,164 +1,127 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { wsConnection } from "@/lib/websocket-singleton";
+import { wsManager } from "@/lib/websocket/WebSocketManager";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 
 type ConnectionState = "connecting" | "connected" | "disconnected" | "error";
 
 export function ConnectionStatus() {
+  const { connectionState } = useWebSocket();
   const [wsState, setWsState] = useState<ConnectionState>("disconnected");
   const [showDetails, setShowDetails] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
-    // Check initial state
-    const checkState = () => {
-      const state = wsConnection.getState();
-      if (state.connected && state.authenticated) {
-        setWsState("connected");
-        setErrorMessage("");
-      } else if (state.connected && !state.authenticated) {
-        setWsState("connecting");
-        setErrorMessage("");
-      } else {
-        setWsState("disconnected");
-      }
-    };
+    // Update state based on connection state
+    if (connectionState.connected && connectionState.authenticated) {
+      setWsState("connected");
+      setErrorMessage("");
+      // Auto-hide details after successful connection
+      setTimeout(() => setShowDetails(false), 3000);
+    } else if (connectionState.connected && !connectionState.authenticated) {
+      setWsState("connecting");
+      setErrorMessage("");
+    } else if (connectionState.lastError) {
+      setWsState("error");
+      setErrorMessage(connectionState.lastError);
+      setShowDetails(true); // Auto-show details on error
+    } else {
+      setWsState("disconnected");
+    }
+  }, [connectionState]);
 
-    checkState();
-
-    // Subscribe to WebSocket messages
-    const unsubscribe = wsConnection.subscribe((msg) => {
-      if (msg.type === "authenticated") {
-        setWsState("connected");
-        setErrorMessage("");
-        // Auto-hide details after successful connection
-        setTimeout(() => setShowDetails(false), 3000);
-      } else if (msg.type === "error") {
-        setWsState("error");
-        setErrorMessage(msg.message || "Connection error");
-        setShowDetails(true); // Auto-show details on error
-      }
+  // Subscribe to error messages
+  useEffect(() => {
+    const unsubscribe = wsManager.subscribe("error", (msg: { message?: string }) => {
+      setWsState("error");
+      setErrorMessage(msg.message || "Connection error");
+      setShowDetails(true);
     });
 
-    // Poll connection state
-    const interval = setInterval(checkState, 2000);
-
-    return () => {
-      unsubscribe();
-      clearInterval(interval);
-    };
+    return unsubscribe;
   }, []);
 
-  const stateConfig = {
-    connecting: {
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      icon: "🔄",
-      label: "Connecting...",
-    },
-    connected: {
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
-      icon: "✅",
-      label: "Connected",
-    },
-    disconnected: {
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
-      borderColor: "border-gray-200",
-      icon: "🔌",
-      label: "Disconnected",
-    },
-    error: {
-      color: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      icon: "❌",
-      label: "Connection Error",
-    },
+  const handleReconnect = () => {
+    window.location.reload();
   };
 
-  const config = stateConfig[wsState];
+  const getStatusColor = () => {
+    switch (wsState) {
+      case "connected":
+        return "bg-green-500";
+      case "connecting":
+        return "bg-yellow-500";
+      case "error":
+        return "bg-red-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const getStatusText = () => {
+    switch (wsState) {
+      case "connected":
+        return "Connected";
+      case "connecting":
+        return "Authenticating...";
+      case "error":
+        return "Error";
+      default:
+        return "Disconnected";
+    }
+  };
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <div
-        className={`rounded-lg border ${config.borderColor} ${config.bgColor} p-3 shadow-lg transition-all duration-300 ${
-          showDetails ? "w-80" : "w-auto"
+      <button
+        onClick={() => setShowDetails(!showDetails)}
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-background-secondary border border-border shadow-lg hover:shadow-xl transition-all ${
+          wsState === "error" ? "animate-pulse" : ""
         }`}
+        aria-label="WebSocket connection status"
       >
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className={`flex items-center gap-2 ${config.color} font-medium text-sm focus:outline-none`}
-        >
-          <span className="text-lg">{config.icon}</span>
-          <span>{config.label}</span>
-          {wsState === "error" && (
-            <span className="ml-2 text-xs">Click for details</span>
-          )}
-        </button>
+        <div className={`w-2 h-2 rounded-full ${getStatusColor()} ${
+          wsState === "connecting" ? "animate-pulse" : ""
+        }`} />
+        <span className="text-xs font-medium">
+          WebSocket: {getStatusText()}
+        </span>
+      </button>
 
-        {showDetails && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <div className="space-y-2 text-sm">
-              <div className="flex items-start gap-2">
-                <span className="text-gray-500">Status:</span>
-                <span className={config.color}>{config.label}</span>
-              </div>
-              
-              {errorMessage && (
-                <div className="flex items-start gap-2">
-                  <span className="text-gray-500">Error:</span>
-                  <span className="text-red-600">{errorMessage}</span>
-                </div>
-              )}
-
-              {wsState === "disconnected" && (
-                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-                  <p className="font-semibold mb-1">Troubleshooting:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Check if WebSocket server is running (npm run dev:ws)</li>
-                    <li>Verify Redis is running (docker ps)</li>
-                    <li>Check .env.local for NEXT_PUBLIC_WEBSOCKET_URL</li>
-                  </ul>
-                </div>
-              )}
-
-              {wsState === "error" && (
-                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-800">
-                  <p className="font-semibold mb-1">Common Causes:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>WebSocket server crashed - check logs</li>
-                    <li>Redis not running - start with: docker run -d -p 6379:6379 redis</li>
-                    <li>Network issues or incorrect URL</li>
-                    <li>Authentication failure</li>
-                  </ul>
-                </div>
-              )}
-
-              <div className="mt-2 flex justify-end">
-                <button
-                  onClick={() => {
-                    const state = wsConnection.getState();
-                    if (state.user) {
-                      wsConnection.disconnect();
-                      setTimeout(() => {
-                        wsConnection.connect(state.user!);
-                      }, 100);
-                    }
-                  }}
-                  className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
-                >
-                  Retry Connection
-                </button>
-              </div>
+      {showDetails && (
+        <div className="absolute bottom-full right-0 mb-2 w-64 p-4 rounded-lg bg-background-secondary border border-border shadow-xl">
+          <h3 className="font-semibold mb-2">Connection Details</h3>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-foreground-muted">Status:</span>
+              <span className={`font-medium ${
+                wsState === "connected" ? "text-green-500" :
+                wsState === "error" ? "text-red-500" :
+                "text-foreground"
+              }`}>
+                {getStatusText()}
+              </span>
             </div>
+
+            {errorMessage && (
+              <div className="pt-2 border-t border-border">
+                <p className="text-red-500 text-xs">{errorMessage}</p>
+              </div>
+            )}
+
+            {wsState === "disconnected" && (
+              <button
+                onClick={handleReconnect}
+                className="w-full mt-2 px-3 py-1 bg-primary text-white rounded text-xs hover:bg-primary-hover transition-colors"
+              >
+                Reconnect
+              </button>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

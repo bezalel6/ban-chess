@@ -1,22 +1,23 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useGame } from '@/contexts/GameContext';
-import { GameProviderWrapper } from '@/components/GameProviderWrapper';
+import { useGameStore } from '@/contexts/GameContext';
+import { useWebSocket } from '@/contexts/WebSocketContext';
 
 function SoloPlayContent() {
-  const { send, connected } = useGame();
+  const gameStore = useGameStore();
+  const { isReady } = useWebSocket();
   const gameCreatedRef = useRef(false);
 
   useEffect(() => {
-    if (!connected) return;
+    if (!isReady) return;
     
     if (gameCreatedRef.current) return;
     gameCreatedRef.current = true;
 
-    const createSoloMsg = { type: 'create-solo-game' } as const;
-    send(createSoloMsg);
-  }, [connected, send]);
+    // Create a solo game
+    gameStore.createSoloGame();
+  }, [isReady, gameStore]);
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -32,9 +33,5 @@ function SoloPlayContent() {
 }
 
 export default function SoloPlayPage() {
-  return (
-    <GameProviderWrapper>
-      <SoloPlayContent />
-    </GameProviderWrapper>
-  );
+  return <SoloPlayContent />;
 }
