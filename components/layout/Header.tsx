@@ -7,16 +7,17 @@ import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "next-auth/react";
 import MobileMenu from "./MobileMenu";
 import Image from "next/image";
-import { useUserRole } from "@/contexts/UserRoleContext";
+import { useBanDifficulty } from "@/hooks/useBanDifficulty";
 import VolumeControl from "./VolumeControl";
 import HeadsetMode from "./HeadsetMode";
 
-function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
+function UserMenu({ user }: { user: { username?: string; userId?: string; provider?: string } }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDifficultySubmenu, setShowDifficultySubmenu] = useState(false);
   const [isPending, startTransition] = useTransition();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { banDifficulty, setBanDifficulty } = useUserRole();
+  const { banDifficulty, setBanDifficulty } = useBanDifficulty();
+  const isAnonymous = user?.provider === 'guest';
 
   const handleSignOut = () => {
     startTransition(() => {
@@ -68,12 +69,14 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center space-x-2 px-4 py-2.5 bg-background-secondary rounded-lg hover:bg-background-tertiary transition-colors"
         >
-          <div className="w-8 h-8 bg-lichess-orange-500 rounded-full flex items-center justify-center">
+          <div className={`w-8 h-8 ${isAnonymous ? 'bg-gray-500' : 'bg-lichess-orange-500'} rounded-full flex items-center justify-center`}>
             <span className="text-xs font-bold text-white">
-              {user.username?.slice(0, 2).toUpperCase() || "U"}
+              {isAnonymous ? "?" : (user.username?.slice(0, 2).toUpperCase() || "U")}
             </span>
           </div>
-          <span className="text-sm font-medium">{user.username || "User"}</span>
+          <span className="text-sm font-medium">
+            {isAnonymous ? "Anonymous" : (user.username || "User")}
+          </span>
           <div
             className="w-2 h-2 bg-green-500 rounded-full ml-1"
             title="Online"
@@ -151,14 +154,24 @@ function UserMenu({ user }: { user: { username?: string; userId?: string } }) {
                 <div className="border-t border-border my-1"></div>
               </>
             )}
-            <button
-              onClick={handleSignOut}
-              disabled={isPending}
-              className="flex items-center w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              {isPending ? "Signing out..." : "Sign out"}
-            </button>
+            {isAnonymous ? (
+              <Link
+                href="/auth/signin"
+                className="flex items-center w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Sign in
+              </Link>
+            ) : (
+              <button
+                onClick={handleSignOut}
+                disabled={isPending}
+                className="flex items-center w-full px-5 py-3 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                {isPending ? "Signing out..." : "Sign out"}
+              </button>
+            )}
           </div>
         )}
       </div>

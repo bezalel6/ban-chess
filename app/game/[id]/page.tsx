@@ -28,6 +28,5 @@ interface GamePageProps {
 export default function GamePage({ params }: GamePageProps) {
   const { id: gameId } = use(params);
 
-  // Simply render the unified GameViewer - it will handle everything
   return <GameViewer gameId={gameId} />;
 }

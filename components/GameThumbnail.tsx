@@ -1,18 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const GameViewer = dynamic(
-  () => import("@/components/GameViewer"),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="bg-background-secondary rounded-lg animate-pulse" 
-           style={{ width: "200px", height: "200px" }} />
-    )
-  }
-);
-
 interface GameThumbnailProps {
   gameId: string;
   size?: number;
@@ -34,13 +21,15 @@ export default function GameThumbnail({
   };
 
   return (
-    <div className="inline-block">
-      <GameViewer
-        gameId={gameId}
-        mode="thumbnail"
-        thumbnailSize={size}
-        onThumbnailClick={handleClick}
-      />
+    <div 
+      className="inline-block cursor-pointer"
+      onClick={handleClick}
+      style={{ width: size, height: size }}
+    >
+      {/* Temporarily simplified - thumbnail view needs different implementation */}
+      <div className="bg-background-secondary rounded-lg flex items-center justify-center h-full">
+        <span className="text-foreground-muted">Game {gameId.slice(0, 8)}</span>
+      </div>
     </div>
   );
 }

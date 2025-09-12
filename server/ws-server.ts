@@ -273,20 +273,14 @@ const wss = new WebSocketServer({
         authToken: typeof token;
       };
       reqWithAuth.authToken = token;
+      console.log('[WebSocket] Authenticated connection for user:', token.username);
+    } else {
+      // Allow anonymous connections - they will be assigned guest IDs on the client
+      console.log('[WebSocket] Anonymous connection allowed - user will be treated as guest');
     }
     
-    // In development, allow connections without auth (they'll be treated as guests)
-    // In production, require authentication
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    if (!token && !isDevelopment) {
-      console.log('[WebSocket] Rejecting unauthenticated connection in production mode');
-      cb(false, 401, "Unauthorized");
-    } else {
-      if (!token) {
-        console.log('[WebSocket] Allowing unauthenticated connection in development mode (will be treated as guest)');
-      }
-      cb(true);
-    }
+    // Always allow connections - anonymous users are welcome!
+    cb(true);
   },
 });
 
@@ -1526,7 +1520,7 @@ wss.on("connection", (ws: WebSocket, request) => {
 
           // Reconstruct the game to check if it's over
           const game = reconstructGameFromBCN(gameSource.bcn);
-          const isGameOver = game.gameOver() || !!gameSource.result;
+          const isGameOver = game.gameOver() || (gameSource.result && gameSource.result !== "*");
 
           console.log(
             `[join-game] Game ${gameId}: storage=${gameSource.type}, gameOver=${isGameOver}`

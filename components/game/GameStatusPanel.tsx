@@ -2,11 +2,12 @@
 
 import type { SimpleGameState } from "@/lib/game-types";
 import { getCurrentBan } from "@/lib/game-types";
-import { useUserRole } from "@/contexts/UserRoleContext";
-import { useGameState } from "@/hooks/useGameState";
+import { useGameRole } from "@/hooks/useGameRole";
+
 
 interface GameStatusPanelProps {
   gameState: SimpleGameState;
+  gameId?: string;
   activePlayer?: "white" | "black";
   actionType?: "move" | "ban";
   isOfflineGame?: boolean;
@@ -15,18 +16,18 @@ interface GameStatusPanelProps {
 
 export default function GameStatusPanel({
   gameState,
+  gameId,
   activePlayer: propActivePlayer,
   actionType: propActionType,
   isOfflineGame = false,
   onNewGame,
 }: GameStatusPanelProps) {
   // For offline games, use props directly. For online games, use the hook
-  const hookData = useGameState(undefined, { disableToasts: true });
-  const activePlayer = isOfflineGame ? propActivePlayer : hookData.activePlayer;
-  const actionType = isOfflineGame ? propActionType : hookData.actionType;
+    const activePlayer = propActivePlayer;
+  const actionType = propActionType;
   
-  const { role } = useUserRole();
-  const isPlayer = role !== null && !isOfflineGame; // Offline games don't use role
+  const { role } = useGameRole(gameId || null);
+  const isPlayer = role !== 'spectator' && !isOfflineGame; // Offline games don't use role
   const currentActivePlayer = activePlayer || gameState?.activePlayer || "white";
   const isMyTurn = isPlayer && role === currentActivePlayer && !gameState?.gameOver;
   const currentBan = getCurrentBan(gameState.fen);
@@ -197,9 +198,9 @@ export default function GameStatusPanel({
                 }`}
               >
                 {nextAction === "ban" ? (
-                  // Banning phase
+                  // Banning phase - the active player bans for the opponent
                   isSinglePlayer ? (
-                    `Choose a move to ban for ${currentActivePlayer}`
+                    `Choose a move to ban for ${currentActivePlayer === 'white' ? 'Black' : 'White'}`
                   ) : (
                     isMyTurn ? "Choose a move to ban" : `${currentActivePlayer.charAt(0).toUpperCase() + currentActivePlayer.slice(1)} is banning...`
                   )

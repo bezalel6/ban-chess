@@ -3,11 +3,8 @@
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
 import React, { memo, useMemo, useCallback } from "react";
-import type {
-  Dests,
-  Key,
-  ReactChessGroundProps,
-} from "@bezalel6/react-chessground";
+import type { Config } from "chessground/config";
+import type { Key, Dests } from "chessground/types";
 
 /**
  * InteractiveBoard - Adds interaction layer to board visualization
@@ -109,7 +106,7 @@ const InteractiveBoard = memo(function InteractiveBoard({
   );
 
   // Chessground configuration
-  const config = useMemo<ReactChessGroundProps>(
+  const config = useMemo<Config>(
     () => ({
       fen,
       orientation,

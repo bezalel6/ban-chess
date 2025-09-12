@@ -3,33 +3,33 @@
 import { useState, useMemo } from "react";
 import type { SimpleGameState } from "@/lib/game-types";
 import { parseFEN } from "@/lib/game-types";
-import { useUserRole } from "@/contexts/UserRoleContext";
-import { useGameState } from "@/hooks/useGameState";
+import { useGameRole } from "@/hooks/useGameRole";
+
 import { BanChess } from "ban-chess.ts";
 
 interface DebugPanelProps {
   gameState: SimpleGameState;
+  gameId?: string;
   game: BanChess | null;
   dests: Map<string, string[]>;
   onRefreshBoard?: () => void;
 }
 
-export default function DebugPanel({ gameState, game, dests, onRefreshBoard }: DebugPanelProps) {
+export default function DebugPanel({ gameState, gameId, game, dests, onRefreshBoard }: DebugPanelProps) {
   const [frozen, setFrozen] = useState(true);
   const [frozenConfig, setFrozenConfig] = useState<Record<string, unknown> | null>(null);
   
-  const { role, orientation } = useUserRole();
-  const { activePlayer, actionType } = useGameState(undefined, { disableToasts: true });
+  const { role, orientation } = useGameRole(gameId || null);
   
   const fenData = useMemo(() => {
     if (!gameState?.fen) return null;
     return parseFEN(gameState.fen);
   }, [gameState?.fen]);
   
-  const currentActivePlayer = activePlayer || game?.getActivePlayer() || "white";
-  const currentAction = actionType || game?.getActionType() || "move";
+  const currentActivePlayer = game?.getActivePlayer() || "white";
+  const currentAction = game?.getActionType() || "move";
   
-  const isPlayer = role !== null;
+  const isPlayer = role !== 'spectator';
   const isMyTurn = isPlayer && role === currentActivePlayer && !gameState?.gameOver;
   const canMove = isMyTurn && currentAction === "move";
   const canBan = isMyTurn && currentAction === "ban";

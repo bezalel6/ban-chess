@@ -1,33 +1,48 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useGameState } from '@/hooks/useGameState';
+import { useEffect } from 'react';
+import { useGameCreation } from '@/hooks/useGameCreation';
 
-export default function SoloPlayPage() {
-  const { connected, createSoloGame } = useGameState(undefined);
-  const gameCreatedRef = useRef(false);
+function SoloPlayContent() {
+  const { createGame, isCreating, error } = useGameCreation();
 
   useEffect(() => {
-    if (!connected) return;
-    
-    // Prevent multiple game creation
-    if (gameCreatedRef.current) return;
-    gameCreatedRef.current = true;
+    // Create the game immediately when component mounts
+    createGame('solo').catch(console.error);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Create solo game immediately when connected
-    // The useGameState hook will handle the redirect when it receives game-created
-    createSoloGame();
-  }, [connected, createSoloGame]);
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2 text-red-500">Error</h2>
+          <p className="text-foreground-muted mb-4">{error}</p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="btn-primary"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center">
         <div className="loading-spinner mb-4"></div>
-        <h2 className="text-2xl font-bold mb-2">Creating Online Practice Game</h2>
+        <h2 className="text-2xl font-bold mb-2">
+          {isCreating ? 'Creating Game...' : 'Redirecting...'}
+        </h2>
         <p className="text-foreground-muted">
-          Testing server game flow - play both sides online...
+          Setting up your practice game...
         </p>
       </div>
     </div>
   );
+}
+
+export default function SoloPlayPage() {
+  return <SoloPlayContent />;
 }

@@ -1,14 +1,10 @@
 "use client";
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
-import { DrawShape } from "@bezalel6/react-chessground";
 import React, { memo, useMemo } from "react";
-import type {
-  Color,
-  Dests,
-  Key,
-  ReactChessGroundProps,
-} from "@bezalel6/react-chessground";
+import type { Config } from "chessground/config";
+import type { DrawShape, DrawBrushes } from "chessground/draw";
+import type { Color, Key, Dests } from "chessground/types";
 
 /**
  * ChessgroundBoard - Unified board component using react-chessground
@@ -113,11 +109,14 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       });
     }
 
+    // Labels for selected squares are handled via CSS pseudo-elements
+    // See .ban-mode .cg-wrap square.selected::after in globals.css
+
     return shapes;
   }, [bannedMove]);
 
   // Configure drawable brushes for different visualizations
-  const drawableBrushes = useMemo(
+  const drawableBrushes: DrawBrushes = useMemo(
     () => ({
       green: { key: "g", color: "#15781B", opacity: 1, lineWidth: 10 },
       red: { key: "r", color: "#882020", opacity: 1, lineWidth: 10 },
@@ -128,16 +127,28 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     []
   );
 
+  // Use custom highlighting for banned square
+  const customHighlight = useMemo(() => {
+    const highlights = new Map<Key, string>();
+
+    // During move phase, highlight the banned destination square
+    if (actionType === "move" && bannedMove?.to) {
+      highlights.set(bannedMove.to as Key, "banned-square");
+    }
+
+    return highlights;
+  }, [actionType, bannedMove?.to]);
+
   // Chessground configuration - using ALL its features
-  const config = useMemo<ReactChessGroundProps>(() => {
-    const baseConfig: ReactChessGroundProps = {
+  const config = useMemo<Config>(() => {
+    const baseConfig: Config = {
       fen,
       orientation,
       turnColor: turn,
       coordinates,
       autoCastle: true,
       disableContextMenu: true,
-
+      trustAllEvents: true,
       // Visual settings
       animation: {
         enabled: animation,
@@ -148,6 +159,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       highlight: {
         lastMove: highlight.lastMove ?? true,
         check: highlight.check ?? true,
+        custom: customHighlight,
       },
       lastMove: lastMove as [Key, Key] | undefined,
       check: check && highlight.check ? (check as Color | boolean) : undefined,
@@ -215,6 +227,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     onPremove,
     drawableBrushes,
     autoShapes,
+    customHighlight,
   ]);
 
   // Board container styles
@@ -236,7 +249,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     const style: Record<string, string | number> = { ...containerStyle };
 
     if (actionType === "ban") {
-      // Add CSS variables for ban mode
+      // Add CSS variables for ban mode - ALL destinations are red
       style["--cg-move-dest-color"] = "rgba(139, 0, 0, 0.5)";
       style["--cg-move-dest-center"] = "#8b0000";
       style["--cg-move-dest-hover"] = "rgba(220, 20, 60, 0.4)";

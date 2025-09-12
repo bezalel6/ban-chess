@@ -4,113 +4,78 @@ import {
   createContext,
   useContext,
   ReactNode,
-  useMemo,
-  useState,
-  useRef,
   useEffect,
+  useState,
+  useMemo,
 } from "react";
-import useWebSocket, { ReadyState } from "react-use-websocket";
 import { useAuth } from "@/components/AuthProvider";
-import { config } from "@/lib/config";
+import { wsManager, type ConnectionState } from "@/lib/websocket/WebSocketManager";
 
 interface WebSocketContextType {
-  sendMessage: (message: string) => void;
-  lastMessage: MessageEvent<string> | null;
-  readyState: number;
-  isAuthenticated: boolean;
+  connectionState: ConnectionState;
+  isReady: boolean;
 }
 
-// This context will provide the raw functions from the hook
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
-export function useGameWebSocket() {
-  return useContext(WebSocketContext);
+export function useWebSocket() {
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error("useWebSocket must be used within WebSocketProvider");
+  }
+  return context;
 }
 
+/**
+ * WebSocketProvider using the singleton WebSocketManager.
+ * Following Lichess pattern - single connection at app level.
+ */
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const authSentRef = useRef(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    wsManager.getConnectionState()
+  );
 
-  const socketUrl = useMemo(() => {
-    // Only connect if user is authenticated
-    // Cookies will be sent automatically with the WebSocket handshake
-    if (!user || !user.userId || !user.username || !user.provider) return null;
+  // Connect when user is available (including anonymous users)
+  useEffect(() => {
+    if (user?.userId && user?.username) {
+      // Connect with auth data (works for both anonymous and authenticated users)
+      wsManager.connect({
+        userId: user.userId,
+        username: user.username,
+      });
 
-    // No need to add auth params to URL - cookies will handle authentication
-    const url = config.websocket.url;
-    // Only log on initial connection, not reconnects
-    if (!authSentRef.current) {
-      console.log("[WebSocketProvider] Connecting with session cookies to:", url);
+      // Send authentication message once connected
+      // Anonymous users have provider: 'guest'
+      const unsubscribe = wsManager.subscribeToConnectionState((state) => {
+        if (state.connected && !state.authenticated) {
+          wsManager.send({
+            type: "authenticate",
+            userId: user.userId,
+            username: user.username,
+            provider: user.provider || "guest", // Default to guest for anonymous users
+          });
+        }
+      });
+
+      return unsubscribe;
     }
-    return url;
+    // Note: We don't disconnect if no user - anonymous users are created automatically
   }, [user]);
 
-  const { sendMessage, lastMessage, readyState } = useWebSocket(socketUrl, {
-    share: true,
-    shouldReconnect: () => true,
-    reconnectAttempts: 10,
-    reconnectInterval: (attemptNumber) =>
-      Math.min(Math.pow(2, attemptNumber) * 1000, 10000), // Exponential backoff: 1s, 2s, 4s, 8s, max 10s
-    retryOnError: true,
-    heartbeat: {
-      message: "ping",
-      returnMessage: "pong",
-      interval: 25000, // Send ping every 25 seconds (before server's 30s timeout)
-      timeout: 60000, // Allow 60 seconds for response
-    },
-    filter: (message) => {
-      // Filter out ping/pong messages to prevent unnecessary re-renders
-      try {
-        const data = JSON.parse(message.data);
-        if (data.type === "pong") {
-          return false; // Don't pass pong messages to components
-        }
-      } catch {
-        // Not JSON, pass it through
-      }
-      return true;
-    },
-  });
-
-  // Monitor connection state for authentication status
+  // Subscribe to connection state changes
   useEffect(() => {
-    // Connection is authenticated automatically via cookies during handshake
-    if (readyState === ReadyState.OPEN && user) {
-      if (!authSentRef.current) {
-        console.log("[WebSocketProvider] Connection established with cookie authentication");
-        authSentRef.current = true;
-      }
-      // No need to send authentication message - server validates cookies automatically
-    }
+    const unsubscribe = wsManager.subscribeToConnectionState(setConnectionState);
+    return unsubscribe;
+  }, []);
 
-    // Reset auth flag when connection closes
-    if (readyState === ReadyState.CLOSED || readyState === ReadyState.CLOSING) {
-      authSentRef.current = false;
-      setIsAuthenticated(false);
-    }
-  }, [readyState, user]);
-
-  // Listen for authentication confirmation
-  useEffect(() => {
-    if (!lastMessage) return;
-    try {
-      const data = JSON.parse(lastMessage.data);
-      if (data.type === "authenticated") {
-        setIsAuthenticated(true);
-        console.log("[WebSocketProvider] Authenticated successfully");
-      }
-    } catch {
-      // Not JSON or not an auth message
-    }
-  }, [lastMessage]);
-
-  const value = {
-    sendMessage,
-    lastMessage,
-    readyState,
-    isAuthenticated,
-  };
+  const value = useMemo(
+    () => ({
+      connectionState,
+      isReady: wsManager.isReady(),
+    }),
+    [connectionState]
+  );
 
   return (
     <WebSocketContext.Provider value={value}>

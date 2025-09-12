@@ -2,44 +2,43 @@
 
 import { useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { useGameState } from "@/hooks/useGameState";
+import { useGameStore } from "@/contexts/GameContext";
+import { useWebSocket } from "@/contexts/WebSocketContext";
 import { useRouter } from "next/navigation";
 
-export default function OnlinePlayPage() {
+function OnlinePlayContent() {
   const { user } = useAuth();
-  const { connected, joinQueue, leaveQueue } = useGameState(undefined);
+  const gameStore = useGameStore();
+  const { isReady } = useWebSocket();
   const router = useRouter();
 
   useEffect(() => {
-    if (!connected) return;
+    // Now we always have a user (either authenticated or anonymous)
+    if (!isReady) return;
 
-    // Join matchmaking queue immediately when connected
-    // The useGameState hook will handle the redirect when matched
-    joinQueue();
+    // Join the matchmaking queue
+    gameStore.joinQueue();
 
-    // Leave queue when component unmounts
+    // Listen for game creation from matchmaking
+    const unsubscribe = gameStore.subscribeToAll((state) => {
+      if (state && state.gameId && state.players?.white && state.players?.black) {
+        // Game has been created by matchmaking
+        router.push(`/game/${state.gameId}`);
+      }
+    });
+
     return () => {
-      leaveQueue();
+      gameStore.leaveQueue();
+      unsubscribe();
     };
-  }, [connected, joinQueue, leaveQueue]);
+  }, [user, isReady, gameStore, router]);
 
   const handleCancel = () => {
-    leaveQueue();
-    router.push("/"); // Navigate to home page
+    gameStore.leaveQueue();
+    router.push("/");
   };
 
-  if (!user) {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-background-secondary rounded-xl p-8 shadow-2xl border border-border max-w-sm w-full mx-4">
-          <div className="text-center">
-            <div className="loading-spinner mb-4"></div>
-            <p className="text-foreground-muted">Redirecting to sign in...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // No need to check for user - we always have one (authenticated or anonymous)
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -55,7 +54,7 @@ export default function OnlinePlayPage() {
           <div className="bg-background/50 rounded-lg p-6 border border-border/50 mb-6">
             <div className="loading-spinner mb-4"></div>
             <p className="text-foreground font-medium">
-              {connected
+              {isReady
                 ? "In queue for an online game..."
                 : "Connecting to server..."}
             </p>
@@ -75,4 +74,8 @@ export default function OnlinePlayPage() {
       </div>
     </div>
   );
+}
+
+export default function OnlinePlayPage() {
+  return <OnlinePlayContent />;
 }

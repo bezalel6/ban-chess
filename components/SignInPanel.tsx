@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useToast } from "@/lib/toast/toast-context";
@@ -15,7 +15,6 @@ export default function SignInPanel({
   compact = false,
   onSignIn,
 }: SignInPanelProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const { showToast } = useToast();
 
@@ -84,23 +83,7 @@ export default function SignInPanel({
     onSignIn?.();
   };
 
-  const handleGuestSignIn = () => {
-    setIsLoading(true);
-    signIn("guest", { callbackUrl: "/" });
-    onSignIn?.();
-  };
-
-  // Show loading state during guest authentication
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <div className="text-center">
-          <div className="loading-spinner mb-4"></div>
-          <p className="text-muted-foreground">Signing you in as guest...</p>
-        </div>
-      </div>
-    );
-  }
+  // Guest sign-in is no longer needed - users are automatically anonymous
 
   if (compact) {
     // Improved compact layout with better spacing and usability
@@ -154,28 +137,6 @@ export default function SignInPanel({
           </button>
         </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-3 text-muted-foreground">Or</span>
-          </div>
-        </div>
-
-        <button
-          onClick={handleGuestSignIn}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-background-secondary text-foreground rounded-xl hover:bg-background-tertiary transition-all duration-200 border border-border hover:border-lichess-orange-500/30 shadow-sm hover:shadow-md group"
-        >
-          <Image
-            src="/icons/pawn.webp"
-            alt="Pawn"
-            width={24}
-            height={24}
-            className="object-contain opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all"
-          />
-          <span className="font-medium">Continue as Guest</span>
-        </button>
       </div>
     );
   }
@@ -231,30 +192,6 @@ export default function SignInPanel({
         </button>
       </div>
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border"></div>
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-3 text-muted-foreground">
-            Or continue without account
-          </span>
-        </div>
-      </div>
-
-      <button
-        onClick={handleGuestSignIn}
-        className="w-full flex items-center justify-center gap-4 py-6 px-6 bg-background-secondary text-foreground rounded-2xl hover:bg-background-tertiary transition-all duration-200 font-medium text-lg border-2 border-border hover:border-lichess-orange-500/30 shadow-sm hover:shadow-lg group"
-      >
-        <Image
-          src="/icons/pawn.webp"
-          alt="Pawn"
-          width={40}
-          height={40}
-          className="object-contain opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all"
-        />
-        <span>Play as Guest</span>
-      </button>
     </div>
   );
 }

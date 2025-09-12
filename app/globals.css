@@ -467,29 +467,60 @@ a {
     height: 12.5% !important;
   }
 
-  /* Style for banned move destination - subtle red tint */
-  .chess-board-inner .cg-wrap square.banned-dest {
-    background: radial-gradient(
-      rgba(220, 20, 60, 0.4) 22%,
-      rgba(139, 0, 0, 0.3) 23%,
-      rgba(139, 0, 0, 0.15) 24%,
-      transparent 25%
-    ) !important;
-    position: relative;
+  /* Highlight for banned square using Chessground's custom highlighting */
+  .chess-board-inner .cg-wrap square.banned-square {
+    background: rgba(139, 0, 0, 0.5) !important;
+    box-shadow: inset 0 0 10px rgba(139, 0, 0, 0.8);
   }
-
-  /* Add a subtle pulse to banned move destinations */
-  .chess-board-inner .cg-wrap square.banned-dest::after {
+  
+  /* Label for selected square during ban mode */
+  .ban-mode .cg-wrap square.selected::after {
+    content: "[source] → ?";
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: #ffff00;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    border: 1px solid #ffff00;
+  }
+  
+  /* Style for move destination on banned square - distinctive red X pattern */
+  .chess-board-inner .cg-wrap square.banned-square.move-dest::before {
     content: "";
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 30%;
-    height: 30%;
-    border-radius: 50%;
-    background: rgba(220, 20, 60, 0.3);
+    width: 60%;
+    height: 3px;
+    background: #dc143c;
+    transform: translate(-50%, -50%) rotate(45deg);
+    z-index: 10;
+  }
+  
+  .chess-board-inner .cg-wrap square.banned-square.move-dest::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 60%;
+    height: 3px;
+    background: #dc143c;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    z-index: 10;
+  }
+  
+  /* Alternative: Pulsing border effect for banned square */
+  .chess-board-inner .cg-wrap square.banned-square.move-dest {
     animation: banned-pulse 2s ease-in-out infinite;
+    border: 2px solid rgba(220, 20, 60, 0.8) !important;
   }
 
   @keyframes banned-pulse {

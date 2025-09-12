@@ -103,7 +103,7 @@ export default function PlayPage() {
             title="Find Opponent"
             description="Play against real players online."
             icon="🌐"
-            requiresAuth={true}
+            requiresAuth={false}
             isAuthenticated={!!user}
             onSelect={handleModeSelect}
           />
@@ -120,7 +120,7 @@ export default function PlayPage() {
               title="Practice Online"
               description="Test the full game flow with the server. Play both sides online."
               icon="🧪"
-              requiresAuth={true}
+              requiresAuth={false}
               isAuthenticated={!!user}
               onSelect={handleModeSelect}
             />

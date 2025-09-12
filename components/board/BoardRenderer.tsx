@@ -3,7 +3,7 @@
 import "@bezalel6/react-chessground/dist/react-chessground.css";
 import Chessground from "@bezalel6/react-chessground";
 import React, { memo, useMemo } from "react";
-import type { ReactChessGroundProps } from "@bezalel6/react-chessground";
+import type { Config } from "chessground/config";
 
 /**
  * BoardRenderer - Pure visualization component
@@ -34,7 +34,7 @@ const BoardRenderer = memo(function BoardRenderer({
   className = "",
 }: BoardRendererProps) {
   // Chessground configuration - purely visual
-  const config = useMemo<ReactChessGroundProps>(
+  const config = useMemo<Config>(
     () => ({
       fen,
       orientation,

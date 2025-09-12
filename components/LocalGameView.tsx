@@ -9,7 +9,7 @@ import type { Move, Ban } from "@/lib/game-types";
 import GameSidebar from "./game/GameSidebar";
 import GameStatusPanel from "./game/GameStatusPanel";
 import { useRouter } from "next/navigation";
-import { useUserRole } from "@/contexts/UserRoleContext";
+import { useBanDifficulty } from "@/hooks/useBanDifficulty";
 
 const ResizableBoard = dynamic(() => import("@/components/game/ResizableBoard"), {
   ssr: false,
@@ -56,7 +56,7 @@ interface LocalGameViewProps {
 
 export default function LocalGameView({ initialFen }: LocalGameViewProps) {
   const router = useRouter();
-  const { banDifficulty } = useUserRole();
+  const { banDifficulty } = useBanDifficulty();
   const [controller] = useState(() => new LocalGameController(initialFen));
   const [gameState, setGameState] = useState<GameControllerState | null>(null);
   const [orientation, setOrientation] = useState<"white" | "black">("white");

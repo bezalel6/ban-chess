@@ -57,6 +57,7 @@ const ChessBoard = memo(function ChessBoard({
   banDifficulty = "medium",
 }: ChessBoardProps) {
   const [bannedMoveAlert, setBannedMoveAlert] = useState<boolean>(false);
+  const [boardKey, setBoardKey] = useState(0); // Force board re-render on banned move
 
   /**
    * Determines which king is in check based on Ban Chess rules.
@@ -123,6 +124,7 @@ const ChessBoard = memo(function ChessBoard({
   }, [currentBan]);
 
 
+
   // Handle move/ban from board
   const handleBoardMove = useCallback(
     (from: string, to: string) => {
@@ -133,6 +135,9 @@ const ChessBoard = memo(function ChessBoard({
       } else {
         // Check if this move is banned
         if (currentBan && currentBan.from === from && currentBan.to === to) {
+          // Force board to reset immediately by changing its key
+          setBoardKey(prev => prev + 1);
+          
           // Show banned move alert
           setBannedMoveAlert(true);
 
@@ -234,6 +239,7 @@ const ChessBoard = memo(function ChessBoard({
   return (
     <div className="relative w-full h-full">
       <ChessgroundBoard
+        key={boardKey} // Force re-render when banned move is attempted
         fen={gameState.fen}
         orientation={orientation}
         turn={activePlayer}
