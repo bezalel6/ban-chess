@@ -51,6 +51,7 @@ export interface ChessgroundBoardProps {
   // Events
   onMove?: (from: string, to: string) => void;
   onPremove?: (from: string, to: string) => void;
+  onSelect?: (key: string | null) => void; // Called when square is selected
 
   // Visual configuration
   coordinates?: boolean;
@@ -78,13 +79,69 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
   bannedMove,
   onMove,
   onPremove,
-  coordinates = false,
+  onSelect,
+  coordinates = true,
   animation = true,
   highlight = { lastMove: true, check: true },
   actionType = "move",
   size,
   className = "",
 }: ChessgroundBoardProps) {
+  // Ref to access the board DOM (unused now but kept for potential future use)
+  const _boardRef = React.useRef<HTMLDivElement>(null);
+
+  // Parse FEN to determine piece colors on squares
+  const getPieceColorAt = React.useCallback(
+    (square: string): "white" | "black" | null => {
+      if (!fen) return null;
+
+      const [position] = fen.split(" ");
+      const ranks = position.split("/");
+      const file = square.charCodeAt(0) - 97; // a=0, b=1, etc
+      const rank = 8 - parseInt(square[1]); // 8=0, 7=1, etc (FEN is top to bottom)
+
+      if (file < 0 || file > 7 || rank < 0 || rank > 7) return null;
+
+      const rankStr = ranks[rank];
+      if (!rankStr) return null;
+
+      let fileIndex = 0;
+      for (const char of rankStr) {
+        if (/\d/.test(char)) {
+          fileIndex += parseInt(char);
+        } else {
+          if (fileIndex === file) {
+            // Uppercase = white, lowercase = black
+            return /[A-Z]/.test(char) ? "white" : "black";
+          }
+          fileIndex++;
+        }
+      }
+      return null;
+    },
+    [fen]
+  );
+
+  // Handle square selection
+  const handleSelect = React.useCallback(
+    (key: Key | undefined) => {
+      if (key && movable?.color && movable.color !== "both") {
+        // Check if the selected square has a piece of the allowed color
+        const pieceColor = getPieceColorAt(key);
+
+        // Only allow selection if:
+        // 1. There's a piece on the square
+        // 2. The piece color matches the movable color
+        if (!pieceColor || pieceColor !== movable.color) {
+          return;
+        }
+      }
+
+      // Notify parent
+      onSelect?.(key || null);
+    },
+    [onSelect, movable?.color, getPieceColorAt]
+  );
   // Convert destinations to Chessground format
   const dests: Dests = useMemo(() => {
     const destsMap = new Map<Key, Key[]>();
@@ -96,7 +153,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
     return destsMap;
   }, [movable?.dests]);
 
-  // Create auto shapes for ban visualization
+  // Create auto shapes for banned move arrow
   const autoShapes = useMemo(() => {
     const shapes: Array<DrawShape> = [];
 
@@ -109,11 +166,9 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       });
     }
 
-    // Labels for selected squares are handled via CSS pseudo-elements
-    // See .ban-mode .cg-wrap square.selected::after in globals.css
-
     return shapes;
   }, [bannedMove]);
+
 
   // Configure drawable brushes for different visualizations
   const drawableBrushes: DrawBrushes = useMemo(
@@ -188,7 +243,7 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       selectable: {
         enabled: !viewOnly,
       },
-
+      coordinatesOnSquares: true,
       // Premove configuration
       premovable: {
         enabled: !viewOnly && !!onPremove,
@@ -267,8 +322,11 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       } ${className}`}
       style={boardStyle}
     >
-      <div className="chess-board-inner">
-        <Chessground {...config} />
+      <div className="chess-board-inner relative" ref={_boardRef}>
+        <Chessground
+          {...config}
+          onSelect={(key) => handleSelect(key as Key | undefined)}
+        />
       </div>
     </div>
   );
