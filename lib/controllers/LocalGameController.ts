@@ -2,6 +2,7 @@ import { BanChess } from "ban-chess.ts";
 import type { Action as BanChessAction } from "ban-chess.ts";
 import type { Action, SimpleGameState, GameEvent, Move, Ban } from "@/lib/game-types";
 import type { IGameController, GameControllerState } from "./IGameController";
+import soundManager from "@/lib/sound-manager";
 
 // Debug logging helper that includes library version
 const debugLog = (message: string, ...args: unknown[]) => {
@@ -28,6 +29,11 @@ export class LocalGameController implements IGameController {
     this.game = new BanChess(initialFen);
     this.currentGameId = `local-${Date.now()}`;
     this.fullActionHistory = [];
+    
+    // Play game start sound for new games
+    if (!initialFen) {
+      soundManager.playEvent('game-start');
+    }
     
     // Add initial event
     this.addEvent({
@@ -270,6 +276,44 @@ export class LocalGameController implements IGameController {
       const actionType = 'move' in action ? 'move' : 'ban';
       const player = this.game.getActivePlayer() === "white" ? "black" : "white"; // Previous player
       
+      // Play appropriate sound for the action
+      if (actionType === 'move') {
+        // Check the move details for special sounds
+        const san = result.san || '';
+        const moveDetails = {
+          check: san.includes('+') || san.includes('#'),
+          capture: san.includes('x'),
+          castle: san.includes('O-O'),
+          promotion: san.includes('='),
+          isOpponent: false, // In local games, you're playing both sides
+        };
+        soundManager.playMoveSound(moveDetails);
+      } else {
+        // Play ban sound
+        soundManager.playEvent('ban');
+      }
+      
+      // Check for game end and play appropriate sound
+      if (gameOver) {
+        // In local games, determine result based on who was checkmated
+        if (inCheckmate || (inCheck && legalMoves === 0)) {
+          // The current player (after the move) is checkmated
+          const loser = this.game.getActivePlayer();
+          const winner = loser === 'white' ? 'black' : 'white';
+          const resultString = `${winner.charAt(0).toUpperCase() + winner.slice(1)} wins by checkmate`;
+          soundManager.playEvent('game-end', { 
+            result: resultString,
+            playerRole: null // Local game, no specific role
+          });
+        } else if (legalMoves === 0) {
+          // Stalemate
+          soundManager.playEvent('game-end', { 
+            result: 'Draw by stalemate',
+            playerRole: null
+          });
+        }
+      }
+      
       this.addEvent({
         timestamp: Date.now(),
         type: actionType === 'move' ? 'move-made' : 'ban-made',
@@ -314,6 +358,9 @@ export class LocalGameController implements IGameController {
     this.currentGameId = `local-${Date.now()}`;
     this.fullActionHistory = [];
     this.isNavigating = false;
+    
+    // Play game start sound for reset
+    soundManager.playEvent('game-start');
     
     this.addEvent({
       timestamp: Date.now(),

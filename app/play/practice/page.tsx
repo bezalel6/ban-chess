@@ -13,10 +13,10 @@ export default function PracticePage() {
         <div className="text-center py-4 flex-shrink-0">
           <h1 className="text-3xl font-bold mb-2">Practice Mode</h1>
           <p className="text-foreground-muted">
-            Play both sides to learn ban chess strategies
+            Play both sides to get familiar with the unique ban-chess flow
           </p>
         </div>
-        
+
         <div className="flex-grow min-h-0 overflow-hidden">
           <LocalGameView />
         </div>

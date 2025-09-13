@@ -221,7 +221,7 @@ export default function VolumeControl() {
         {/* Divider */}
         <div className="my-3 border-t border-border"></div>
         
-        {/* Link to full sound settings */}
+        {/* Link to full sound settings - available for all users including anonymous */}
         <Link 
           href="/sound-settings"
           className="flex items-center gap-2 w-full px-2 py-2 text-sm rounded transition-colors hover:bg-lichess-orange-500/20 text-foreground-muted hover:text-foreground"

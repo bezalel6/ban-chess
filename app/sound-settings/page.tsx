@@ -1,7 +1,3 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import type { AuthSession } from "@/types/auth";
 import { Suspense } from "react";
 import SettingsClient from "./SettingsClient";
 import Loading from "./loading";
@@ -23,13 +19,9 @@ async function SettingsContent() {
 }
 
 export default async function SettingsPage() {
-  const session = (await getServerSession(authOptions)) as AuthSession | null;
-
-  // Redirect if not authenticated
-  if (!session) {
-    redirect("/auth/signin");
-  }
-
+  // Allow anonymous users - no authentication required
+  // This follows our Lichess-style anonymous-first approach
+  
   // Use Suspense to show loading state while data loads
   return (
     <Suspense fallback={<Loading />}>
