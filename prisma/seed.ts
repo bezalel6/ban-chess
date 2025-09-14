@@ -29,9 +29,9 @@ async function seed() {
         "game-invite": "/sounds/standard/NewChallenge.mp3",
         "time-warning": "/sounds/standard/LowTime.mp3",
         "opponent-move": "/sounds/standard/Move.mp3",
-        "ban-attempt-easy": "/sounds/other/no-go.mp3",
-        "ban-attempt-hard": "/sounds/futuristic/Explosion.mp3",
-        "ban-attempt-medium": "/sounds/standard/Error.mp3"
+        "ban-attempt-mild": "/sounds/other/no-go.mp3",
+        "ban-attempt-severe": "/sounds/futuristic/Explosion.mp3",
+        "ban-attempt-moderate": "/sounds/standard/Error.mp3"
       }
     }
   })

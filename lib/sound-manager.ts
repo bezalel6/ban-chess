@@ -20,9 +20,9 @@ export const eventTypes = [
   "game-invite",
   "game-start",
   "ban",
-  "ban-attempt-easy",
-  "ban-attempt-medium",
-  "ban-attempt-hard",
+  "ban-attempt-mild",
+  "ban-attempt-moderate",
+  "ban-attempt-severe",
   "move",
   "opponent-move",
   "capture",
@@ -44,9 +44,9 @@ export const eventMetadata: Record<
   "game-invite": { name: "Game Invite", icon: Mail },
   "game-start": { name: "Game Start", icon: Play },
   ban: { name: "Ban", icon: Ban },
-  "ban-attempt-easy": { name: "Ban Attempt (Easy)", icon: Ban },
-  "ban-attempt-medium": { name: "Ban Attempt (Medium)", icon: AlertTriangle },
-  "ban-attempt-hard": { name: "Ban Attempt (Hard)", icon: Ban },
+  "ban-attempt-mild": { name: "Ban Penalty (Mild)", icon: Ban },
+  "ban-attempt-moderate": { name: "Ban Penalty (Moderate)", icon: AlertTriangle },
+  "ban-attempt-severe": { name: "Ban Penalty (Severe)", icon: Ban },
   move: { name: "Move", icon: Move },
   "opponent-move": { name: "Opponent Move", icon: Users },
   capture: { name: "Capture", icon: Swords },
@@ -131,9 +131,9 @@ const defaultEventSoundMap: Record<EventType, string | null> = {
   "game-invite": "/sounds/standard/NewChallenge.mp3",
   "game-start": "/sounds/standard/Confirmation.mp3",
   ban: "/sounds/standard/Explosion.mp3",
-  "ban-attempt-easy": null, // No sound for easy mode
-  "ban-attempt-medium": "/sounds/standard/Error.mp3",
-  "ban-attempt-hard": "/sounds/futuristic/Explosion.mp3", // The aggressive explosion for hard mode
+  "ban-attempt-mild": null, // No sound for mild penalty
+  "ban-attempt-moderate": "/sounds/standard/Error.mp3",
+  "ban-attempt-severe": "/sounds/futuristic/Explosion.mp3", // The aggressive explosion for severe penalty
   move: "/sounds/standard/Move.mp3",
   "opponent-move": "/sounds/standard/Move.mp3",
   capture: "/sounds/standard/Capture.mp3",
@@ -229,6 +229,44 @@ class SoundManager {
       if (savedEventMap !== null) {
         try {
           const map = JSON.parse(savedEventMap);
+          
+          // Migrate old ban-attempt event names to new ones
+          let needsSave = false;
+          if ('ban-attempt-easy' in map) {
+            map['ban-attempt-mild'] = map['ban-attempt-easy'];
+            delete map['ban-attempt-easy'];
+            needsSave = true;
+          }
+          if ('ban-attempt-medium' in map) {
+            map['ban-attempt-moderate'] = map['ban-attempt-medium'];
+            delete map['ban-attempt-medium'];
+            needsSave = true;
+          }
+          if ('ban-attempt-hard' in map) {
+            map['ban-attempt-severe'] = map['ban-attempt-hard'];
+            delete map['ban-attempt-hard'];
+            needsSave = true;
+          }
+          
+          // Ensure new ban-attempt events exist in the map
+          if (!('ban-attempt-mild' in map)) {
+            map['ban-attempt-mild'] = defaultEventSoundMap['ban-attempt-mild'];
+            needsSave = true;
+          }
+          if (!('ban-attempt-moderate' in map)) {
+            map['ban-attempt-moderate'] = defaultEventSoundMap['ban-attempt-moderate'];
+            needsSave = true;
+          }
+          if (!('ban-attempt-severe' in map)) {
+            map['ban-attempt-severe'] = defaultEventSoundMap['ban-attempt-severe'];
+            needsSave = true;
+          }
+          
+          if (needsSave) {
+            // Save the migrated/updated map
+            localStorage.setItem("soundEventMap", JSON.stringify(map));
+          }
+          
           // Saved preferences completely replace defaults
           this.eventSoundMap = map;
           
@@ -545,9 +583,9 @@ class SoundManager {
         soundFiles["Confirmation"]
       ),
       ban: this.findAvailableSound(themePath, soundFiles["Explosion"]),
-      "ban-attempt-easy": null, // No sound for easy mode
-      "ban-attempt-medium": this.findAvailableSound(themePath, soundFiles["Error"]),
-      "ban-attempt-hard": "/sounds/futuristic/Explosion.mp3", // Always use futuristic explosion for hard mode
+      "ban-attempt-mild": null, // No sound for mild penalty
+      "ban-attempt-moderate": this.findAvailableSound(themePath, soundFiles["Error"]),
+      "ban-attempt-severe": "/sounds/futuristic/Explosion.mp3", // Always use futuristic explosion for severe penalty
       move: this.findAvailableSound(themePath, soundFiles["Move"]),
       "opponent-move": this.findAvailableSound(themePath, soundFiles["Move"]),
       capture: this.findAvailableSound(themePath, soundFiles["Capture"]),

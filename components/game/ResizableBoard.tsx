@@ -22,7 +22,7 @@ interface ResizableBoardProps {
   refreshKey?: number;
   orientation?: 'white' | 'black';
   canInteract?: boolean; // Pass through to ChessBoard
-  banDifficulty?: "easy" | "medium" | "hard";
+  banPenalty?: "mild" | "moderate" | "severe";
 }
 
 const ResizableBoard = memo(function ResizableBoard({
@@ -35,7 +35,7 @@ const ResizableBoard = memo(function ResizableBoard({
   refreshKey: _refreshKey,
   orientation = 'white',
   canInteract = true,
-  banDifficulty = "medium",
+  banPenalty = "moderate",
 }: ResizableBoardProps) {
   // Default board size in pixels - use multiples of 8 for perfect square alignment
   const MIN_SIZE = 400;
@@ -323,7 +323,7 @@ const ResizableBoard = memo(function ResizableBoard({
             orientation={orientation}
             canInteract={canInteract}
             size={isResizing ? visualSize : boardSize} // Use visualSize during resize for immediate feedback
-            banDifficulty={banDifficulty}
+            banPenalty={banPenalty}
           />
         </ChessBoardErrorBoundary>
 

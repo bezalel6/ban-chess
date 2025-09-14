@@ -50,7 +50,7 @@ interface BoardConfig {
   checkSoundEnabled: boolean;
 
   // Ban Chess specific
-  banDifficulty: "easy" | "medium" | "hard";
+  banPenalty: "mild" | "moderate" | "severe";
   showBanOverlay: boolean;
   banOverlayOpacity: number;
 
@@ -83,7 +83,7 @@ const DEFAULT_CONFIG: BoardConfig = {
   moveSoundEnabled: true,
   captureSoundEnabled: true,
   checkSoundEnabled: true,
-  banDifficulty: "medium",
+  banPenalty: "moderate",
   showBanOverlay: true,
   banOverlayOpacity: 0.4,
   autoResize: true,
@@ -301,14 +301,14 @@ export default function ChessboardDebugger() {
           updateGameState(game, ban, result.san);
           setLastBan(ban); // Track the last ban for visualization
           
-          // Play ban sound effect based on difficulty
+          // Play ban sound effect based on penalty severity
           if (config.moveSoundEnabled) {
-            if (config.banDifficulty === "hard") {
-              soundManager.playEvent("ban-attempt-hard");
-            } else if (config.banDifficulty === "medium") {
-              soundManager.playEvent("ban-attempt-medium");
+            if (config.banPenalty === "severe") {
+              soundManager.playEvent("ban-attempt-severe");
+            } else if (config.banPenalty === "moderate") {
+              soundManager.playEvent("ban-attempt-moderate");
             } else {
-              soundManager.playEvent("ban");
+              soundManager.playEvent("ban-attempt-mild");
             }
           }
         }
@@ -316,7 +316,7 @@ export default function ChessboardDebugger() {
         console.error("Ban failed:", error);
       }
     },
-    [game, updateGameState, config.moveSoundEnabled, config.banDifficulty]
+    [game, updateGameState, config.moveSoundEnabled, config.banPenalty]
   );
 
   // Initialize game and sound manager
@@ -830,17 +830,17 @@ export default function ChessboardDebugger() {
             <h3 className="font-semibold mb-2">Ban Chess Settings</h3>
             <div className="space-y-2">
               <label className="block">
-                <span className="text-sm">Ban Difficulty</span>
+                <span className="text-sm">Ban Penalty Severity</span>
                 <select
-                  value={config.banDifficulty}
+                  value={config.banPenalty}
                   onChange={(e) =>
-                    updateConfig("banDifficulty", e.target.value)
+                    updateConfig("banPenalty", e.target.value)
                   }
                   className="w-full mt-1 px-2 py-1 bg-background rounded border border-border"
                 >
-                  <option value="easy">Easy (Green)</option>
-                  <option value="medium">Medium (Yellow)</option>
-                  <option value="hard">Hard (Red)</option>
+                  <option value="mild">Mild (Green)</option>
+                  <option value="moderate">Moderate (Yellow)</option>
+                  <option value="severe">Severe (Red)</option>
                 </select>
               </label>
 
@@ -924,7 +924,7 @@ export default function ChessboardDebugger() {
               canInteract={!config.viewOnly && config.draggable && config.selectable}
               size={config.autoResize ? undefined : config.maxBoardSize}
               className={`transition-all duration-${config.animationDuration}`}
-              banDifficulty={config.banDifficulty}
+              banPenalty={config.banPenalty}
             />
           </div>
         </div>

@@ -499,22 +499,10 @@ a {
     z-index: 10;
   }
   
-  /* Alternative: Pulsing border effect for banned square */
+  /* Subtle static border for banned square - no animation */
   .chess-board-inner .cg-wrap square.banned-square.move-dest {
-    animation: banned-pulse 2s ease-in-out infinite;
-    border: 2px solid rgba(220, 20, 60, 0.8) !important;
-  }
-
-  @keyframes banned-pulse {
-    0%,
-    100% {
-      opacity: 0.3;
-      transform: translate(-50%, -50%) scale(1);
-    }
-    50% {
-      opacity: 0.6;
-      transform: translate(-50%, -50%) scale(1.2);
-    }
+    border: 2px solid rgba(220, 20, 60, 0.6) !important;
+    box-shadow: 0 0 8px rgba(220, 20, 60, 0.4);
   }
 
   /* Mini board styles for game history */
@@ -612,7 +600,7 @@ a {
   animation: slide-up 0.3s ease-out;
 }
 
-/* Shake animation for banned move alert */
+/* Shake animation for severe ban penalty alert */
 @keyframes shake-alert {
   0%,
   100% {
@@ -637,7 +625,7 @@ a {
   animation: shake-alert 0.6s ease-in-out;
 }
 
-/* Warning bounce animation for medium ban difficulty */
+/* Warning bounce animation for moderate ban penalty */
 @keyframes warning-bounce {
   0%,
   100% {
@@ -658,8 +646,8 @@ a {
   animation: warning-bounce 0.8s ease-in-out;
 }
 
-/* Fade-in animation for easy mode */
-@keyframes fade-in {
+/* Fade-in animation for mild penalty mode */
+@keyframes fade-in-scale {
   from {
     opacity: 0;
     transform: scale(0.8);
@@ -671,7 +659,7 @@ a {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in-scale 0.3s ease-out;
 }
 
 /* Custom scrollbar for settings modal */

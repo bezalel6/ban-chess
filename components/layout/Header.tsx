@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { signOut } from "next-auth/react";
 import MobileMenu from "./MobileMenu";
 import Image from "next/image";
-import { useBanDifficulty } from "@/hooks/useBanDifficulty";
+import { useBanPenalty } from "@/hooks/useBanPenalty";
 import VolumeControl from "./VolumeControl";
 import HeadsetMode from "./HeadsetMode";
 
@@ -16,7 +16,7 @@ function UserMenu({ user }: { user: { username?: string; userId?: string; provid
   const [showDifficultySubmenu, setShowDifficultySubmenu] = useState(false);
   const [isPending, startTransition] = useTransition();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { banDifficulty, setBanDifficulty } = useBanDifficulty();
+  const { banPenalty, setBanPenalty } = useBanPenalty();
   const isAnonymous = user?.provider === 'guest';
 
   const handleSignOut = () => {
@@ -102,52 +102,55 @@ function UserMenu({ user }: { user: { username?: string; userId?: string; provid
                 >
                   <span className="flex items-center">
                     <Shield className="h-4 w-4 mr-2" />
-                    Ban Harshness
+                    Ban Penalty
                   </span>
                   <ChevronRight className={`h-4 w-4 transition-transform ${showDifficultySubmenu ? 'rotate-90' : ''}`} />
                 </button>
                 
-                {/* Difficulty Submenu */}
+                {/* Ban Penalty Submenu */}
                 {showDifficultySubmenu && (
                   <div className="ml-4 border-l-2 border-border">
+                    <div className="px-5 py-2 text-xs text-foreground-muted">
+                      How severely the board reacts when you attempt a banned move
+                    </div>
                     <button
                       onClick={() => {
-                        setBanDifficulty('easy');
+                        setBanPenalty('mild');
                         setShowDifficultySubmenu(false);
                         setIsOpen(false);
                       }}
                       className={`flex items-center justify-between w-full px-5 py-2 text-sm hover:bg-background-tertiary transition-colors ${
-                        banDifficulty === 'easy' ? 'text-green-500' : 'text-foreground'
+                        banPenalty === 'mild' ? 'text-green-500' : 'text-foreground'
                       }`}
                     >
-                      <span>Easy</span>
-                      {banDifficulty === 'easy' && <Check className="h-3 w-3" />}
+                      <span title="Subtle visual feedback">Mild</span>
+                      {banPenalty === 'mild' && <Check className="h-3 w-3" />}
                     </button>
                     <button
                       onClick={() => {
-                        setBanDifficulty('medium');
+                        setBanPenalty('moderate');
                         setShowDifficultySubmenu(false);
                         setIsOpen(false);
                       }}
                       className={`flex items-center justify-between w-full px-5 py-2 text-sm hover:bg-background-tertiary transition-colors ${
-                        banDifficulty === 'medium' ? 'text-orange-500' : 'text-foreground'
+                        banPenalty === 'moderate' ? 'text-orange-500' : 'text-foreground'
                       }`}
                     >
-                      <span>Medium</span>
-                      {banDifficulty === 'medium' && <Check className="h-3 w-3" />}
+                      <span title="Warning sign with sound">Moderate</span>
+                      {banPenalty === 'moderate' && <Check className="h-3 w-3" />}
                     </button>
                     <button
                       onClick={() => {
-                        setBanDifficulty('hard');
+                        setBanPenalty('severe');
                         setShowDifficultySubmenu(false);
                         setIsOpen(false);
                       }}
                       className={`flex items-center justify-between w-full px-5 py-2 text-sm hover:bg-background-tertiary transition-colors ${
-                        banDifficulty === 'hard' ? 'text-red-500' : 'text-foreground'
+                        banPenalty === 'severe' ? 'text-red-500' : 'text-foreground'
                       }`}
                     >
-                      <span>Hard</span>
-                      {banDifficulty === 'hard' && <Check className="h-3 w-3" />}
+                      <span title="Strong alert with explosion sound">Severe</span>
+                      {banPenalty === 'severe' && <Check className="h-3 w-3" />}
                     </button>
                   </div>
                 )}

@@ -39,7 +39,7 @@ interface ChessBoardProps {
   canInteract?: boolean; // Controls whether the user can select and move pieces
   size?: number;
   className?: string;
-  banDifficulty?: "easy" | "medium" | "hard";
+  banPenalty?: "mild" | "moderate" | "severe";
 }
 
 const ChessBoard = memo(function ChessBoard({
@@ -54,7 +54,7 @@ const ChessBoard = memo(function ChessBoard({
   canInteract = true, // Default to true for backward compatibility
   size,
   className = "",
-  banDifficulty = "medium",
+  banPenalty = "moderate",
 }: ChessBoardProps) {
   const [bannedMoveAlert, setBannedMoveAlert] = useState<boolean>(false);
   const [boardKey, setBoardKey] = useState(0); // Force board re-render on banned move
@@ -141,13 +141,13 @@ const ChessBoard = memo(function ChessBoard({
           // Show banned move alert
           setBannedMoveAlert(true);
 
-          // Play appropriate sound based on difficulty
-          if (banDifficulty === "hard") {
-            soundManager.playEvent("ban-attempt-hard");
-          } else if (banDifficulty === "medium") {
-            soundManager.playEvent("ban-attempt-medium");
+          // Play appropriate sound based on penalty severity
+          if (banPenalty === "severe") {
+            soundManager.playEvent("ban-attempt-severe");
+          } else if (banPenalty === "moderate") {
+            soundManager.playEvent("ban-attempt-moderate");
           } else {
-            soundManager.playEvent("ban-attempt-easy");
+            soundManager.playEvent("ban-attempt-mild");
           }
 
           // Reset alert after animation
@@ -162,7 +162,7 @@ const ChessBoard = memo(function ChessBoard({
         onMove({ from, to });
       }
     },
-    [gameState, actionType, currentBan, onMove, onBan, banDifficulty]
+    [gameState, actionType, currentBan, onMove, onBan, banPenalty]
   );
 
   // Determine movable color based on game state
@@ -261,7 +261,7 @@ const ChessBoard = memo(function ChessBoard({
       {/* Banned Move Alert Overlay */}
       {bannedMoveAlert && (
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-50">
-          {banDifficulty === "hard" ? (
+          {banPenalty === "severe" ? (
             <div className="bg-red-600/95 text-white px-8 py-4 rounded-xl shadow-2xl animate-shake-alert border-2 border-red-400">
               <div className="flex items-center gap-3">
                 <svg
@@ -283,7 +283,7 @@ const ChessBoard = memo(function ChessBoard({
                 </div>
               </div>
             </div>
-          ) : banDifficulty === "medium" ? (
+          ) : banPenalty === "moderate" ? (
             /* Yellow road warning sign style - diamond shape */
             <div
               className="relative animate-warning-bounce"
