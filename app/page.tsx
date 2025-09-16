@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useGameStore } from "@/contexts/GameContext";
 import { useWebSocket } from "@/contexts/WebSocketContext";
 import ActiveGameCard from "@/components/ActiveGameCard";
+import InteractiveDemo from "@/components/homepage/InteractiveDemo";
 import { useMemo, useEffect, useState } from "react";
 import type { SimpleGameState } from "@/lib/game-types";
+import Link from "next/link";
 
 function HomePageContent() {
   const { user, loading } = useAuth();
@@ -36,21 +38,15 @@ function HomePageContent() {
 
   const resignGame = () => {
     if (currentGameId) {
-      // Resign is a special action - we'll need to handle this differently
-      // For now, just leave the game which effectively resigns
       gameStore.leaveGame();
     }
   };
 
-  const playOffline = () => {
+  const playNow = () => {
     router.push("/play/practice");
   };
 
-  const playSolo = () => {
-    router.push("/play/solo");
-  };
-
-  const playOnline = () => {
+  const findOpponent = () => {
     router.push("/play/online");
   };
 
@@ -58,96 +54,124 @@ function HomePageContent() {
     return null;
   }
 
-  // Now we always have a user (either authenticated or anonymous)
-
   return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-2">
-          <span className="text-lichess-orange-500">Ban</span>
-          <span className="text-foreground">Chess</span>
-        </h1>
-        <p className="text-foreground-muted">
-          {user?.provider === 'guest' 
-            ? 'Playing anonymously' 
-            : `Playing as ${user?.username || 'Anonymous'}`}
-        </p>
-      </div>
+    <div className="space-y-16 pb-12">
+      {/* Hero Section with Interactive Demo */}
+      <section className="relative">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl md:text-7xl font-bold mb-6">
+            <span className="text-lichess-orange-500">Ban</span>
+            <span className="text-foreground">Chess</span>
+          </h1>
+          <p className="text-xl md:text-2xl text-foreground-muted max-w-3xl mx-auto">
+            Chess with a twist: players can ban opponent moves
+          </p>
+        </div>
 
-      <div className="max-w-4xl mx-auto space-y-6">
-        {currentGameId && currentGame && !currentGame.gameOver && !isLocalGame && user && (
+        {/* Interactive Demo Board - The Star */}
+        <div className="max-w-4xl mx-auto">
+          <InteractiveDemo />
+        </div>
+      </section>
+
+      {/* Active Game Card (if applicable) */}
+      {currentGameId && currentGame && !currentGame.gameOver && !isLocalGame && user && (
+        <section className="max-w-4xl mx-auto">
           <ActiveGameCard
             gameId={currentGameId}
             gameState={currentGame}
             userId={user.userId}
             onResign={resignGame}
           />
-        )}
+        </section>
+      )}
 
-        {(!currentGameId || !currentGame || currentGame.gameOver || isLocalGame) && (
-          <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">Play</h2>
-            <div className="flex flex-col gap-4 w-full">
-              <button
-                onClick={playOffline}
-                className="btn-primary py-4 text-lg bg-lichess-green-500 hover:bg-lichess-green-600 text-white"
-              >
-                Practice Locally
-              </button>
-              <button
-                onClick={playOnline}
-                disabled={!isReady}
-                className="btn-primary py-4 text-lg"
-              >
-                Find Online Opponent
-              </button>
-              <details className="mt-2">
-                <summary className="cursor-pointer text-sm text-foreground-muted hover:text-foreground transition-colors">
-                  Test server mode
-                </summary>
-                <div className="mt-3">
-                  <button
-                    onClick={playSolo}
-                    disabled={!isReady}
-                    className="btn-secondary py-3 text-sm bg-blue-600 hover:bg-blue-700 text-white w-full"
-                  >
-                    Practice Online (test server flow)
-                  </button>
-                </div>
-              </details>
-            </div>
-            {!isReady && (
-              <div className="text-center pt-4">
-                <div className="loading-spinner mb-4"></div>
-                <p className="text-foreground-muted">
-                  Connecting to game server...
-                </p>
-              </div>
-            )}
+      {/* Play Options - Clear Call to Action */}
+      <section className="max-w-lg mx-auto">
+        <div className="text-center space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Practice Button - Warm & Inviting */}
+            <button
+              onClick={playNow}
+              className="group relative bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-5 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span className="relative text-lg">Practice</span>
+            </button>
+            
+            {/* Online Button - Bold & Exciting */}
+            <button
+              onClick={findOpponent}
+              disabled={!isReady}
+              className="group relative bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-5 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:transform-none disabled:shadow-md"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span className="relative text-lg">
+                {isReady ? "Play Online" : "Connecting..."}
+              </span>
+            </button>
           </div>
-        )}
 
-        <div className="bg-background-secondary p-6 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">How to Play</h2>
-          <div className="space-y-3 text-foreground-muted">
-            <p>BanChess adds a unique twist to traditional chess:</p>
-            <ul className="list-disc list-inside space-y-2">
-              <li>
-                <strong className="text-foreground">Ban Phase:</strong> Before
-                each move, ban a square your opponent cannot move to
-              </li>
-              <li>
-                <strong className="text-foreground">Strategic Depth:</strong>{" "}
-                Control the board by limiting your opponent&apos;s options
-              </li>
-              <li>
-                <strong className="text-foreground">New Tactics:</strong> Create
-                unique checkmate patterns with banned squares
-              </li>
-            </ul>
+          {/* Subtle Guest Message */}
+          {user?.provider === 'guest' && (
+            <p className="text-sm text-foreground-muted/80">
+              Playing as guest • 
+              <Link href="/auth/signin" className="text-lichess-orange-500 hover:text-lichess-orange-400 transition-colors ml-1">
+                Sign in for rankings
+              </Link>
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Quick Rules - Simplified */}
+      <section className="max-w-2xl mx-auto text-center">
+        <h2 className="text-2xl md:text-3xl font-bold mb-8 text-foreground">Quick Rules</h2>
+        
+        <div className="grid gap-6 text-left">
+          <div className="flex items-start gap-4 p-4 rounded-lg bg-background-secondary/50">
+            <div className="flex-shrink-0 w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+              <span className="text-red-600 font-bold text-sm">1</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">Black bans first</h3>
+              <p className="text-foreground-muted text-sm">Black starts by banning one of White&apos;s possible moves</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-4 p-4 rounded-lg bg-background-secondary/50">
+            <div className="flex-shrink-0 w-8 h-8 bg-orange-500/20 rounded-full flex items-center justify-center">
+              <span className="text-orange-600 font-bold text-sm">2</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">Bans expire quickly</h3>
+              <p className="text-foreground-muted text-sm">Each ban only lasts for one move</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-4 p-4 rounded-lg bg-background-secondary/50">
+            <div className="flex-shrink-0 w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-bold text-sm">3</span>
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">Alternate actions</h3>
+              <p className="text-foreground-muted text-sm">Players alternate between moving and banning</p>
+            </div>
           </div>
         </div>
-      </div>
+
+        <div className="mt-8">
+          <Link 
+            href="/rules" 
+            className="text-lichess-orange-500 hover:text-lichess-orange-400 font-medium inline-flex items-center gap-2 transition-colors"
+          >
+            Complete Rules
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
