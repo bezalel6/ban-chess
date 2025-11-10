@@ -34,6 +34,7 @@ import {
   getActionHistory,
   addGameEvent,
   getRecentGameEvents as _getRecentGameEvents,
+  cleanupExpiredQueueEntries,
 } from "./redis";
 import { saveCompletedGame } from "./services/game-persistence";
 import {
@@ -1181,6 +1182,35 @@ setInterval(() => {
     }
   });
 }, PING_INTERVAL);
+
+// Clean up expired queue entries every 30 seconds
+const QUEUE_CLEANUP_INTERVAL = 30 * 1000; // 30 seconds
+setInterval(async () => {
+  try {
+    const expiredPlayers = await cleanupExpiredQueueEntries();
+
+    // Notify expired players that they've been removed from queue
+    for (const expiredUserId of expiredPlayers) {
+      const player = Array.from(authenticatedPlayers.values()).find(
+        (p) => p.userId === expiredUserId
+      );
+
+      if (player && player.ws.readyState === WebSocket.OPEN) {
+        sendMessage(player.ws, {
+          type: "queue-expired",
+          message: "You have been removed from the queue due to inactivity. Please re-queue to find a match.",
+        } as SimpleServerMsg);
+      }
+    }
+
+    // Update queue positions for remaining players
+    if (expiredPlayers.length > 0) {
+      await updateQueuePositions();
+    }
+  } catch (error) {
+    console.error("[Queue] Error during queue cleanup:", error);
+  }
+}, QUEUE_CLEANUP_INTERVAL);
 
 wss.on("connection", (ws: WebSocket, request) => {
   // Only log if debug mode is enabled

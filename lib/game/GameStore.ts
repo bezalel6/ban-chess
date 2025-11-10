@@ -93,6 +93,15 @@ export class GameStore {
         console.error('[GameStore] Server error:', msg.message);
       }
     });
+
+    // Handle queue expiration notification
+    wsManager.subscribe('queue-expired', (msg: SimpleServerMsg) => {
+      if (msg.type === 'queue-expired') {
+        console.log('[GameStore] Queue expired:', msg.message);
+        // The user has been removed from queue - they can re-queue if they want
+        // You could also trigger a notification to the user here
+      }
+    });
   }
 
   /**

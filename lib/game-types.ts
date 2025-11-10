@@ -196,6 +196,7 @@ export type SimpleServerMsg =
     }
   | { type: "authenticated"; userId: string; username: string }
   | { type: "queued"; position: number }
+  | { type: "queue-expired"; message: string }
   | {
       type: "matched";
       gameId: string;

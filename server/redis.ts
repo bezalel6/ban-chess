@@ -390,6 +390,74 @@ export async function getPlayersForMatch(): Promise<
 }
 
 /**
+ * Clean up expired queue entries (players who have been waiting > 60 seconds)
+ * Returns list of removed player IDs
+ */
+export async function cleanupExpiredQueueEntries(): Promise<string[]> {
+  const queue = await redis.lrange(KEYS.QUEUE, 0, -1);
+  const now = Date.now();
+  const QUEUE_TIMEOUT_MS = 60 * 1000; // 60 seconds
+  const expiredPlayers: string[] = [];
+
+  // Track indices to remove (from end to start to maintain indices)
+  const indicesToRemove: number[] = [];
+
+  for (let i = 0; i < queue.length; i++) {
+    const data = JSON.parse(queue[i]);
+    const waitTime = now - data.joinedAt;
+
+    if (waitTime > QUEUE_TIMEOUT_MS) {
+      expiredPlayers.push(data.userId);
+      indicesToRemove.push(i);
+      console.log(
+        `[Queue] Removing expired player ${data.username} (${data.userId}) - waited ${Math.floor(waitTime / 1000)}s`
+      );
+    }
+  }
+
+  // Remove expired entries from queue
+  if (indicesToRemove.length > 0) {
+    // Use a transaction to remove all expired entries atomically
+    const multi = redis.multi();
+
+    // Remove each expired entry by value
+    for (const index of indicesToRemove) {
+      const queueEntry = queue[index];
+      multi.lrem(KEYS.QUEUE, 1, queueEntry);
+
+      // Also remove from the set
+      const data = JSON.parse(queueEntry);
+      multi.srem(KEYS.QUEUE_SET, data.userId);
+    }
+
+    await multi.exec();
+
+    console.log(
+      `[Queue] Cleaned up ${expiredPlayers.length} expired queue entries`
+    );
+  }
+
+  return expiredPlayers;
+}
+
+/**
+ * Get current queue with wait times
+ */
+export async function getQueueStatus(): Promise<{ userId: string; username: string; waitTime: number }[]> {
+  const queue = await redis.lrange(KEYS.QUEUE, 0, -1);
+  const now = Date.now();
+
+  return queue.map((entry) => {
+    const data = JSON.parse(entry);
+    return {
+      userId: data.userId,
+      username: data.username,
+      waitTime: Math.floor((now - data.joinedAt) / 1000), // in seconds
+    };
+  });
+}
+
+/**
  * Store player session
  */
 export async function savePlayerSession(
