@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import ChessgroundBoard from "@/components/board/ChessgroundBoard";
-import { COLORS, SHADOWS } from "@/lib/design-constants";
 
 interface DemoPosition {
   fen: string;
@@ -69,8 +68,8 @@ export default function InteractiveDemo() {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <div className={`bg-${COLORS.background.secondary} rounded-lg p-6 ${SHADOWS.xl}`}>
-        <div className="grid lg:grid-cols-2 gap-6 items-center">
+      <div className="bg-background-secondary rounded-xl p-4 md:p-6 shadow-xl">
+        <div className="grid lg:grid-cols-2 gap-4 md:gap-6 items-center">
           {/* Board Section */}
           <div className="relative">
             <div className="aspect-square w-full max-w-md mx-auto">
@@ -108,15 +107,15 @@ export default function InteractiveDemo() {
           <div className="space-y-4">
             <div>
               <h2 className="text-2xl font-bold mb-2">
-                <span className={`text-${COLORS.brand.orange.primary}`}>Ban</span>Chess in Action
+                <span className="text-lichess-orange-500">Ban</span>Chess in Action
               </h2>
-              <p className={`text-${COLORS.text.muted}`}>
+              <p className="text-foreground-muted">
                 Watch how banning moves creates a dynamic new chess experience
               </p>
             </div>
 
             {/* Current Position Description */}
-            <div className={`bg-${COLORS.background.tertiary} rounded-lg p-4`}>
+            <div className="bg-background-tertiary rounded-lg p-4">
               <p className="text-lg font-medium">{position.description}</p>
               {position.bannedMove && (
                 <p className="text-sm text-destructive-400 mt-2">
@@ -138,8 +137,8 @@ export default function InteractiveDemo() {
                   onClick={() => handlePositionClick(index)}
                   className={`w-2 h-2 rounded-full transition-all ${
                     index === currentPosition
-                      ? `w-8 bg-${COLORS.brand.orange.primary}`
-                      : `bg-${COLORS.text.subtle} hover:bg-${COLORS.text.muted}`
+                      ? "w-8 bg-lichess-orange-500"
+                      : "bg-foreground-subtle hover:bg-foreground-muted"
                   }`}
                   aria-label={`Go to position ${index + 1}`}
                 />
@@ -148,7 +147,7 @@ export default function InteractiveDemo() {
 
             {/* Key Concept */}
             <div className="border-t border-border pt-4">
-              <p className={`text-sm text-${COLORS.text.muted}`}>
+              <p className="text-sm text-foreground-muted">
                 <strong className="text-foreground">Key Concept:</strong> Players alternate between banning opponent moves and making their own moves, creating unique strategic depth.
               </p>
             </div>
