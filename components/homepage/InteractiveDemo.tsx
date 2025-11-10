@@ -11,32 +11,53 @@ interface DemoPosition {
   lastMove?: [string, string];
 }
 
-// Demo sequence showing the essence of Ban Chess
+// Demo sequence showing Scholar's Mate without Bishop using bans
 const DEMO_POSITIONS: DemoPosition[] = [
   {
     fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    description: "Black bans White's e2-e4 opening",
-    bannedMove: { from: "e2", to: "e4" },
+    description: "Scholar's Mate usually needs Queen + Bishop. But with bans...",
   },
   {
-    fen: "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
-    description: "White plays d2-d4 instead",
-    lastMove: ["d2", "d4"],
+    fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    description: "Black bans Bf1-c4, blocking the bishop's development",
+    bannedMove: { from: "f1", to: "c4" },
   },
   {
-    fen: "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq d3 0 1",
-    description: "White bans Black's d7-d5 response",
-    bannedMove: { from: "d7", to: "d5" },
+    fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    description: "White plays e2-e4 anyway, opening the queen's diagonal",
+    lastMove: ["e2", "e4"],
   },
   {
-    fen: "rnbqkb1r/pppppppp/5n2/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 1 2",
-    description: "Black develops knight to f6 instead",
-    lastMove: ["g8", "f6"],
+    fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    description: "White bans Ng8-f6! The key defensive move is blocked",
+    bannedMove: { from: "g8", to: "f6" },
   },
   {
-    fen: "rnbqkb1r/pppppppp/5n2/8/3P4/8/PPP1PPPP/RNBQKBNR w KQkq - 1 2",
-    description: "The strategic dance continues...",
-    bannedMove: { from: "e2", to: "e4" },
+    fen: "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
+    description: "Black plays e7-e5, unaware of the coming threat",
+    lastMove: ["e7", "e5"],
+  },
+  {
+    fen: "rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+    description: "White strikes with Qd1-h5! Threatening mate on f7",
+    lastMove: ["d1", "h5"],
+    highlightSquares: ["f7"],
+  },
+  {
+    fen: "rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+    description: "White bans Qd8-e7, blocking Black's queen defense",
+    bannedMove: { from: "d8", to: "e7" },
+  },
+  {
+    fen: "r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    description: "Black desperately plays Nb8-c6, but it's too late",
+    lastMove: ["b8", "c6"],
+  },
+  {
+    fen: "r1bqkbnr/pppp1Qpp/2n5/4p3/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 0 3",
+    description: "Checkmate! Qh5xf7# - Scholar's Mate without the bishop!",
+    lastMove: ["h5", "f7"],
+    highlightSquares: ["f7", "e8"],
   },
 ];
 
@@ -50,7 +71,7 @@ export default function InteractiveDemo() {
 
     const timer = setTimeout(() => {
       setCurrentPosition((prev) => (prev + 1) % DEMO_POSITIONS.length);
-    }, 3000); // 3 seconds per position
+    }, 3500); // 3.5 seconds per position for better readability
 
     return () => clearTimeout(timer);
   }, [currentPosition, isPlaying]);
@@ -107,15 +128,25 @@ export default function InteractiveDemo() {
           <div className="space-y-4">
             <div>
               <h2 className="text-2xl font-bold mb-2">
-                <span className="text-lichess-orange-500">Ban</span>Chess in Action
+                <span className="text-lichess-orange-500">Scholar&apos;s Mate</span> Without a Bishop
               </h2>
               <p className="text-foreground-muted">
-                Watch how banning moves creates a dynamic new chess experience
+                See how strategic banning enables impossible tactics
               </p>
             </div>
 
             {/* Current Position Description */}
-            <div className="bg-background-tertiary rounded-lg p-4">
+            <div className="bg-background-tertiary rounded-lg p-4 relative">
+              {currentPosition === DEMO_POSITIONS.length - 1 && (
+                <div className="absolute -top-3 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg animate-pulse">
+                  Checkmate!
+                </div>
+              )}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-foreground-subtle bg-background/50 px-2 py-0.5 rounded">
+                  Step {currentPosition + 1}/{DEMO_POSITIONS.length}
+                </span>
+              </div>
               <p className="text-lg font-medium">{position.description}</p>
               {position.bannedMove && (
                 <p className="text-sm text-destructive-400 mt-2">
@@ -148,7 +179,7 @@ export default function InteractiveDemo() {
             {/* Key Concept */}
             <div className="border-t border-border pt-4">
               <p className="text-sm text-foreground-muted">
-                <strong className="text-foreground">Key Concept:</strong> Players alternate between banning opponent moves and making their own moves, creating unique strategic depth.
+                <strong className="text-foreground">Tactical Power:</strong> By banning Nf6 and Qe7, White achieves a 4-move checkmate that&apos;s impossible in regular chess.
               </p>
             </div>
           </div>
