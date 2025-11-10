@@ -278,8 +278,8 @@ const ChessBoard = memo(function ChessBoard({
                   />
                 </svg>
                 <div>
-                  <span className="font-bold text-xl block">BANNED MOVE!</span>
-                  <p className="text-sm opacity-90">This move is not allowed</p>
+                  <span className="font-bold text-xl block">MOVE BLOCKED!</span>
+                  <p className="text-sm opacity-90">Your opponent blocked this move</p>
                 </div>
               </div>
             </div>
@@ -324,7 +324,7 @@ const ChessBoard = memo(function ChessBoard({
                   </svg>
                   {/* Text */}
                   <span className="text-black font-black text-sm uppercase tracking-wide">
-                    Banned
+                    Blocked
                   </span>
                 </div>
               </div>

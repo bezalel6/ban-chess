@@ -19,21 +19,21 @@ This document serves as the **DEFINITIVE** ruleset for Ban-Chess. All implementa
 
 ## Core Principles
 
-1. **Ban-Chess is asymmetric**: Black always bans first, creating intentional asymmetry
-2. **One ban at a time**: Only ONE move can be banned at any given moment
-3. **Temporary bans**: Bans last for EXACTLY one move, then expire
-4. **No accumulation**: Bans do not stack or accumulate
-5. **Turn alternation**: ban → move → ban → move (after initial black ban)
+1. **Black goes first**: Black starts the game by blocking a White move (balances White's traditional advantage)
+2. **One block at a time**: Only one move can be blocked at any moment
+3. **Blocks expire quickly**: Each block only lasts for that specific turn
+4. **Fresh start each turn**: Previous blocks don't carry over - each turn gets a new block
+5. **The flow**: Your opponent blocks, you move, you block, they move - repeat
 
 ## Turn Order & Game Flow
 
 ### Game Start Sequence
-1. **Move 0**: Black bans a white move (MANDATORY)
-2. **Move 1**: White makes a move (cannot be the banned move)
-3. **Move 1 (cont)**: White bans a black move
-4. **Move 1 (cont)**: Black makes a move (cannot be the banned move)
-5. **Move 2**: Black bans a white move
-6. Continue alternating: move → ban for same color
+1. **Game begins**: Black blocks one of White's possible opening moves (MANDATORY)
+2. **White's turn**: White plays (avoiding the blocked move)
+3. **Black's turn begins**: White first blocks one of Black's possible responses
+4. **Black plays**: Black moves (avoiding the blocked option)
+5. **White's second turn**: Black blocks a move, then White plays
+6. **The pattern**: Every turn starts with your opponent blocking one of your moves
 
 ### Turn Determination
 ```

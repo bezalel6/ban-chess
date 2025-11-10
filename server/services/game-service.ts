@@ -171,7 +171,7 @@ export class GameService {
     const fen = game.fen();
     const fenParts = fen.split(" ");
     const banState = fenParts[6];
-    // Check if next action is ban by checking if ply is odd
+    // Determine if it's time for a ban (opponent blocks one move before you play)
     const ply = banState ? parseInt(banState.split(":")[0]) : 0;
     const isNextActionBan = ply % 2 === 1;
 
@@ -294,7 +294,7 @@ export class GameService {
     const fen = game.fen();
     const fenParts = fen.split(" ");
     const banState = fenParts[6];
-    // Check if next action is ban by checking if ply is odd
+    // Determine if it's time for a ban (opponent blocks one move before you play)
     const ply = banState ? parseInt(banState.split(":")[0]) : 0;
     const isNextActionBan = ply % 2 === 1;
 

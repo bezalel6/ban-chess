@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Edit2, Info } from "lucide-react";
-import UsernameChangeModal from "@/components/UsernameChangeModal";
+import { User, Info } from "lucide-react";
 import LazyGameThumbnail from "@/components/game/LazyGameThumbnail";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
@@ -41,18 +40,15 @@ interface ProfilePageClientProps {
   username: string;
   user: AuthUser | null | undefined;
   isOwnProfile: boolean;
-  canChangeUsername: boolean;
 }
 
 export default function ProfilePageClient({
   username: initialUsername,
   user,
   isOwnProfile,
-  canChangeUsername,
 }: ProfilePageClientProps) {
   const router = useRouter();
-  const [isUsernameModalOpen, setIsUsernameModalOpen] = useState(false);
-  const [username, setUsername] = useState(initialUsername);
+  const username = initialUsername;
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,11 +116,6 @@ export default function ProfilePageClient({
     router.push(`/game/${gameId}`);
   };
 
-  const handleUsernameChange = (newUsername: string) => {
-    setUsername(newUsername);
-    // The modal will handle signing out and redirecting
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -184,16 +175,7 @@ export default function ProfilePageClient({
               </div>
             </div>
 
-            {/* Action buttons for own profile */}
-            {isOwnProfile && canChangeUsername && (
-              <button
-                onClick={() => setIsUsernameModalOpen(true)}
-                className="px-4 py-2 text-sm bg-background hover:bg-background-tertiary rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Edit2 className="h-4 w-4" />
-                Change Username
-              </button>
-            )}
+            {/* Action buttons for own profile - username change removed as feature was debloated */}
           </div>
 
           {/* Stats */}
@@ -362,17 +344,6 @@ export default function ProfilePageClient({
         </div>
       </div>
 
-      {/* Username Change Modal */}
-      {canChangeUsername && user && (
-        <UsernameChangeModal
-          isOpen={isUsernameModalOpen}
-          onClose={() => setIsUsernameModalOpen(false)}
-          currentUsername={username}
-          provider={user.provider}
-          originalName={user.originalUsername || user.originalName}
-          onSuccess={handleUsernameChange}
-        />
-      )}
     </>
   );
 }

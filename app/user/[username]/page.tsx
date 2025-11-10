@@ -39,8 +39,6 @@ export default async function UserProfilePage({
   // Guest users don't have profiles
   const isGuest = user?.provider === "guest";
   const isOwnProfile = user?.username === username && !isGuest;
-  const canChangeUsername = isOwnProfile && user?.provider !== "guest";
-
 
   // Pass data to client component for interactivity
   return (
@@ -48,7 +46,6 @@ export default async function UserProfilePage({
       username={username}
       user={user}
       isOwnProfile={isOwnProfile}
-      canChangeUsername={canChangeUsername}
     />
   );
 }

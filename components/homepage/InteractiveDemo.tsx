@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import ChessgroundBoard from "@/components/board/ChessgroundBoard";
 
 interface DemoPosition {
@@ -9,61 +9,35 @@ interface DemoPosition {
   description: string;
   highlightSquares?: string[];
   lastMove?: [string, string];
+  check?: "white" | "black";
 }
 
-// Demo sequence showing Scholar's Mate without Bishop using bans
+// Demo sequence showing the forced checkmate-by-ban
 const DEMO_POSITIONS: DemoPosition[] = [
   {
-    fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    description: "Scholar's Mate usually needs Queen + Bishop. But with bans...",
+    fen: "rnbqkbnr/pppppppp/8/8/8/5Q2/PPPPPPPP/RNB1KBNR w KQkq - 0 1 1",
+    description: "White's Queen threatens f7. The pawn is undefended and the King can't protect it.",
   },
   {
-    fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-    description: "Black bans Bf1-c4, blocking the bishop's development",
-    bannedMove: { from: "f1", to: "c4" },
-  },
-  {
-    fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
-    description: "White plays e2-e4 anyway, opening the queen's diagonal",
-    lastMove: ["e2", "e4"],
-  },
-  {
-    fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
-    description: "White bans Ng8-f6! The key defensive move is blocked",
-    bannedMove: { from: "g8", to: "f6" },
-  },
-  {
-    fen: "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2",
-    description: "Black plays e7-e5, unaware of the coming threat",
-    lastMove: ["e7", "e5"],
-  },
-  {
-    fen: "rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
-    description: "White strikes with Qd1-h5! Threatening mate on f7",
-    lastMove: ["d1", "h5"],
-    highlightSquares: ["f7"],
-  },
-  {
-    fen: "rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
-    description: "White bans Qd8-e7, blocking Black's queen defense",
-    bannedMove: { from: "d8", to: "e7" },
-  },
-  {
-    fen: "r1bqkbnr/pppp1ppp/2n5/4p2Q/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
-    description: "Black desperately plays Nb8-c6, but it's too late",
-    lastMove: ["b8", "c6"],
-  },
-  {
-    fen: "r1bqkbnr/pppp1Qpp/2n5/4p3/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 0 3",
-    description: "Checkmate! Qh5xf7# - Scholar's Mate without the bishop!",
-    lastMove: ["h5", "f7"],
+    fen: "rnbqkbnr/pppp1Qpp/8/8/8/8/PPPPPPPP/RNB1KBNR b KQkq - 0 1 2+",
+    description: "Queen captures f7 with check! Normally, Black would simply capture the Queen with the King.",
+    lastMove: ["f3", "f7"],
     highlightSquares: ["f7", "e8"],
+    check: "black",
+  },
+  {
+    fen: "rnbqkbnr/pppp1Qpp/8/8/8/8/PPPPPPPP/RNB1KBNR b KQkq - 0 1 3:e8f7#",
+    description: "But wait! It's Black's turn, so White gets to block one move first. White blocks Kxf7 - the only legal move. Checkmate!",
+    bannedMove: { from: "e8", to: "f7" },
+    highlightSquares: ["e8", "f7"],
+    check: "black",
   },
 ];
 
 export default function InteractiveDemo() {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-advance through positions
   useEffect(() => {
@@ -71,7 +45,7 @@ export default function InteractiveDemo() {
 
     const timer = setTimeout(() => {
       setCurrentPosition((prev) => (prev + 1) % DEMO_POSITIONS.length);
-    }, 3500); // 3.5 seconds per position for better readability
+    }, 4000); // 4 seconds per position for better readability with only 3 positions
 
     return () => clearTimeout(timer);
   }, [currentPosition, isPlaying]);
@@ -85,11 +59,42 @@ export default function InteractiveDemo() {
     setIsPlaying((prev) => !prev);
   }, []);
 
+  // Add native event listener for scroll wheel navigation
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleNativeWheel = (e: WheelEvent) => {
+      // Prevent page scrolling
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Pause auto-play when user scrolls
+      setIsPlaying(false);
+
+      // Scroll down = next position, scroll up = previous position
+      if (e.deltaY > 0) {
+        // Scrolling down - go to next position (stop at last)
+        setCurrentPosition((prev) => Math.min(prev + 1, DEMO_POSITIONS.length - 1));
+      } else if (e.deltaY < 0) {
+        // Scrolling up - go to previous position (stop at first)
+        setCurrentPosition((prev) => Math.max(prev - 1, 0));
+      }
+    };
+
+    // Use passive: false to allow preventDefault
+    container.addEventListener('wheel', handleNativeWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleNativeWheel);
+    };
+  }, []);
+
   const position = DEMO_POSITIONS[currentPosition];
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <div className="bg-background-secondary rounded-xl p-4 md:p-6 shadow-xl">
+      <div className="bg-background-secondary rounded-xl p-4 md:p-6 shadow-xl" ref={containerRef}>
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6 items-center">
           {/* Board Section */}
           <div className="relative">
@@ -100,9 +105,10 @@ export default function InteractiveDemo() {
                 viewOnly={true}
                 bannedMove={position.bannedMove}
                 lastMove={position.lastMove}
+                check={position.check}
                 coordinates={true}
                 animation={true}
-                highlight={{ lastMove: true, check: false }}
+                highlight={{ lastMove: true, check: true }}
               />
             </div>
             
@@ -128,23 +134,18 @@ export default function InteractiveDemo() {
           <div className="space-y-4">
             <div>
               <h2 className="text-2xl font-bold mb-2">
-                <span className="text-lichess-orange-500">Scholar&apos;s Mate</span> Without a Bishop
+                <span className="text-lichess-orange-500">Checkmate</span> by Ban
               </h2>
               <p className="text-foreground-muted">
-                See how strategic banning enables impossible tactics
+                A unique winning pattern only possible in BanChess
               </p>
             </div>
 
             {/* Current Position Description */}
             <div className="bg-background-tertiary rounded-lg p-4 relative">
-              {currentPosition === DEMO_POSITIONS.length - 1 && (
-                <div className="absolute -top-3 -right-2 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg animate-pulse">
-                  Checkmate!
-                </div>
-              )}
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs font-medium text-foreground-subtle bg-background/50 px-2 py-0.5 rounded">
-                  Step {currentPosition + 1}/{DEMO_POSITIONS.length}
+                  {position.fen.includes(":") ? "Ban Phase" : position.fen.split(" ")[6] ? `Ply ${position.fen.split(" ")[6]}` : "Opening"}
                 </span>
               </div>
               <p className="text-lg font-medium">{position.description}</p>
@@ -179,7 +180,7 @@ export default function InteractiveDemo() {
             {/* Key Concept */}
             <div className="border-t border-border pt-4">
               <p className="text-sm text-foreground-muted">
-                <strong className="text-foreground">Tactical Power:</strong> By banning Nf6 and Qe7, White achieves a 4-move checkmate that&apos;s impossible in regular chess.
+                <strong className="text-foreground">The twist:</strong> Since it&apos;s Black&apos;s turn to move, White gets to block one option first. When there&apos;s only one legal move and it gets blocked, that&apos;s checkmate!
               </p>
             </div>
           </div>

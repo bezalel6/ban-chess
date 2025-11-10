@@ -67,7 +67,7 @@ function HomePageContent() {
             Strategic chess where you can block your opponent&apos;s moves
           </p>
           <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto">
-            Before each turn, ban one of your opponent&apos;s moves to control the board and create winning opportunities
+            Each turn, your opponent first blocks one move you could make, forcing you to adapt your strategy
           </p>
         </div>
 
@@ -147,8 +147,8 @@ function HomePageContent() {
               <span className="text-red-500 font-bold">1</span>
             </div>
             <p className="text-sm">
-              <span className="font-medium text-foreground">Black bans first</span>
-              <span className="text-foreground-muted"> – Block one White move</span>
+              <span className="font-medium text-foreground">Your turn starts</span>
+              <span className="text-foreground-muted"> – But first, your opponent blocks one of your moves</span>
             </p>
           </div>
 
@@ -157,18 +157,18 @@ function HomePageContent() {
               <span className="text-orange-500 font-bold">2</span>
             </div>
             <p className="text-sm">
-              <span className="font-medium text-foreground">White plays</span>
-              <span className="text-foreground-muted"> – Any move except the banned one</span>
+              <span className="font-medium text-foreground">Black starts by blocking</span>
+              <span className="text-foreground-muted"> – Black bans a White move before the game begins</span>
             </p>
           </div>
 
           <div className="flex items-center gap-3 p-3 rounded-lg bg-background-secondary/30 border border-border/50">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center">
-              <span className="text-blue-500 font-bold">3</span>
+            <div className="flex-shrink-0 w-8 h-8 bg-green-500/10 rounded-full flex items-center justify-center">
+              <span className="text-green-500 font-bold">✓</span>
             </div>
             <p className="text-sm">
-              <span className="font-medium text-foreground">Continue alternating</span>
-              <span className="text-foreground-muted"> – Ban → Move → Ban → Move</span>
+              <span className="font-medium text-foreground">New way to win</span>
+              <span className="text-foreground-muted"> – Block their only escape from check for instant checkmate</span>
             </p>
           </div>
         </div>
