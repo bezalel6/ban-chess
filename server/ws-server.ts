@@ -321,17 +321,41 @@ redis
       await ensureDbSchema();
       console.log("✅ Database schema: OK");
     }
-    
+
     if (runDataMigrations) {
       console.log("📊 Running data migrations...");
       await runDataMigrations();
       console.log("✅ Data migrations: Complete");
     }
-    
+
     if (initializeAdmins) {
       console.log("👤 Initializing admin users...");
       await initializeAdmins();
       console.log("✅ Admin initialization: Complete");
+    }
+
+    // Clean up stale player-game associations on startup
+    console.log("🧹 Cleaning up stale player-game associations...");
+    const onlinePlayers = await redis.smembers(KEYS.ONLINE_PLAYERS);
+    let cleanedCount = 0;
+
+    for (const playerId of onlinePlayers) {
+      const gameId = await redis.get(KEYS.PLAYER_GAME(playerId));
+      if (gameId) {
+        const gameState = await getGameState(gameId);
+        // If the game doesn't exist or is over, clean up the association
+        if (!gameState || gameState.gameOver) {
+          await redis.del(KEYS.PLAYER_GAME(playerId));
+          cleanedCount++;
+          console.log(`   Cleaned stale game association for player ${playerId}`);
+        }
+      }
+    }
+
+    if (cleanedCount > 0) {
+      console.log(`✅ Cleaned ${cleanedCount} stale player-game associations`);
+    } else {
+      console.log("✅ No stale associations found");
     }
   } catch (error) {
     console.error("❌ Startup initialization error:", error);
@@ -1046,15 +1070,45 @@ async function matchPlayers() {
   const player1GameId = await redis.get(KEYS.PLAYER_GAME(player1.userId));
   const player2GameId = await redis.get(KEYS.PLAYER_GAME(player2.userId));
 
-  if (player1GameId || player2GameId) {
+  // If players have game IDs, verify the games actually exist and are active
+  let player1HasActiveGame = false;
+  let player2HasActiveGame = false;
+
+  if (player1GameId) {
+    const gameState = await getGameState(player1GameId);
+    if (gameState && !gameState.gameOver) {
+      player1HasActiveGame = true;
+    } else {
+      // Clean up stale game association
+      console.log(
+        `[matchPlayers] Cleaning stale game association for ${player1.username} (game: ${player1GameId})`
+      );
+      await redis.del(KEYS.PLAYER_GAME(player1.userId));
+    }
+  }
+
+  if (player2GameId) {
+    const gameState = await getGameState(player2GameId);
+    if (gameState && !gameState.gameOver) {
+      player2HasActiveGame = true;
+    } else {
+      // Clean up stale game association
+      console.log(
+        `[matchPlayers] Cleaning stale game association for ${player2.username} (game: ${player2GameId})`
+      );
+      await redis.del(KEYS.PLAYER_GAME(player2.userId));
+    }
+  }
+
+  if (player1HasActiveGame || player2HasActiveGame) {
     console.log(
-      `[matchPlayers] Skipping match - players already in games. P1: ${player1GameId}, P2: ${player2GameId}`
+      `[matchPlayers] Skipping match - players have active games. P1: ${player1HasActiveGame}, P2: ${player2HasActiveGame}`
     );
-    // Put players back in queue if they were incorrectly removed
-    if (!player1GameId) {
+    // Put players back in queue if they don't have active games
+    if (!player1HasActiveGame) {
       await addToQueue(player1.userId, player1.username);
     }
-    if (!player2GameId) {
+    if (!player2HasActiveGame) {
       await addToQueue(player2.userId, player2.username);
     }
     return;
@@ -1711,6 +1765,25 @@ wss.on("connection", (ws: WebSocket, request) => {
               message: "Not authenticated",
             } as SimpleServerMsg);
             return;
+          }
+
+          // Clean up any stale game associations before joining queue
+          const existingGameId = await redis.get(KEYS.PLAYER_GAME(currentPlayer.userId));
+          if (existingGameId) {
+            const gameState = await getGameState(existingGameId);
+            if (!gameState || gameState.gameOver) {
+              console.log(
+                `[join-queue] Cleaning stale game association for ${currentPlayer.username} (game: ${existingGameId})`
+              );
+              await redis.del(KEYS.PLAYER_GAME(currentPlayer.userId));
+            } else {
+              // Player still has an active game
+              sendMessage(ws, {
+                type: "error",
+                message: "You are already in an active game",
+              } as SimpleServerMsg);
+              return;
+            }
           }
 
           const position = await addToQueue(
