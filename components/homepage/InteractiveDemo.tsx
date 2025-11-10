@@ -27,7 +27,7 @@ const DEMO_POSITIONS: DemoPosition[] = [
   },
   {
     fen: "rnbqkbnr/pppp1Qpp/8/8/8/8/PPPPPPPP/RNB1KBNR b KQkq - 0 1 3:e8f7#",
-    description: "But wait! It's Black's turn, so White gets to block one move first. White blocks Kxf7 - the only legal move. Checkmate!",
+    description: "It's Black's turn. Black is in check and has only one legal move: Kxf7. But White blocks that move first! With no legal moves while in check, Black is checkmated.",
     bannedMove: { from: "e8", to: "f7" },
     highlightSquares: ["e8", "f7"],
     check: "black",
@@ -180,7 +180,7 @@ export default function InteractiveDemo() {
             {/* Key Concept */}
             <div className="border-t border-border pt-4">
               <p className="text-sm text-foreground-muted">
-                <strong className="text-foreground">The twist:</strong> Since it&apos;s Black&apos;s turn to move, White gets to block one option first. When there&apos;s only one legal move and it gets blocked, that&apos;s checkmate!
+                <strong className="text-foreground">The key:</strong> Black is in check with only one way to escape. White blocks that escape move. Since Black is in check and has no legal moves, it&apos;s checkmate!
               </p>
             </div>
           </div>

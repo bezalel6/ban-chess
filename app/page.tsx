@@ -167,8 +167,8 @@ function HomePageContent() {
               <span className="text-green-500 font-bold">✓</span>
             </div>
             <p className="text-sm">
-              <span className="font-medium text-foreground">New way to win</span>
-              <span className="text-foreground-muted"> – Block their only escape from check for instant checkmate</span>
+              <span className="font-medium text-foreground">Checkmate-by-block</span>
+              <span className="text-foreground-muted"> – If they&apos;re in check with one escape, block it for checkmate</span>
             </p>
           </div>
         </div>
