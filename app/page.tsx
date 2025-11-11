@@ -67,7 +67,8 @@ function HomePageContent() {
             Strategic chess where you can block your opponent&apos;s moves
           </p>
           <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto">
-            Each turn, your opponent first blocks one move you could make, forcing you to adapt your strategy
+            Each turn, your opponent first blocks one move you could make,
+            forcing you to adapt your strategy
           </p>
         </div>
 
@@ -76,23 +77,27 @@ function HomePageContent() {
           <InteractiveDemo />
         </div>
       </section>
-
       {/* Active Game Card (if applicable) */}
-      {currentGameId && currentGame && !currentGame.gameOver && !isLocalGame && user && (
-        <section className="max-w-4xl mx-auto">
-          <ActiveGameCard
-            gameId={currentGameId}
-            gameState={currentGame}
-            userId={user.userId}
-            onResign={resignGame}
-          />
-        </section>
-      )}
-
+      {currentGameId &&
+        currentGame &&
+        !currentGame.gameOver &&
+        !isLocalGame &&
+        user && (
+          <section className="max-w-4xl mx-auto">
+            <ActiveGameCard
+              gameId={currentGameId}
+              gameState={currentGame}
+              userId={user.userId}
+              onResign={resignGame}
+            />
+          </section>
+        )}
       {/* Play Options - Clear Call to Action */}
       <section className="max-w-md mx-auto">
         <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Ready to play?</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            Ready to play?
+          </h2>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             {/* Practice Button - Warm & Inviting */}
@@ -102,8 +107,18 @@ function HomePageContent() {
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <span className="relative flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                  />
                 </svg>
                 Practice
               </span>
@@ -117,8 +132,18 @@ function HomePageContent() {
             >
               <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <span className="relative flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                  />
                 </svg>
                 {isReady ? "Play Online" : "Connecting..."}
               </span>
@@ -126,20 +151,24 @@ function HomePageContent() {
           </div>
 
           {/* Subtle Guest Message */}
-          {user?.provider === 'guest' && (
+          {user?.provider === "guest" && (
             <p className="text-sm text-foreground-muted/70">
               Playing as guest •
-              <Link href="/auth/signin" className="text-lichess-orange-500 hover:text-lichess-orange-400 transition-colors ml-1">
+              <Link
+                href="/auth/signin"
+                className="text-lichess-orange-500 hover:text-lichess-orange-400 transition-colors ml-1"
+              >
                 Sign in for rankings
               </Link>
             </p>
           )}
         </div>
       </section>
-
-      {/* Quick Rules - Simplified */}
+      {/* Quick Rules - Simplified */}`
       <section className="max-w-xl mx-auto">
-        <h2 className="text-xl font-semibold text-center mb-6 text-foreground">How it works</h2>
+        <h2 className="text-xl font-semibold text-center mb-6 text-foreground">
+          How it works
+        </h2>
 
         <div className="grid gap-4">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-background-secondary/30 border border-border/50">
@@ -147,8 +176,13 @@ function HomePageContent() {
               <span className="text-red-500 font-bold">1</span>
             </div>
             <p className="text-sm">
-              <span className="font-medium text-foreground">Your turn starts</span>
-              <span className="text-foreground-muted"> – But first, your opponent blocks one of your moves</span>
+              <span className="font-medium text-foreground">
+                Your turn starts
+              </span>
+              <span className="text-foreground-muted">
+                {" "}
+                – But first, your opponent blocks one of your moves
+              </span>
             </p>
           </div>
 
@@ -157,8 +191,13 @@ function HomePageContent() {
               <span className="text-orange-500 font-bold">2</span>
             </div>
             <p className="text-sm">
-              <span className="font-medium text-foreground">Black starts by blocking</span>
-              <span className="text-foreground-muted"> – Black bans a White move before the game begins</span>
+              <span className="font-medium text-foreground">
+                Black starts by blocking
+              </span>
+              <span className="text-foreground-muted">
+                {" "}
+                – Black bans a White move before the game begins
+              </span>
             </p>
           </div>
 
@@ -167,8 +206,14 @@ function HomePageContent() {
               <span className="text-green-500 font-bold">✓</span>
             </div>
             <p className="text-sm">
-              <span className="font-medium text-foreground">Checkmate-by-block</span>
-              <span className="text-foreground-muted"> – If they&apos;re in check with one escape, block it for checkmate</span>
+              <span className="font-medium text-foreground">
+                Checkmate-by-block
+              </span>
+              <span className="text-foreground-muted">
+                {" "}
+                – If they&apos;re in check with one escape, block it for
+                checkmate
+              </span>
             </p>
           </div>
         </div>
@@ -179,8 +224,18 @@ function HomePageContent() {
             className="text-lichess-orange-500 hover:text-lichess-orange-400 font-medium inline-flex items-center gap-1 text-sm transition-colors"
           >
             View complete rules
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <svg
+              className="w-3 h-3"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
             </svg>
           </Link>
         </div>
