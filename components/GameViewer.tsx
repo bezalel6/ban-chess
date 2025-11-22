@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/hooks/useGame";
+import { BanChess } from "ban-chess.ts";
 import ResizableBoard from "@/components/game/ResizableBoard";
 import GameStatusPanel from "@/components/game/GameStatusPanel";
 import GameSidebar from "@/components/game/GameSidebar";
@@ -31,6 +32,11 @@ export default function GameViewer({ gameId }: GameViewerProps) {
   const [initiallyCompleted, setInitiallyCompleted] = useState(false);
   const gameEndedRef = useRef(false);
   const [fullHistory, setFullHistory] = useState<HistoryEntry[]>([]);
+
+  // Navigation state for move history
+  const [currentMoveIndex, setCurrentMoveIndex] = useState<number | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [navigatedGameState, setNavigatedGameState] = useState<typeof gameState | null>(null);
 
   // Check if this is a local/solo game
   const isLocalGame = useMemo(() => {
@@ -83,16 +89,80 @@ export default function GameViewer({ gameId }: GameViewerProps) {
     return gameState;
   }, [gameState, fullHistory, isGameOver]);
 
+  // Handle move navigation through history
+  const handleMoveSelect = useCallback((moveIndex: number) => {
+    if (!effectiveGameState?.actionHistory) return;
+
+    setCurrentMoveIndex(moveIndex);
+
+    // Check if returning to current position
+    const isCurrentPosition = moveIndex === effectiveGameState.actionHistory.length - 1;
+
+    if (isCurrentPosition) {
+      // Return to live position
+      setIsNavigating(false);
+      setNavigatedGameState(null);
+    } else {
+      // Navigate to historical position
+      setIsNavigating(true);
+
+      try {
+        let reconstructedGame: BanChess;
+
+        if (moveIndex === -1) {
+          // Starting position
+          reconstructedGame = new BanChess();
+        } else {
+          // Replay actions up to the selected move
+          const actionsToReplay = effectiveGameState.actionHistory.slice(0, moveIndex + 1);
+          reconstructedGame = BanChess.replayFromActions(actionsToReplay);
+        }
+
+        // Create a new game state with the reconstructed position
+        // Only update FEN since it's the source of truth for all game state
+        const newGameState = {
+          ...effectiveGameState,
+          fen: reconstructedGame.fen(),
+          activePlayer: reconstructedGame.getActivePlayer(),
+          ply: reconstructedGame.getPly(),
+          inCheck: reconstructedGame.inCheck(),
+        };
+
+        setNavigatedGameState(newGameState);
+      } catch (error) {
+        console.error('Error navigating to move:', error);
+        setIsNavigating(false);
+        setNavigatedGameState(null);
+      }
+    }
+  }, [effectiveGameState]);
+
+  // Return to live position
+  const handleReturnToLive = useCallback(() => {
+    if (effectiveGameState?.actionHistory) {
+      const lastIndex = effectiveGameState.actionHistory.length - 1;
+      handleMoveSelect(lastIndex);
+    }
+  }, [effectiveGameState, handleMoveSelect]);
+
+  // Reset navigation when game state changes (new moves in live game)
+  useEffect(() => {
+    if (isNavigating && !isGameOver) {
+      // If we're navigating and a new move comes in, stay in navigation mode
+      // but the user can click "Live" to return
+    }
+  }, [gameState, isNavigating, isGameOver]);
+
   // Handle moves and bans
   const handleMove = (move: Move) => {
-    if (isGameOver) return;
+    if (isGameOver || isNavigating) return;
     if (isLocalGame || isMyTurn) {
       makeMove(move.from, move.to);
     }
   };
 
   const handleBan = (ban: Ban) => {
-    if (isGameOver) return;
+    if (isGameOver || isNavigating) return;
     if (isLocalGame || isMyTurn) {
       // Convert ban to square notation
       const square = `${ban.from}${ban.to}`;
@@ -103,6 +173,9 @@ export default function GameViewer({ gameId }: GameViewerProps) {
   const handleResign = () => {
     resign();
   };
+
+  // Determine which game state to display on the board
+  const displayGameState = isNavigating && navigatedGameState ? navigatedGameState : effectiveGameState;
 
   // Loading state
   if (!gameState) {
@@ -154,12 +227,12 @@ export default function GameViewer({ gameId }: GameViewerProps) {
       {/* Main Board Area */}
       <div className="flex-1 min-w-0 flex flex-col items-center">
         <ResizableBoard
-          gameState={effectiveGameState!}
+          gameState={displayGameState!}
           orientation={boardOrientation}
-          dests={dests}
+          dests={isNavigating ? new Map() : dests}
           activePlayer={activePlayer}
           actionType={actionType}
-          canInteract={!isGameOver && (isLocalGame || isMyTurn)}
+          canInteract={!isGameOver && !isNavigating && (isLocalGame || isMyTurn)}
           onMove={handleMove}
           onBan={handleBan}
         />
@@ -167,7 +240,7 @@ export default function GameViewer({ gameId }: GameViewerProps) {
         {/* Game Status Panel */}
         <div className="mt-4 w-full max-w-2xl">
           <GameStatusPanel
-            gameState={effectiveGameState!}
+            gameState={displayGameState!}
             gameId={gameId}
             activePlayer={activePlayer}
             actionType={actionType}
@@ -183,6 +256,9 @@ export default function GameViewer({ gameId }: GameViewerProps) {
           gameId={gameId}
           isLocalGame={isLocalGame}
           onResign={!isGameOver && !isLocalGame ? handleResign : undefined}
+          onMoveSelect={handleMoveSelect}
+          currentMoveIndex={currentMoveIndex ?? undefined}
+          onReturnToLive={isNavigating ? handleReturnToLive : undefined}
         />
       </div>
     </div>
