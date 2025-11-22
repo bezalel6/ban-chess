@@ -55,7 +55,7 @@ function HomePageContent() {
   }
 
   return (
-    <div className="space-y-12 pb-12 px-4">
+    <div className="space-y-12 pb-12 px-4 max-w-7xl mx-auto">
       {/* Hero Section with Interactive Demo */}
       <section className="relative">
         <div className="text-center mb-8">
@@ -63,10 +63,10 @@ function HomePageContent() {
             <span className="text-lichess-orange-500">Ban</span>
             <span className="text-foreground">Chess</span>
           </h1>
-          <p className="text-xl md:text-2xl text-foreground-muted mb-3 max-w-2xl mx-auto px-4">
+          <p className="text-xl md:text-2xl text-foreground-muted mb-3 max-w-2xl mx-auto">
             Strategic chess where you can block your opponent&apos;s moves
           </p>
-          <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto px-4">
+          <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto">
             Each turn, your opponent first blocks one move you could make,
             forcing you to adapt your strategy
           </p>
@@ -83,7 +83,7 @@ function HomePageContent() {
         !currentGame.gameOver &&
         !isLocalGame &&
         user && (
-          <section className="max-w-4xl mx-auto">
+          <section>
             <ActiveGameCard
               gameId={currentGameId}
               gameState={currentGame}
@@ -93,7 +93,7 @@ function HomePageContent() {
           </section>
         )}
       {/* Play Options - Clear Call to Action */}
-      <section className="max-w-md mx-auto">
+      <section>
         <div className="text-center space-y-4">
           <h2 className="text-xl font-semibold text-foreground mb-4">
             Ready to play?
@@ -164,8 +164,8 @@ function HomePageContent() {
           )}
         </div>
       </section>
-      {/* Quick Rules - Simplified */}`
-      <section className="max-w-xl mx-auto">
+      {/* Quick Rules - Simplified */}
+      <section>
         <h2 className="text-xl font-semibold text-center mb-6 text-foreground">
           How it works
         </h2>
