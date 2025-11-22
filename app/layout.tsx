@@ -7,6 +7,7 @@ import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import { GameProvider } from "@/contexts/GameContext";
 import { ToastProvider } from "@/lib/toast/toast-context";
 import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import WebSocketStatusWidget from "@/components/WebSocketStatusWidget";
 import ToastContainer from "@/components/ToastContainer";
 
@@ -54,6 +55,9 @@ export default function RootLayout({
                 <Header />
                 {/* Main content - flex-grow to fill available space */}
                 <main className="flex-grow w-full flex flex-col">{children}</main>
+                
+                {/* Footer */}
+                <Footer />
 
                 {/* Toast notifications */}
                 <ToastContainer />
