@@ -63,18 +63,13 @@ function HomePageContent() {
             <span className="text-lichess-orange-500">Ban</span>
             <span className="text-foreground">Chess</span>
           </h1>
-          <p className="text-xl md:text-2xl text-foreground-muted mb-3 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-foreground-muted mb-3 max-w-2xl mx-auto min-w-full">
             Strategic chess where you can block your opponent&apos;s moves
           </p>
-          <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto">
+          <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto min-w-full">
             Each turn, your opponent first blocks one move you could make,
             forcing you to adapt your strategy
           </p>
-        </div>
-
-        {/* Interactive Demo Board - The Star */}
-        <div className="max-w-4xl mx-auto">
-          <InteractiveDemo />
         </div>
       </section>
       {/* Active Game Card (if applicable) */}
@@ -217,7 +212,10 @@ function HomePageContent() {
             </p>
           </div>
         </div>
-
+        {/* Interactive Demo Board - The Star */}
+        <div className="mt-10 max-w-4xl mx-auto">
+          <InteractiveDemo />
+        </div>
         <div className="mt-6 text-center">
           <Link
             href="/rules"
