@@ -243,7 +243,6 @@ const ChessgroundBoard = memo(function ChessgroundBoard({
       selectable: {
         enabled: !viewOnly,
       },
-      coordinatesOnSquares: true,
       // Premove configuration
       premovable: {
         enabled: !viewOnly && !!onPremove,

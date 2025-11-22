@@ -55,7 +55,7 @@ function HomePageContent() {
   }
 
   return (
-    <div className="space-y-12 pb-12">
+    <div className="space-y-12 pb-12 px-4">
       {/* Hero Section with Interactive Demo */}
       <section className="relative">
         <div className="text-center mb-8">
@@ -63,10 +63,10 @@ function HomePageContent() {
             <span className="text-lichess-orange-500">Ban</span>
             <span className="text-foreground">Chess</span>
           </h1>
-          <p className="text-xl md:text-2xl text-foreground-muted mb-3 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-foreground-muted mb-3 max-w-2xl mx-auto px-4">
             Strategic chess where you can block your opponent&apos;s moves
           </p>
-          <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto">
+          <p className="text-base md:text-lg text-foreground-muted/80 max-w-xl mx-auto px-4">
             Each turn, your opponent first blocks one move you could make,
             forcing you to adapt your strategy
           </p>

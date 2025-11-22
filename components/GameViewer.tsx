@@ -6,6 +6,7 @@ import { useGame } from "@/hooks/useGame";
 import ResizableBoard from "@/components/game/ResizableBoard";
 import GameStatusPanel from "@/components/game/GameStatusPanel";
 import GameSidebar from "@/components/game/GameSidebar";
+import PlayerInfo from "@/components/game/PlayerInfo";
 import type { Move, Ban, HistoryEntry } from "@/lib/game-types";
 
 interface GameViewerProps {
@@ -136,9 +137,22 @@ export default function GameViewer({ gameId }: GameViewerProps) {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 p-6 max-w-[1600px] mx-auto">
+    <div className="flex flex-col lg:flex-row gap-6 p-6 max-w-[1800px] mx-auto">
+      {/* Left Sidebar - Opponent Info */}
+      <div className="lg:w-64 hidden lg:block">
+        <div className="bg-background-secondary rounded-lg p-4 shadow-lg">
+          <PlayerInfo
+            username={boardOrientation === 'white' ? (gameState?.players.black?.username || "Waiting...") : (gameState?.players.white?.username || "Waiting...")}
+            isTurn={boardOrientation === 'white' ? (activePlayer === 'black' && !isGameOver) : (activePlayer === 'white' && !isGameOver)}
+            clock={boardOrientation === 'white' ? gameState?.clocks?.black : gameState?.clocks?.white}
+            isClockActive={boardOrientation === 'white' ? (activePlayer === 'black' && !isGameOver) : (activePlayer === 'white' && !isGameOver)}
+            isOnline={boardOrientation === 'white' ? (gameState?.players.black?.username !== "Waiting...") : (gameState?.players.white?.username !== "Waiting...")}
+          />
+        </div>
+      </div>
+
       {/* Main Board Area */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col items-center">
         <ResizableBoard
           gameState={effectiveGameState!}
           orientation={boardOrientation}
@@ -151,7 +165,7 @@ export default function GameViewer({ gameId }: GameViewerProps) {
         />
 
         {/* Game Status Panel */}
-        <div className="mt-4">
+        <div className="mt-4 w-full max-w-2xl">
           <GameStatusPanel
             gameState={effectiveGameState!}
             gameId={gameId}
@@ -162,7 +176,7 @@ export default function GameViewer({ gameId }: GameViewerProps) {
         </div>
       </div>
 
-      {/* Sidebar */}
+      {/* Right Sidebar - Current Player + Controls */}
       <div className="lg:w-80">
         <GameSidebar
           gameState={effectiveGameState!}
